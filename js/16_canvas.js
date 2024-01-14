@@ -136,7 +136,6 @@ import {
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import { EventTarget } from "ext:deno_web/02_event.js";
-import { WorkerGlobalScope } from "ext:deno_web/04_global_interfaces.js";
 import { Blob } from "ext:deno_web/09_file.js";
 import { ImageData } from "ext:deno_web/16_image_data.js";
 import {
@@ -154,7 +153,6 @@ const {
   MathMin,
   MathSign,
   NumberIsFinite,
-  ObjectDefineProperty,
   ObjectFreeze,
   ObjectGetOwnPropertyDescriptors,
   ObjectGetPrototypeOf,
@@ -169,9 +167,9 @@ const {
   TypedArrayPrototypeGetByteLength,
   TypedArrayPrototypeGetByteOffset,
   TypedArrayPrototypeGetLength,
-  TypedArrayPrototypeSlice,
   Uint32Array,
   Uint8Array,
+  Uint8ClampedArray,
   globalThis,
 } = primordials;
 const illegalConstructorKey = Symbol();
@@ -211,6 +209,695 @@ const convertCanvasRenderingContext2DSettings = createDictionaryConverter(
 const convertImageSmoothingQuality = createEnumConverterForSetter(
   ["low", "medium", "high"],
 );
+const convertDOMStringOrCanvasGradientOrCanvasPattern = (value) => {
+  if (
+    type(value) === "Object" &&
+    (objectIsCanvasGradient(value) || objectIsCanvasPattern(value))
+  ) {
+    return value;
+  }
+  return convertDOMString(value);
+};
+const convertCanvasLineCap = createEnumConverterForSetter(
+  ["butt", "round", "square"],
+);
+const convertCanvasLineJoin = createEnumConverterForSetter(
+  ["round", "bevel", "miter"],
+);
+const convertCanvasTextAlign = createEnumConverterForSetter(
+  ["start", "end", "left", "right", "center"],
+);
+const convertCanvasTextBaseline = createEnumConverterForSetter(
+  ["top", "hanging", "middle", "alphabetic", "ideographic", "bottom"],
+);
+const convertCanvasDirection = createEnumConverterForSetter(
+  ["ltr", "rtl", "inherit"],
+);
+const convertCanvasFontKerning = createEnumConverterForSetter(
+  ["auto", "normal", "none"],
+);
+const convertCanvasFontStretch = createEnumConverterForSetter([
+  "ultra-condensed",
+  "extra-condensed",
+  "condensed",
+  "semi-condensed",
+  "normal",
+  "semi-expanded",
+  "expanded",
+  "extra-expanded",
+  "ultra-expanded",
+]);
+const convertCanvasFontVariantCaps = createEnumConverterForSetter([
+  "normal",
+  "small-caps",
+  "all-small-caps",
+  "petite-caps",
+  "all-petite-caps",
+  "unicase",
+  "titling-caps",
+]);
+const convertCanvasTextRendering = createEnumConverterForSetter(
+  ["auto", "optimizeSpeed", "optimizeLegibility", "geometricPrecision"],
+);
+let objectIsCanvasGradient;
+let getCanvasGradientRaw;
+
+export class CanvasGradient {
+  #brand() {}
+
+  #raw;
+
+  constructor(key = undefined, raw) {
+    if (key !== illegalConstructorKey) {
+      illegalConstructor();
+    }
+    this.#raw = raw;
+  }
+
+  addColorStop(offset, color) {
+    this.#brand;
+    const prefix = "Failed to execute 'addColorStop' on 'CanvasGradient'";
+    requiredArguments(arguments.length, 2, prefix);
+    offset = convertDouble(offset);
+    color = convertDOMString(color);
+    if (!(offset >= 0 && offset <= 1)) {
+      throw new DOMException(
+        "Color stop offset must be inside the range [0, 1]",
+        "IndexSizeError",
+      );
+    }
+    op_canvas_2d_gradient_add_color_stop(this.#raw, offset, color);
+  }
+
+  static {
+    configureInterface(this);
+    // deno-lint-ignore prefer-primordials
+    objectIsCanvasGradient = (o) => #brand in o;
+    getCanvasGradientRaw = (o) => o.#raw;
+    hideSourceText(this);
+    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
+    hideSourceText(proto.addColorStop.value);
+  }
+}
+
+const linearGradient = (x0, y0, x1, y1) =>
+  new CanvasGradient(
+    illegalConstructorKey,
+    op_canvas_2d_gradient_new_linear(x0, y0, x1, y1),
+  );
+const radialGradient = (x0, y0, r0, x1, y1, r1) =>
+  new CanvasGradient(
+    illegalConstructorKey,
+    op_canvas_2d_gradient_new_radial(x0, y0, r0, x1, y1, r1),
+  );
+const conicGradient = (startAngle, x, y) =>
+  new CanvasGradient(
+    illegalConstructorKey,
+    op_canvas_2d_gradient_new_conic(startAngle, x, y),
+  );
+let objectIsCanvasPattern;
+let getCanvasPatternRaw;
+
+export class CanvasPattern {
+  #brand() {}
+
+  #raw;
+
+  constructor(key = undefined, raw) {
+    if (key !== illegalConstructorKey) {
+      illegalConstructor();
+    }
+    this.#raw = raw;
+  }
+
+  setTransform(transform = undefined) {
+    this.#brand;
+    transform = convertDOMMatrix2DInit(transform);
+    validateAndFixup2D(transform);
+    op_canvas_2d_pattern_set_transform(
+      this.#raw,
+      transform.m11,
+      transform.m12,
+      transform.m21,
+      transform.m22,
+      transform.m41,
+      transform.m42,
+    );
+  }
+
+  static {
+    configureInterface(this);
+    // deno-lint-ignore prefer-primordials
+    objectIsCanvasPattern = (o) => #brand in o;
+    getCanvasPatternRaw = (o) => o.#raw;
+    hideSourceText(this);
+    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
+    hideSourceText(proto.setTransform.value);
+  }
+}
+
+const checkUsabilityAndClone = (image) => {
+  if (objectIsImageBitmap(image)) {
+    const raw = getImageBitmapRaw(image);
+    if (raw === null) {
+      throw new DOMException("Image is detached", "InvalidStateError");
+    }
+    return op_canvas_2d_image_bitmap_clone(raw);
+  }
+  const ctx = getOffscreenCanvasContext(image);
+  if (!ctx) {
+    throw new DOMException("Canvas is detached", "InvalidStateError");
+  }
+  const width = getOffscreenCanvasWidth(image);
+  const height = getOffscreenCanvasHeight(image);
+  if (width === 0 || height === 0) {
+    throw new DOMException("Canvas has no pixels", "InvalidStateError");
+  }
+  switch (getOffscreenCanvasContextMode(ctx)) {
+    case "none":
+      return op_canvas_2d_image_bitmap_empty(ctx.width, ctx.height);
+    case "2d": {
+      const state = getOffscreenCanvasRenderingContext2DState(ctx);
+      return op_canvas_2d_image_bitmap_from_canvas_state(state);
+    }
+  }
+};
+const repetitionBehaviorToRepr = ObjectFreeze({
+  __proto__: null,
+  "repeat": 0,
+  "repeat-x": 1,
+  "repeat-y": 2,
+  "no-repeat": 3,
+});
+const getRepetitionBehavior = (repetition) => {
+  const repr = repetitionBehaviorToRepr[repetition || "repeat"];
+  if (repr === undefined) {
+    throw new DOMException(
+      `Invalid repetition mode ${repetition}`,
+      "SyntaxError",
+    );
+  }
+  return repr;
+};
+const pattern = (image, repetition) => {
+  const bitmap = checkUsabilityAndClone(image);
+  repetition = getRepetitionBehavior(repetition);
+  return new CanvasPattern(
+    illegalConstructorKey,
+    op_canvas_2d_pattern_new(bitmap, repetition),
+  );
+};
+
+export class TextMetrics {
+  #width;
+  #actualBoundingBoxLeft;
+  #actualBoundingBoxRight;
+  #fontBoundingBoxAscent;
+  #fontBoundingBoxDescent;
+  #actualBoundingBoxAscent;
+  #actualBoundingBoxDescent;
+  #emHeightAscent;
+  #emHeightDescent;
+  #hangingBaseline;
+  #alphabeticBaseline;
+  #ideographicBaseline;
+
+  constructor(
+    key = undefined,
+    width,
+    actualBoundingBoxLeft,
+    actualBoundingBoxRight,
+    fontBoundingBoxAscent,
+    fontBoundingBoxDescent,
+    actualBoundingBoxAscent,
+    actualBoundingBoxDescent,
+    emHeightAscent,
+    emHeightDescent,
+    hangingBaseline,
+    alphabeticBaseline,
+    ideographicBaseline,
+  ) {
+    if (key !== illegalConstructorKey) {
+      illegalConstructor();
+    }
+    this.#width = width;
+    this.#actualBoundingBoxLeft = actualBoundingBoxLeft;
+    this.#actualBoundingBoxRight = actualBoundingBoxRight;
+    this.#fontBoundingBoxAscent = fontBoundingBoxAscent;
+    this.#fontBoundingBoxDescent = fontBoundingBoxDescent;
+    this.#actualBoundingBoxAscent = actualBoundingBoxAscent;
+    this.#actualBoundingBoxDescent = actualBoundingBoxDescent;
+    this.#emHeightAscent = emHeightAscent;
+    this.#emHeightDescent = emHeightDescent;
+    this.#hangingBaseline = hangingBaseline;
+    this.#alphabeticBaseline = alphabeticBaseline;
+    this.#ideographicBaseline = ideographicBaseline;
+  }
+
+  get width() {
+    return this.#width;
+  }
+
+  get actualBoundingBoxLeft() {
+    return this.#actualBoundingBoxLeft;
+  }
+
+  get actualBoundingBoxRight() {
+    return this.#actualBoundingBoxRight;
+  }
+
+  get fontBoundingBoxAscent() {
+    return this.#fontBoundingBoxAscent;
+  }
+
+  get fontBoundingBoxDescent() {
+    return this.#fontBoundingBoxDescent;
+  }
+
+  get actualBoundingBoxAscent() {
+    return this.#actualBoundingBoxAscent;
+  }
+
+  get actualBoundingBoxDescent() {
+    return this.#actualBoundingBoxDescent;
+  }
+
+  get emHeightAscent() {
+    return this.#emHeightAscent;
+  }
+
+  get emHeightDescent() {
+    return this.#emHeightDescent;
+  }
+
+  get hangingBaseline() {
+    return this.#hangingBaseline;
+  }
+
+  get alphabeticBaseline() {
+    return this.#alphabeticBaseline;
+  }
+
+  get ideographicBaseline() {
+    return this.#ideographicBaseline;
+  }
+
+  #inspect(inspect, options) {
+    return inspect(
+      createFilteredInspectProxy({
+        object: this,
+        evaluate: true,
+        keys: [
+          "width",
+          "actualBoundingBoxLeft",
+          "actualBoundingBoxRight",
+          "fontBoundingBoxAscent",
+          "fontBoundingBoxDescent",
+          "actualBoundingBoxAscent",
+          "actualBoundingBoxDescent",
+          "emHeightAscent",
+          "emHeightDescent",
+          "hangingBaseline",
+          "alphabeticBaseline",
+          "ideographicBaseline",
+        ],
+      }),
+      options,
+    );
+  }
+
+  get [privateCustomInspect]() {
+    try {
+      return this.#inspect;
+    } catch {
+      return undefined;
+    }
+  }
+
+  static {
+    configureInterface(this);
+    hideSourceText(this);
+    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
+    hideSourceText(proto.width.get);
+    hideSourceText(proto.actualBoundingBoxLeft.get);
+    hideSourceText(proto.actualBoundingBoxRight.get);
+    hideSourceText(proto.fontBoundingBoxAscent.get);
+    hideSourceText(proto.fontBoundingBoxDescent.get);
+    hideSourceText(proto.actualBoundingBoxAscent.get);
+    hideSourceText(proto.actualBoundingBoxDescent.get);
+    hideSourceText(proto.emHeightAscent.get);
+    hideSourceText(proto.emHeightDescent.get);
+    hideSourceText(proto.hangingBaseline.get);
+    hideSourceText(proto.alphabeticBaseline.get);
+    hideSourceText(proto.ideographicBaseline.get);
+  }
+}
+
+const readImageDataSettingsMembers = (value) => {
+  const result = { __proto__: null };
+  const { colorSpace } = value;
+  if (colorSpace !== undefined) {
+    result.colorSpace = convertPredefinedColorSpace(colorSpace);
+  }
+  return result;
+};
+const convertImageDataSettings = createDictionaryConverter(
+  readImageDataSettingsMembers,
+);
+const convertPath2D = (value) => {
+  if (!(type(value) === "Object" && objectIsPath2D(value))) {
+    throw new TypeError("Expected Path2D");
+  }
+  return value;
+};
+const convertPath2DOrDOMString = (value) =>
+  type(value) === "Object" && objectIsPath2D(value)
+    ? value
+    : convertDOMString(value);
+
+function allFinite(...args) {
+  return ArrayPrototypeEvery(args, NumberIsFinite);
+}
+
+function normalizeAndScaleRadii(x, y, w, h, radii) {
+  if (!allFinite(x, y, w, h)) {
+    return null;
+  }
+  if (!ArrayIsArray(radii)) {
+    radii = [radii];
+  }
+  const count = radii.length;
+  if (count < 1 || count > 4) {
+    throw new RangeError("Number of radii must be between 1 and 4");
+  }
+  for (let i = 0; i < count; i++) {
+    const radius = radii[i];
+    if (typeof radius === "number") {
+      if (!NumberIsFinite(radius)) {
+        return null;
+      }
+      if (radius < 0) {
+        throw new RangeError("Radius must be non-negative");
+      }
+      radii[i] = { x: radius, y: radius };
+    } else {
+      const { x, y } = radius;
+      if (!allFinite(x, y)) {
+        return null;
+      }
+      if (x < 0 || y < 0) {
+        throw new RangeError("Radius must be non-negative");
+      }
+      radii[i] = { x, y };
+    }
+  }
+  let upperLeft;
+  let upperRight;
+  let lowerRight;
+  let lowerLeft;
+  switch (count) {
+    case 4:
+      upperLeft = radii[0];
+      upperRight = radii[1];
+      lowerRight = radii[2];
+      lowerLeft = radii[3];
+      break;
+    case 3:
+      upperLeft = radii[0];
+      upperRight = radii[1];
+      lowerRight = radii[2];
+      lowerLeft = radii[1];
+      break;
+    case 2:
+      upperLeft = radii[0];
+      upperRight = radii[1];
+      lowerRight = radii[0];
+      lowerLeft = radii[1];
+      break;
+    case 1:
+      upperLeft = radii[0];
+      upperRight = radii[0];
+      lowerRight = radii[0];
+      lowerLeft = radii[0];
+      break;
+  }
+  let scale = 0;
+  if (w !== 0 && h !== 0) {
+    const maxX = MathAbs(w);
+    const maxY = MathAbs(h);
+    const top = upperLeft.x + upperRight.x;
+    const right = upperRight.y + lowerRight.y;
+    const bottom = lowerRight.x + lowerLeft.x;
+    const left = upperLeft.y + lowerLeft.y;
+    scale = MathMin(1, maxX / top, maxY / right, maxX / bottom, maxY / left);
+  }
+  const scaleX = scale * MathSign(w);
+  const scaleY = scale * MathSign(h);
+  for (let i = 0; i < count; i++) {
+    const radius = radii[i];
+    radius.x *= scaleX;
+    radius.y *= scaleY;
+  }
+  return { upperLeft, upperRight, lowerRight, lowerLeft };
+}
+
+let objectIsPath2D;
+let getPath2DRaw;
+
+export class Path2D {
+  #brand() {}
+
+  #raw;
+
+  constructor(path = undefined) {
+    if (path !== undefined) {
+      path = convertPath2DOrDOMString(path);
+    }
+    if (typeof path === "string") {
+      throw new TypeError("Unimplemented");
+    }
+    this.#raw = path === undefined
+      ? op_canvas_2d_path_new()
+      : op_canvas_2d_path_clone(/** @type {Path2D} */ (path).#raw);
+  }
+
+  addPath(path, transform = undefined) {
+    this.#brand;
+    const prefix = "Failed to execute 'addPath' on 'Path2D'";
+    requiredArguments(arguments.length, 1, prefix);
+    path = convertPath2D(path);
+    transform = convertDOMMatrix2DInit(transform);
+    validateAndFixup2D(transform);
+    op_canvas_2d_path_extend(
+      this.#raw,
+      path.#raw,
+      transform.m11,
+      transform.m12,
+      transform.m21,
+      transform.m22,
+      transform.m41,
+      transform.m42,
+    );
+  }
+
+  closePath() {
+    this.#brand;
+    op_canvas_2d_path_close(this.#raw);
+  }
+
+  moveTo(x, y) {
+    this.#brand;
+    const prefix = "Failed to execute 'moveTo' on 'Path2D'";
+    requiredArguments(arguments.length, 2, prefix);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    op_canvas_2d_path_move_to(this.#raw, x, y);
+  }
+
+  lineTo(x, y) {
+    this.#brand;
+    const prefix = "Failed to execute 'lineTo' on 'Path2D'";
+    requiredArguments(arguments.length, 2, prefix);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    op_canvas_2d_path_line_to(this.#raw, x, y);
+  }
+
+  quadraticCurveTo(cpx, cpy, x, y) {
+    this.#brand;
+    const prefix = "Failed to execute 'quadraticCurveTo' on 'Path2D'";
+    requiredArguments(arguments.length, 4, prefix);
+    cpx = convertUnrestrictedDouble(cpx);
+    cpy = convertUnrestrictedDouble(cpy);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    op_canvas_2d_path_quad_to(this.#raw, cpx, cpy, x, y);
+  }
+
+  bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
+    this.#brand;
+    const prefix = "Failed to execute 'bezierCurveTo' on 'Path2D'";
+    requiredArguments(arguments.length, 6, prefix);
+    cp1x = convertUnrestrictedDouble(cp1x);
+    cp1y = convertUnrestrictedDouble(cp1y);
+    cp2x = convertUnrestrictedDouble(cp2x);
+    cp2y = convertUnrestrictedDouble(cp2y);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    op_canvas_2d_path_cubic_to(this.#raw, cp1x, cp1y, cp2x, cp2y, x, y);
+  }
+
+  arcTo(x1, y1, x2, y2, radius) {
+    this.#brand;
+    const prefix = "Failed to execute 'arcTo' on 'Path2D'";
+    requiredArguments(arguments.length, 5, prefix);
+    x1 = convertUnrestrictedDouble(x1);
+    y1 = convertUnrestrictedDouble(y1);
+    x2 = convertUnrestrictedDouble(x2);
+    y2 = convertUnrestrictedDouble(y2);
+    radius = convertUnrestrictedDouble(radius);
+    if (!allFinite(x1, y1, x2, y2, radius)) {
+      return;
+    }
+    if (radius < 0) {
+      op_canvas_2d_path_ensure_subpath(this.#raw, x1, y1);
+      throw new DOMException("Radius must be non-negative", "IndexSizeError");
+    }
+    op_canvas_2d_path_arc_to(this.#raw, x1, y1, x2, y2, radius);
+  }
+
+  rect(x, y, w, h) {
+    this.#brand;
+    const prefix = "Failed to execute 'rect' on 'Path2D'";
+    requiredArguments(arguments.length, 4, prefix);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    w = convertUnrestrictedDouble(w);
+    h = convertUnrestrictedDouble(h);
+    op_canvas_2d_path_rect(this.#raw, x, y, w, h);
+  }
+
+  roundRect(x, y, w, h, radii = 0) {
+    this.#brand;
+    const prefix = "Failed to execute 'roundRect' on 'Path2D'";
+    requiredArguments(arguments.length, 4, prefix);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    w = convertUnrestrictedDouble(w);
+    h = convertUnrestrictedDouble(h);
+    radii = convertUnrestrictedDoubleOrDOMPointInitOrSequenceThereof(radii);
+    const normalizedRadii = normalizeAndScaleRadii(x, y, w, h, radii);
+    if (!normalizedRadii) {
+      return;
+    }
+    const { upperLeft, upperRight, lowerRight, lowerLeft } = normalizedRadii;
+    op_canvas_2d_path_round_rect(
+      this.#raw,
+      x,
+      y,
+      w,
+      h,
+      upperLeft.x,
+      upperLeft.y,
+      upperRight.x,
+      upperRight.y,
+      lowerRight.x,
+      lowerRight.y,
+      lowerLeft.x,
+      lowerLeft.y,
+    );
+  }
+
+  arc(x, y, radius, startAngle, endAngle, counterclockwise = false) {
+    this.#brand;
+    const prefix = "Failed to execute 'arc' on 'Path2D'";
+    requiredArguments(arguments.length, 5, prefix);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    radius = convertUnrestrictedDouble(radius);
+    startAngle = convertUnrestrictedDouble(startAngle);
+    endAngle = convertUnrestrictedDouble(endAngle);
+    counterclockwise = convertBoolean(counterclockwise);
+    if (!allFinite(x, y, radius, startAngle, endAngle)) {
+      return;
+    }
+    if (radius < 0) {
+      throw new DOMException("Radius must be non-negative", "IndexSizeError");
+    }
+    op_canvas_2d_path_ellipse(
+      this.#raw,
+      x,
+      y,
+      radius,
+      radius,
+      startAngle,
+      endAngle,
+      0,
+      counterclockwise ? -1 : 1,
+    );
+  }
+
+  ellipse(
+    x,
+    y,
+    radiusX,
+    radiusY,
+    rotation,
+    startAngle,
+    endAngle,
+    counterclockwise = false,
+  ) {
+    this.#brand;
+    const prefix = "Failed to execute 'ellipse' on 'Path2D'";
+    requiredArguments(arguments.length, 7, prefix);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    radiusX = convertUnrestrictedDouble(radiusX);
+    radiusY = convertUnrestrictedDouble(radiusY);
+    rotation = convertUnrestrictedDouble(rotation);
+    startAngle = convertUnrestrictedDouble(startAngle);
+    endAngle = convertUnrestrictedDouble(endAngle);
+    counterclockwise = convertBoolean(counterclockwise);
+    if (!allFinite(x, y, radiusX, radiusY, rotation, startAngle, endAngle)) {
+      return;
+    }
+    if (radiusX < 0 || radiusY < 0) {
+      throw new DOMException("Radius must be non-negative", "IndexSizeError");
+    }
+    op_canvas_2d_path_ellipse(
+      this.#raw,
+      x,
+      y,
+      radiusX,
+      radiusY,
+      startAngle,
+      endAngle,
+      rotation,
+      counterclockwise ? -1 : 1,
+    );
+  }
+
+  static {
+    configureInterface(this);
+    // deno-lint-ignore prefer-primordials
+    objectIsPath2D = (o) => #brand in o;
+    getPath2DRaw = (o) => o.#raw;
+    hideSourceText(this);
+    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
+    hideSourceText(proto.addPath.value);
+    hideSourceText(proto.closePath.value);
+    hideSourceText(proto.moveTo.value);
+    hideSourceText(proto.lineTo.value);
+    hideSourceText(proto.quadraticCurveTo.value);
+    hideSourceText(proto.bezierCurveTo.value);
+    hideSourceText(proto.arcTo.value);
+    hideSourceText(proto.rect.value);
+    hideSourceText(proto.roundRect.value);
+    hideSourceText(proto.arc.value);
+    hideSourceText(proto.ellipse.value);
+  }
+}
+
 const readImageEncodeOptionsMembers = (value) => {
   const result = { __proto__: null };
   const { quality } = value;
@@ -243,7 +930,7 @@ function getOffscreenCanvasContextMode(ctx) {
   throw new TypeError("Unreachable");
 }
 
-class OffscreenCanvas extends EventTarget {
+export class OffscreenCanvas extends EventTarget {
   #brand() {}
 
   #context;
@@ -524,13 +1211,6 @@ class OffscreenCanvas extends EventTarget {
   }
 }
 
-ObjectDefineProperty(globalThis, "OffscreenCanvas", {
-  __proto__: null,
-  value: OffscreenCanvas,
-  writable: true,
-  configurable: true,
-});
-
 class DummyCanvasContext {
   width;
   height;
@@ -543,719 +1223,6 @@ class DummyCanvasContext {
 
 const objectIsDummyCanvasContext = (o) =>
   ObjectGetPrototypeOf(o) === DummyCanvasContext.prototype;
-const convertDOMStringOrCanvasGradientOrCanvasPattern = (value) => {
-  if (
-    type(value) === "Object" &&
-    (objectIsCanvasGradient(value) || objectIsCanvasPattern(value))
-  ) {
-    return value;
-  }
-  return convertDOMString(value);
-};
-const convertCanvasLineCap = createEnumConverterForSetter(
-  ["butt", "round", "square"],
-);
-const convertCanvasLineJoin = createEnumConverterForSetter(
-  ["round", "bevel", "miter"],
-);
-const convertCanvasTextAlign = createEnumConverterForSetter(
-  ["start", "end", "left", "right", "center"],
-);
-const convertCanvasTextBaseline = createEnumConverterForSetter(
-  ["top", "hanging", "middle", "alphabetic", "ideographic", "bottom"],
-);
-const convertCanvasDirection = createEnumConverterForSetter(
-  ["ltr", "rtl", "inherit"],
-);
-const convertCanvasFontKerning = createEnumConverterForSetter(
-  ["auto", "normal", "none"],
-);
-const convertCanvasFontStretch = createEnumConverterForSetter([
-  "ultra-condensed",
-  "extra-condensed",
-  "condensed",
-  "semi-condensed",
-  "normal",
-  "semi-expanded",
-  "expanded",
-  "extra-expanded",
-  "ultra-expanded",
-]);
-const convertCanvasFontVariantCaps = createEnumConverterForSetter([
-  "normal",
-  "small-caps",
-  "all-small-caps",
-  "petite-caps",
-  "all-petite-caps",
-  "unicase",
-  "titling-caps",
-]);
-const convertCanvasTextRendering = createEnumConverterForSetter(
-  ["auto", "optimizeSpeed", "optimizeLegibility", "geometricPrecision"],
-);
-let objectIsCanvasGradient;
-let getCanvasGradientRaw;
-
-class CanvasGradient {
-  #brand() {}
-
-  #raw;
-
-  constructor(key = undefined, raw) {
-    if (key !== illegalConstructorKey) {
-      illegalConstructor();
-    }
-    this.#raw = raw;
-  }
-
-  addColorStop(offset, color) {
-    this.#brand;
-    const prefix = "Failed to execute 'addColorStop' on 'CanvasGradient'";
-    requiredArguments(arguments.length, 2, prefix);
-    offset = convertDouble(offset);
-    color = convertDOMString(color);
-    if (!(offset >= 0 && offset <= 1)) {
-      throw new DOMException(
-        "Color stop offset must be inside the range [0, 1]",
-        "IndexSizeError",
-      );
-    }
-    op_canvas_2d_gradient_add_color_stop(this.#raw, offset, color);
-  }
-
-  static {
-    configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsCanvasGradient = (o) => #brand in o;
-    getCanvasGradientRaw = (o) => o.#raw;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.addColorStop.value);
-  }
-}
-
-const linearGradient = (x0, y0, x1, y1) =>
-  new CanvasGradient(
-    illegalConstructorKey,
-    op_canvas_2d_gradient_new_linear(x0, y0, x1, y1),
-  );
-const radialGradient = (x0, y0, r0, x1, y1, r1) =>
-  new CanvasGradient(
-    illegalConstructorKey,
-    op_canvas_2d_gradient_new_radial(x0, y0, r0, x1, y1, r1),
-  );
-const conicGradient = (startAngle, x, y) =>
-  new CanvasGradient(
-    illegalConstructorKey,
-    op_canvas_2d_gradient_new_conic(startAngle, x, y),
-  );
-ObjectDefineProperty(globalThis, "CanvasGradient", {
-  __proto__: null,
-  value: CanvasGradient,
-  writable: true,
-  configurable: true,
-});
-let objectIsCanvasPattern;
-let getCanvasPatternRaw;
-
-class CanvasPattern {
-  #brand() {}
-
-  #raw;
-
-  constructor(key = undefined, raw) {
-    if (key !== illegalConstructorKey) {
-      illegalConstructor();
-    }
-    this.#raw = raw;
-  }
-
-  setTransform(transform = undefined) {
-    this.#brand;
-    transform = convertDOMMatrix2DInit(transform);
-    validateAndFixup2D(transform);
-    op_canvas_2d_pattern_set_transform(
-      this.#raw,
-      transform.m11,
-      transform.m12,
-      transform.m21,
-      transform.m22,
-      transform.m41,
-      transform.m42,
-    );
-  }
-
-  static {
-    configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsCanvasPattern = (o) => #brand in o;
-    getCanvasPatternRaw = (o) => o.#raw;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.setTransform.value);
-  }
-}
-
-const checkUsabilityAndClone = (image) => {
-  if (objectIsImageBitmap(image)) {
-    const raw = getImageBitmapRaw(image);
-    if (raw === null) {
-      throw new DOMException("Image is detached", "InvalidStateError");
-    }
-    return op_canvas_2d_image_bitmap_clone(raw);
-  }
-  const ctx = getOffscreenCanvasContext(image);
-  if (!ctx) {
-    throw new DOMException("Canvas is detached", "InvalidStateError");
-  }
-  const width = getOffscreenCanvasWidth(image);
-  const height = getOffscreenCanvasHeight(image);
-  if (width === 0 || height === 0) {
-    throw new DOMException("Canvas has no pixels", "InvalidStateError");
-  }
-  switch (getOffscreenCanvasContextMode(ctx)) {
-    case "none":
-      return op_canvas_2d_image_bitmap_empty(ctx.width, ctx.height);
-    case "2d": {
-      const state = getOffscreenCanvasRenderingContext2DState(ctx);
-      return op_canvas_2d_image_bitmap_from_canvas_state(state);
-    }
-  }
-};
-const repetitionBehaviorToRepr = ObjectFreeze({
-  __proto__: null,
-  "repeat": 0,
-  "repeat-x": 1,
-  "repeat-y": 2,
-  "no-repeat": 3,
-});
-const getRepetitionBehavior = (repetition) => {
-  const repr = repetitionBehaviorToRepr[repetition || "repeat"];
-  if (repr === undefined) {
-    throw new DOMException(
-      `Invalid repetition mode ${repetition}`,
-      "SyntaxError",
-    );
-  }
-  return repr;
-};
-const pattern = (image, repetition) => {
-  const bitmap = checkUsabilityAndClone(image);
-  repetition = getRepetitionBehavior(repetition);
-  return new CanvasPattern(
-    illegalConstructorKey,
-    op_canvas_2d_pattern_new(bitmap, repetition),
-  );
-};
-ObjectDefineProperty(globalThis, "CanvasPattern", {
-  __proto__: null,
-  value: CanvasPattern,
-  writable: true,
-  configurable: true,
-});
-
-class TextMetrics {
-  #width;
-  #actualBoundingBoxLeft;
-  #actualBoundingBoxRight;
-  #fontBoundingBoxAscent;
-  #fontBoundingBoxDescent;
-  #actualBoundingBoxAscent;
-  #actualBoundingBoxDescent;
-  #emHeightAscent;
-  #emHeightDescent;
-  #hangingBaseline;
-  #alphabeticBaseline;
-  #ideographicBaseline;
-
-  constructor(
-    key = undefined,
-    width,
-    actualBoundingBoxLeft,
-    actualBoundingBoxRight,
-    fontBoundingBoxAscent,
-    fontBoundingBoxDescent,
-    actualBoundingBoxAscent,
-    actualBoundingBoxDescent,
-    emHeightAscent,
-    emHeightDescent,
-    hangingBaseline,
-    alphabeticBaseline,
-    ideographicBaseline,
-  ) {
-    if (key !== illegalConstructorKey) {
-      illegalConstructor();
-    }
-    this.#width = width;
-    this.#actualBoundingBoxLeft = actualBoundingBoxLeft;
-    this.#actualBoundingBoxRight = actualBoundingBoxRight;
-    this.#fontBoundingBoxAscent = fontBoundingBoxAscent;
-    this.#fontBoundingBoxDescent = fontBoundingBoxDescent;
-    this.#actualBoundingBoxAscent = actualBoundingBoxAscent;
-    this.#actualBoundingBoxDescent = actualBoundingBoxDescent;
-    this.#emHeightAscent = emHeightAscent;
-    this.#emHeightDescent = emHeightDescent;
-    this.#hangingBaseline = hangingBaseline;
-    this.#alphabeticBaseline = alphabeticBaseline;
-    this.#ideographicBaseline = ideographicBaseline;
-  }
-
-  get width() {
-    return this.#width;
-  }
-
-  get actualBoundingBoxLeft() {
-    return this.#actualBoundingBoxLeft;
-  }
-
-  get actualBoundingBoxRight() {
-    return this.#actualBoundingBoxRight;
-  }
-
-  get fontBoundingBoxAscent() {
-    return this.#fontBoundingBoxAscent;
-  }
-
-  get fontBoundingBoxDescent() {
-    return this.#fontBoundingBoxDescent;
-  }
-
-  get actualBoundingBoxAscent() {
-    return this.#actualBoundingBoxAscent;
-  }
-
-  get actualBoundingBoxDescent() {
-    return this.#actualBoundingBoxDescent;
-  }
-
-  get emHeightAscent() {
-    return this.#emHeightAscent;
-  }
-
-  get emHeightDescent() {
-    return this.#emHeightDescent;
-  }
-
-  get hangingBaseline() {
-    return this.#hangingBaseline;
-  }
-
-  get alphabeticBaseline() {
-    return this.#alphabeticBaseline;
-  }
-
-  get ideographicBaseline() {
-    return this.#ideographicBaseline;
-  }
-
-  #inspect(inspect, options) {
-    return inspect(
-      createFilteredInspectProxy({
-        object: this,
-        evaluate: true,
-        keys: [
-          "width",
-          "actualBoundingBoxLeft",
-          "actualBoundingBoxRight",
-          "fontBoundingBoxAscent",
-          "fontBoundingBoxDescent",
-          "actualBoundingBoxAscent",
-          "actualBoundingBoxDescent",
-          "emHeightAscent",
-          "emHeightDescent",
-          "hangingBaseline",
-          "alphabeticBaseline",
-          "ideographicBaseline",
-        ],
-      }),
-      options,
-    );
-  }
-
-  get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
-  }
-
-  static {
-    configureInterface(this);
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.width.get);
-    hideSourceText(proto.actualBoundingBoxLeft.get);
-    hideSourceText(proto.actualBoundingBoxRight.get);
-    hideSourceText(proto.fontBoundingBoxAscent.get);
-    hideSourceText(proto.fontBoundingBoxDescent.get);
-    hideSourceText(proto.actualBoundingBoxAscent.get);
-    hideSourceText(proto.actualBoundingBoxDescent.get);
-    hideSourceText(proto.emHeightAscent.get);
-    hideSourceText(proto.emHeightDescent.get);
-    hideSourceText(proto.hangingBaseline.get);
-    hideSourceText(proto.alphabeticBaseline.get);
-    hideSourceText(proto.ideographicBaseline.get);
-  }
-}
-
-ObjectDefineProperty(globalThis, "TextMetrics", {
-  __proto__: null,
-  value: TextMetrics,
-  writable: true,
-  configurable: true,
-});
-const readImageDataSettingsMembers = (value) => {
-  const result = { __proto__: null };
-  const { colorSpace } = value;
-  if (colorSpace !== undefined) {
-    result.colorSpace = convertPredefinedColorSpace(colorSpace);
-  }
-  return result;
-};
-const convertImageDataSettings = createDictionaryConverter(
-  readImageDataSettingsMembers,
-);
-const convertPath2D = (value) => {
-  if (!(type(value) === "Object" && objectIsPath2D(value))) {
-    throw new TypeError("Expected Path2D");
-  }
-  return value;
-};
-const convertPath2DOrDOMString = (value) =>
-  type(value) === "Object" && objectIsPath2D(value)
-    ? value
-    : convertDOMString(value);
-
-function allFinite(...args) {
-  return ArrayPrototypeEvery(args, NumberIsFinite);
-}
-
-function normalizeAndScaleRadii(x, y, w, h, radii) {
-  if (!allFinite(x, y, w, h)) {
-    return null;
-  }
-  if (!ArrayIsArray(radii)) {
-    radii = [radii];
-  }
-  const count = radii.length;
-  if (count < 1 || count > 4) {
-    throw new RangeError("Number of radii must be between 1 and 4");
-  }
-  for (let i = 0; i < count; i++) {
-    const radius = radii[i];
-    if (typeof radius === "number") {
-      if (!NumberIsFinite(radius)) {
-        return null;
-      }
-      if (radius < 0) {
-        throw new RangeError("Radius must be non-negative");
-      }
-      radii[i] = { x: radius, y: radius };
-    } else {
-      const { x, y } = radius;
-      if (!allFinite(x, y)) {
-        return null;
-      }
-      if (x < 0 || y < 0) {
-        throw new RangeError("Radius must be non-negative");
-      }
-      radii[i] = { x, y };
-    }
-  }
-  let upperLeft;
-  let upperRight;
-  let lowerRight;
-  let lowerLeft;
-  switch (count) {
-    case 4:
-      upperLeft = radii[0];
-      upperRight = radii[1];
-      lowerRight = radii[2];
-      lowerLeft = radii[3];
-      break;
-    case 3:
-      upperLeft = radii[0];
-      upperRight = radii[1];
-      lowerRight = radii[2];
-      lowerLeft = radii[1];
-      break;
-    case 2:
-      upperLeft = radii[0];
-      upperRight = radii[1];
-      lowerRight = radii[0];
-      lowerLeft = radii[1];
-      break;
-    case 1:
-      upperLeft = radii[0];
-      upperRight = radii[0];
-      lowerRight = radii[0];
-      lowerLeft = radii[0];
-      break;
-  }
-  let scale = 0;
-  if (w !== 0 && h !== 0) {
-    const maxX = MathAbs(w);
-    const maxY = MathAbs(h);
-    const top = upperLeft.x + upperRight.x;
-    const right = upperRight.y + lowerRight.y;
-    const bottom = lowerRight.x + lowerLeft.x;
-    const left = upperLeft.y + lowerLeft.y;
-    scale = MathMin(1, maxX / top, maxY / right, maxX / bottom, maxY / left);
-  }
-  const scaleX = scale * MathSign(w);
-  const scaleY = scale * MathSign(h);
-  for (let i = 0; i < count; i++) {
-    const radius = radii[i];
-    radius.x *= scaleX;
-    radius.y *= scaleY;
-  }
-  return { upperLeft, upperRight, lowerRight, lowerLeft };
-}
-
-let objectIsPath2D;
-let getPath2DRaw;
-
-class Path2D {
-  #brand() {}
-
-  #raw;
-
-  constructor(path = undefined) {
-    if (path !== undefined) {
-      path = convertPath2DOrDOMString(path);
-    }
-    if (typeof path === "string") {
-      throw new TypeError("Unimplemented");
-    }
-    this.#raw = path === undefined
-      ? op_canvas_2d_path_new()
-      : op_canvas_2d_path_clone(/** @type {Path2D} */ (path).#raw);
-  }
-
-  addPath(path, transform = undefined) {
-    this.#brand;
-    const prefix = "Failed to execute 'addPath' on 'Path2D'";
-    requiredArguments(arguments.length, 1, prefix);
-    path = convertPath2D(path);
-    transform = convertDOMMatrix2DInit(transform);
-    validateAndFixup2D(transform);
-    op_canvas_2d_path_extend(
-      this.#raw,
-      path.#raw,
-      transform.m11,
-      transform.m12,
-      transform.m21,
-      transform.m22,
-      transform.m41,
-      transform.m42,
-    );
-  }
-
-  closePath() {
-    this.#brand;
-    op_canvas_2d_path_close(this.#raw);
-  }
-
-  moveTo(x, y) {
-    this.#brand;
-    const prefix = "Failed to execute 'moveTo' on 'Path2D'";
-    requiredArguments(arguments.length, 2, prefix);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_move_to(this.#raw, x, y);
-  }
-
-  lineTo(x, y) {
-    this.#brand;
-    const prefix = "Failed to execute 'lineTo' on 'Path2D'";
-    requiredArguments(arguments.length, 2, prefix);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_line_to(this.#raw, x, y);
-  }
-
-  quadraticCurveTo(cpx, cpy, x, y) {
-    this.#brand;
-    const prefix = "Failed to execute 'quadraticCurveTo' on 'Path2D'";
-    requiredArguments(arguments.length, 4, prefix);
-    cpx = convertUnrestrictedDouble(cpx);
-    cpy = convertUnrestrictedDouble(cpy);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_quad_to(this.#raw, cpx, cpy, x, y);
-  }
-
-  bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
-    this.#brand;
-    const prefix = "Failed to execute 'bezierCurveTo' on 'Path2D'";
-    requiredArguments(arguments.length, 6, prefix);
-    cp1x = convertUnrestrictedDouble(cp1x);
-    cp1y = convertUnrestrictedDouble(cp1y);
-    cp2x = convertUnrestrictedDouble(cp2x);
-    cp2y = convertUnrestrictedDouble(cp2y);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_cubic_to(this.#raw, cp1x, cp1y, cp2x, cp2y, x, y);
-  }
-
-  arcTo(x1, y1, x2, y2, radius) {
-    this.#brand;
-    const prefix = "Failed to execute 'arcTo' on 'Path2D'";
-    requiredArguments(arguments.length, 5, prefix);
-    x1 = convertUnrestrictedDouble(x1);
-    y1 = convertUnrestrictedDouble(y1);
-    x2 = convertUnrestrictedDouble(x2);
-    y2 = convertUnrestrictedDouble(y2);
-    radius = convertUnrestrictedDouble(radius);
-    if (!allFinite(x1, y1, x2, y2, radius)) {
-      return;
-    }
-    if (radius < 0) {
-      op_canvas_2d_path_ensure_subpath(this.#raw, x1, y1);
-      throw new DOMException("Radius must be non-negative", "IndexSizeError");
-    }
-    op_canvas_2d_path_arc_to(this.#raw, x1, y1, x2, y2, radius);
-  }
-
-  rect(x, y, w, h) {
-    this.#brand;
-    const prefix = "Failed to execute 'rect' on 'Path2D'";
-    requiredArguments(arguments.length, 4, prefix);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    w = convertUnrestrictedDouble(w);
-    h = convertUnrestrictedDouble(h);
-    op_canvas_2d_path_rect(this.#raw, x, y, w, h);
-  }
-
-  roundRect(x, y, w, h, radii = 0) {
-    this.#brand;
-    const prefix = "Failed to execute 'roundRect' on 'Path2D'";
-    requiredArguments(arguments.length, 4, prefix);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    w = convertUnrestrictedDouble(w);
-    h = convertUnrestrictedDouble(h);
-    radii = convertUnrestrictedDoubleOrDOMPointInitOrSequenceThereof(radii);
-    const normalizedRadii = normalizeAndScaleRadii(x, y, w, h, radii);
-    if (!normalizedRadii) {
-      return;
-    }
-    const { upperLeft, upperRight, lowerRight, lowerLeft } = normalizedRadii;
-    op_canvas_2d_path_round_rect(
-      this.#raw,
-      x,
-      y,
-      w,
-      h,
-      upperLeft.x,
-      upperLeft.y,
-      upperRight.x,
-      upperRight.y,
-      lowerRight.x,
-      lowerRight.y,
-      lowerLeft.x,
-      lowerLeft.y,
-    );
-  }
-
-  arc(x, y, radius, startAngle, endAngle, counterclockwise = false) {
-    this.#brand;
-    const prefix = "Failed to execute 'arc' on 'Path2D'";
-    requiredArguments(arguments.length, 5, prefix);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    radius = convertUnrestrictedDouble(radius);
-    startAngle = convertUnrestrictedDouble(startAngle);
-    endAngle = convertUnrestrictedDouble(endAngle);
-    counterclockwise = convertBoolean(counterclockwise);
-    if (!allFinite(x, y, radius, startAngle, endAngle)) {
-      return;
-    }
-    if (radius < 0) {
-      throw new DOMException("Radius must be non-negative", "IndexSizeError");
-    }
-    op_canvas_2d_path_ellipse(
-      this.#raw,
-      x,
-      y,
-      radius,
-      radius,
-      startAngle,
-      endAngle,
-      0,
-      counterclockwise ? -1 : 1,
-    );
-  }
-
-  ellipse(
-    x,
-    y,
-    radiusX,
-    radiusY,
-    rotation,
-    startAngle,
-    endAngle,
-    counterclockwise = false,
-  ) {
-    this.#brand;
-    const prefix = "Failed to execute 'ellipse' on 'Path2D'";
-    requiredArguments(arguments.length, 7, prefix);
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    radiusX = convertUnrestrictedDouble(radiusX);
-    radiusY = convertUnrestrictedDouble(radiusY);
-    rotation = convertUnrestrictedDouble(rotation);
-    startAngle = convertUnrestrictedDouble(startAngle);
-    endAngle = convertUnrestrictedDouble(endAngle);
-    counterclockwise = convertBoolean(counterclockwise);
-    if (!allFinite(x, y, radiusX, radiusY, rotation, startAngle, endAngle)) {
-      return;
-    }
-    if (radiusX < 0 || radiusY < 0) {
-      throw new DOMException("Radius must be non-negative", "IndexSizeError");
-    }
-    op_canvas_2d_path_ellipse(
-      this.#raw,
-      x,
-      y,
-      radiusX,
-      radiusY,
-      startAngle,
-      endAngle,
-      rotation,
-      counterclockwise ? -1 : 1,
-    );
-  }
-
-  static {
-    configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsPath2D = (o) => #brand in o;
-    getPath2DRaw = (o) => o.#raw;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.addPath.value);
-    hideSourceText(proto.closePath.value);
-    hideSourceText(proto.moveTo.value);
-    hideSourceText(proto.lineTo.value);
-    hideSourceText(proto.quadraticCurveTo.value);
-    hideSourceText(proto.bezierCurveTo.value);
-    hideSourceText(proto.arcTo.value);
-    hideSourceText(proto.rect.value);
-    hideSourceText(proto.roundRect.value);
-    hideSourceText(proto.arc.value);
-    hideSourceText(proto.ellipse.value);
-  }
-}
-
-ObjectDefineProperty(globalThis, "Path2D", {
-  __proto__: null,
-  value: Path2D,
-  writable: true,
-  configurable: true,
-});
 const convertSequenceOfUnrestrictedDouble = (value) => {
   const method = requireObject(value)[SymbolIterator];
   return createSequenceFromIterable(value, method, convertUnrestrictedDouble);
@@ -1277,13 +1244,13 @@ const convertUnrestrictedDoubleOrDOMPointInitOrSequenceThereof = (value) => {
   }
   return convertUnrestrictedDoubleOrDOMPointInit(value);
 };
-const alignToUint32 = (data) => {
+const alignUint8ClampedArrayToUint32 = (data) => {
   const offset = TypedArrayPrototypeGetByteOffset(data);
   const length = TypedArrayPrototypeGetByteLength(data);
   return offset % 4 === 0
     ? new Uint32Array(TypedArrayPrototypeGetBuffer(data), offset, length / 4)
     : new Uint32Array(
-      TypedArrayPrototypeGetBuffer(TypedArrayPrototypeSlice(data)),
+      TypedArrayPrototypeGetBuffer(new Uint8ClampedArray(data)),
     );
 };
 let objectIsOffscreenCanvasRenderingContext2D;
@@ -1398,7 +1365,7 @@ const imageSmoothingQualityToRepr = ObjectFreeze({
 });
 const getTransformBuffer = new Float64Array(6);
 
-class OffscreenCanvasRenderingContext2D {
+export class OffscreenCanvasRenderingContext2D {
   #brand() {}
 
   #canvas;
@@ -2222,7 +2189,7 @@ class OffscreenCanvasRenderingContext2D {
     if (dirtyWidth <= 0 || dirtyHeight <= 0) {
       return;
     }
-    const buf = alignToUint32(data);
+    const buf = alignUint8ClampedArrayToUint32(data);
     const colorSpace = ImageDataPrototypeGetColorSpace(imagedata);
     op_canvas_2d_state_put_image_data(
       this.#state,
@@ -2845,16 +2812,10 @@ class OffscreenCanvasRenderingContext2D {
   }
 }
 
-ObjectDefineProperty(globalThis, "OffscreenCanvasRenderingContext2D", {
-  __proto__: null,
-  value: OffscreenCanvasRenderingContext2D,
-  writable: true,
-  configurable: true,
-});
 let objectIsImageBitmap;
 let getImageBitmapRaw;
 
-class ImageBitmap {
+export class ImageBitmap {
   #brand() {}
 
   #raw;
@@ -2913,12 +2874,6 @@ class ImageBitmap {
   }
 }
 
-ObjectDefineProperty(globalThis, "ImageBitmap", {
-  __proto__: null,
-  value: ImageBitmap,
-  writable: true,
-  configurable: true,
-});
 const convertImageBitmapSource = (value) => {
   if (
     (type(value) === "Object" &&
@@ -3049,7 +3004,7 @@ const checkUsabilityAndCropWithFormatting = (
   if (TypedArrayPrototypeGetLength(data) === 0) {
     throw new DOMException("Image data is detached", "InvalidStateError");
   }
-  const buf = alignToUint32(data);
+  const buf = alignUint8ClampedArrayToUint32(data);
   const width = ImageDataPrototypeGetWidth(image);
   const height = ImageDataPrototypeGetHeight(image);
   const colorSpace = ImageDataPrototypeGetColorSpace(image);
@@ -3071,92 +3026,78 @@ const checkUsabilityAndCropWithFormatting = (
   );
 };
 
-export function initCanvasModule() {
-  const isWindow = constructor.name === "Window";
-  {
-    const target = isWindow ? globalThis : WorkerGlobalScope.prototype;
-    const prefix = isWindow
-      ? "Failed to execute 'createImageBitmap' on 'Window'"
-      : "Failed to execute 'createImageBitmap' on 'WorkerGlobalScope'";
-    ObjectDefineProperty(target, "createImageBitmap", {
-      __proto__: null,
-      // deno-lint-ignore require-await
-      value: hideSourceText(async function createImageBitmap(
-        image,
-        sx = undefined,
-        sy,
-        sw,
-        sh,
-        options,
-      ) {
-        if (this !== null && this !== undefined && this !== globalThis) {
-          throw new TypeError("Illegal invocation");
-        }
-        const nArgs = arguments.length;
-        requiredArguments(nArgs, 1, prefix);
-        if (nArgs <= 2) {
-          image = convertImageBitmapSource(image);
-          options = convertImageBitmapOptions(sx);
-          sx = 0;
-          sy = 0;
-        } else if (nArgs >= 5) {
-          image = convertImageBitmapSource(image);
-          sx = convertLong(sx);
-          sy = convertLong(sy);
-          sw = convertLong(sw);
-          sh = convertLong(sh);
-          options = convertImageBitmapOptions(options);
-          if (sw === 0) {
-            throw new RangeError("Source width must be non-zero");
-          }
-          if (sh === 0) {
-            throw new RangeError("Source height must be non-zero");
-          }
-          if (sw < 0) {
-            sx += sw;
-            sw = -sw;
-          }
-          if (sh < 0) {
-            sy += sh;
-            sh = -sh;
-          }
-        } else {
-          throw new TypeError("Overload resolution failed");
-        }
-        const {
-          resizeWidth,
-          resizeHeight,
-          resizeQuality,
-          imageOrientation,
-        } = options;
-        if (resizeWidth === 0) {
-          throw new DOMException(
-            "Output width must be non-zero",
-            "InvalidStateError",
-          );
-        }
-        if (resizeHeight === 0) {
-          throw new DOMException(
-            "Output height must be non-zero",
-            "InvalidStateError",
-          );
-        }
-        const bitmap = checkUsabilityAndCropWithFormatting(
-          image,
-          sx,
-          sy,
-          sw,
-          sh,
-          resizeWidth,
-          resizeHeight,
-          resizeQuality,
-          imageOrientation,
-        );
-        return new ImageBitmap(illegalConstructorKey, bitmap);
-      }),
-      writable: true,
-      enumerable: true,
-      configurable: true,
-    });
-  }
-}
+export const makeCreateImageBitmap = (prefix) =>
+  // deno-lint-ignore require-await
+  hideSourceText(async function createImageBitmap(
+    image,
+    sx = undefined,
+    sy,
+    sw,
+    sh,
+    options,
+  ) {
+    if (this !== null && this !== undefined && this !== globalThis) {
+      throw new TypeError("Illegal invocation");
+    }
+    const nArgs = arguments.length;
+    requiredArguments(nArgs, 1, prefix);
+    if (nArgs <= 2) {
+      image = convertImageBitmapSource(image);
+      options = convertImageBitmapOptions(sx);
+      sx = 0;
+      sy = 0;
+    } else if (nArgs >= 5) {
+      image = convertImageBitmapSource(image);
+      sx = convertLong(sx);
+      sy = convertLong(sy);
+      sw = convertLong(sw);
+      sh = convertLong(sh);
+      options = convertImageBitmapOptions(options);
+      if (sw === 0) {
+        throw new RangeError("Source width must be non-zero");
+      }
+      if (sh === 0) {
+        throw new RangeError("Source height must be non-zero");
+      }
+      if (sw < 0) {
+        sx += sw;
+        sw = -sw;
+      }
+      if (sh < 0) {
+        sy += sh;
+        sh = -sh;
+      }
+    } else {
+      throw new TypeError("Overload resolution failed");
+    }
+    const {
+      resizeWidth,
+      resizeHeight,
+      resizeQuality,
+      imageOrientation,
+    } = options;
+    if (resizeWidth === 0) {
+      throw new DOMException(
+        "Output width must be non-zero",
+        "InvalidStateError",
+      );
+    }
+    if (resizeHeight === 0) {
+      throw new DOMException(
+        "Output height must be non-zero",
+        "InvalidStateError",
+      );
+    }
+    const bitmap = checkUsabilityAndCropWithFormatting(
+      image,
+      sx,
+      sy,
+      sw,
+      sh,
+      resizeWidth,
+      resizeHeight,
+      resizeQuality,
+      imageOrientation,
+    );
+    return new ImageBitmap(illegalConstructorKey, bitmap);
+  });

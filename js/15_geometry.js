@@ -25,7 +25,6 @@ const {
   MathMin,
   MathSin,
   MathTan,
-  ObjectDefineProperty,
   ObjectFreeze,
   ObjectGetOwnPropertyDescriptors,
   Symbol,
@@ -33,7 +32,6 @@ const {
   SymbolIterator,
   TypeError,
   TypedArrayPrototypeGetLength,
-  globalThis,
 } = primordials;
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const RAD_PER_DEG = 0.017453292519943295;
@@ -51,7 +49,7 @@ let setDOMPointZ;
 let getDOMPointW;
 let setDOMPointW;
 
-class DOMPointReadOnly {
+export class DOMPointReadOnly {
   #brand() {}
 
   #x;
@@ -145,14 +143,7 @@ class DOMPointReadOnly {
   }
 }
 
-ObjectDefineProperty(globalThis, "DOMPointReadOnly", {
-  __proto__: null,
-  value: DOMPointReadOnly,
-  writable: true,
-  configurable: true,
-});
-
-class DOMPoint extends DOMPointReadOnly {
+export class DOMPoint extends DOMPointReadOnly {
   #brand() {}
 
   static fromPoint(other = undefined) {
@@ -229,12 +220,6 @@ class DOMPoint extends DOMPointReadOnly {
   }
 }
 
-ObjectDefineProperty(globalThis, "DOMPoint", {
-  __proto__: null,
-  value: DOMPoint,
-  writable: true,
-  configurable: true,
-});
 const readDOMPointInitMembers = (value) => {
   const result = { __proto__: null };
   const { w = 1 } = value;
@@ -297,7 +282,7 @@ let setDOMRectWidth;
 let getDOMRectHeight;
 let setDOMRectHeight;
 
-class DOMRectReadOnly {
+export class DOMRectReadOnly {
   #brand() {}
 
   #x;
@@ -428,14 +413,7 @@ class DOMRectReadOnly {
   }
 }
 
-ObjectDefineProperty(globalThis, "DOMRectReadOnly", {
-  __proto__: null,
-  value: DOMRectReadOnly,
-  writable: true,
-  configurable: true,
-});
-
-class DOMRect extends DOMRectReadOnly {
+export class DOMRect extends DOMRectReadOnly {
   #brand() {}
 
   static fromRect(other = undefined) {
@@ -512,12 +490,6 @@ class DOMRect extends DOMRectReadOnly {
   }
 }
 
-ObjectDefineProperty(globalThis, "DOMRect", {
-  __proto__: null,
-  value: DOMRect,
-  writable: true,
-  configurable: true,
-});
 const readDOMRectInitMembers = (value) => {
   const result = { __proto__: null };
   const { height = 0 } = value;
@@ -540,7 +512,7 @@ function createDOMRectFromDictionary(other) {
   return new DOMRect(other.x, other.y, other.width, other.height);
 }
 
-class DOMQuad {
+export class DOMQuad {
   #brand() {}
 
   #p1;
@@ -646,12 +618,6 @@ class DOMQuad {
   }
 }
 
-ObjectDefineProperty(globalThis, "DOMQuad", {
-  __proto__: null,
-  value: DOMQuad,
-  writable: true,
-  configurable: true,
-});
 const readDOMQuadInitMembers = (value) => {
   const result = { __proto__: null };
   const { p1 } = value;
@@ -742,7 +708,7 @@ let setDOMMatrixIs2D;
 export const directConstruct = Symbol();
 const identityMatrix2DValues = ObjectFreeze([1, 0, 0, 1, 0, 0]);
 
-class DOMMatrixReadOnly {
+export class DOMMatrixReadOnly {
   #brand() {}
 
   #m11;
@@ -1430,12 +1396,6 @@ const flipYTransform = new DOMMatrixReadOnly(
   [1, 0, 0, -1, 0, 0],
   true,
 );
-ObjectDefineProperty(globalThis, "DOMMatrixReadOnly", {
-  __proto__: null,
-  value: DOMMatrixReadOnly,
-  writable: true,
-  configurable: true,
-});
 
 export class DOMMatrix extends DOMMatrixReadOnly {
   #brand() {}
@@ -2001,12 +1961,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 }
 
-ObjectDefineProperty(globalThis, "DOMMatrix", {
-  __proto__: null,
-  value: DOMMatrix,
-  writable: true,
-  configurable: true,
-});
 const readDOMMatrix2DInitMembers = (value) => {
   const result = { __proto__: null };
   const { a } = value;
