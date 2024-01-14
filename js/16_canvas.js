@@ -1655,6 +1655,9 @@ export class OffscreenCanvasRenderingContext2D {
     x1 = convertDouble(x1);
     y1 = convertDouble(y1);
     r1 = convertDouble(r1);
+    if (r0 < 0 || r1 < 0) {
+      throw new DOMException("Radius must be non-negative", "IndexSizeError");
+    }
     return radialGradient(x0, y0, r0, x1, y1, r1);
   }
 
