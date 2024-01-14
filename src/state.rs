@@ -5,7 +5,7 @@ use std::fmt::{self, Debug};
 use std::ops::{Residual, Try};
 use std::rc::Rc;
 
-use deno_runtime::deno_core::{self, anyhow, op2, v8, OpState};
+use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2, Angle};
 use strum_macros::FromRepr;

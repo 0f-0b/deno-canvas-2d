@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::ffi::c_void;
 use std::rc::Rc;
 
-use deno_runtime::deno_core::{v8, OpState};
+use deno_core::{v8, OpState};
 
 fn into_managed<'a, T: 'static>(
     scope: &mut v8::HandleScope<'a>,

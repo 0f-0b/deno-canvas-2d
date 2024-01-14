@@ -14,8 +14,8 @@ pub mod state;
 
 use css_color::{parse_and_compute_color, AbsoluteColor, ComputedColor};
 use cssparser::BasicParseError;
-use deno_runtime::deno_core::error::range_error;
-use deno_runtime::deno_core::{self, anyhow, op2};
+use deno_core::error::range_error;
+use deno_core::{anyhow, op2};
 use euclid::default::{Point2D, Size2D};
 use euclid::{point2, size2};
 use palette::stimulus::IntoStimulus as _;
@@ -133,7 +133,7 @@ pub fn op_canvas_2d_encode_png(
 
 deno_core::extension!(
     deno_canvas_2d,
-    deps = [runtime],
+    deps = [deno_web],
     ops = [
         op_canvas_2d_encode_png,
         state::op_canvas_2d_state_new,

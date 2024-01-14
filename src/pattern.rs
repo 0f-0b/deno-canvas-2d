@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::ffi::c_void;
 use std::rc::Rc;
 
-use deno_runtime::deno_core::{self, op2, v8, OpState};
+use deno_core::{op2, v8, OpState};
 use euclid::default::Transform2D;
 use strum_macros::FromRepr;
 

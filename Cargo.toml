@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 cssparser = "0.33.0"
 cssparser-color = "0.1.0"
-deno_runtime = { path = "../../vendor/deno/runtime" }
+deno_core = "0.245.0"
 euclid = "0.22.9"
 lyon_geom = "1.0.5"
 palette = "0.7.3"

@@ -1,8 +1,8 @@
 use std::ffi::c_void;
 use std::rc::Rc;
 
-use deno_runtime::deno_core::error::range_error;
-use deno_runtime::deno_core::{self, anyhow, op2, v8, OpState};
+use deno_core::error::range_error;
+use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Size2D, Transform2D};
 use euclid::size2;
 use strum_macros::FromRepr;

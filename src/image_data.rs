@@ -1,4 +1,4 @@
-use deno_runtime::deno_core::anyhow;
+use deno_core::anyhow;
 
 use super::{to_raqote_size, CanvasColorSpace};
 

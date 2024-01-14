@@ -1,7 +1,7 @@
 use std::f64::consts::TAU;
 use std::ffi::c_void;
 
-use deno_runtime::deno_core::{self, op2, v8, OpState};
+use deno_core::{op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D};
 use euclid::{point2, size2, vec2, Angle};
 use lyon_geom::Arc;
