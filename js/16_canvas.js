@@ -42,10 +42,16 @@ import {
   op_canvas_2d_state_clear_rect,
   op_canvas_2d_state_clip,
   op_canvas_2d_state_dash_list,
+  op_canvas_2d_state_direction,
   op_canvas_2d_state_draw_image,
   op_canvas_2d_state_fill,
   op_canvas_2d_state_fill_rect,
   op_canvas_2d_state_fill_style,
+  op_canvas_2d_state_fill_text,
+  op_canvas_2d_state_font,
+  op_canvas_2d_state_font_kerning,
+  op_canvas_2d_state_font_stretch,
+  op_canvas_2d_state_font_variant_caps,
   op_canvas_2d_state_get_image_data,
   op_canvas_2d_state_get_transform,
   op_canvas_2d_state_global_alpha,
@@ -55,10 +61,12 @@ import {
   op_canvas_2d_state_image_smoothing_quality,
   op_canvas_2d_state_is_point_in_path,
   op_canvas_2d_state_is_point_in_stroke,
+  op_canvas_2d_state_letter_spacing,
   op_canvas_2d_state_line_cap,
   op_canvas_2d_state_line_dash_offset,
   op_canvas_2d_state_line_join,
   op_canvas_2d_state_line_width,
+  op_canvas_2d_state_measure_text,
   op_canvas_2d_state_miter_limit,
   op_canvas_2d_state_new,
   op_canvas_2d_state_put_image_data,
@@ -69,14 +77,21 @@ import {
   op_canvas_2d_state_save,
   op_canvas_2d_state_scale,
   op_canvas_2d_state_set_dash_list,
+  op_canvas_2d_state_set_direction,
   op_canvas_2d_state_set_fill_style_color,
   op_canvas_2d_state_set_fill_style_gradient,
   op_canvas_2d_state_set_fill_style_pattern,
+  op_canvas_2d_state_set_filter,
+  op_canvas_2d_state_set_font,
+  op_canvas_2d_state_set_font_kerning,
+  op_canvas_2d_state_set_font_stretch,
+  op_canvas_2d_state_set_font_variant_caps,
   op_canvas_2d_state_set_global_alpha,
   op_canvas_2d_state_set_global_composite_operation,
   op_canvas_2d_state_set_height,
   op_canvas_2d_state_set_image_smoothing_enabled,
   op_canvas_2d_state_set_image_smoothing_quality,
+  op_canvas_2d_state_set_letter_spacing,
   op_canvas_2d_state_set_line_cap,
   op_canvas_2d_state_set_line_dash_offset,
   op_canvas_2d_state_set_line_join,
@@ -89,8 +104,12 @@ import {
   op_canvas_2d_state_set_stroke_style_color,
   op_canvas_2d_state_set_stroke_style_gradient,
   op_canvas_2d_state_set_stroke_style_pattern,
+  op_canvas_2d_state_set_text_align,
+  op_canvas_2d_state_set_text_baseline,
+  op_canvas_2d_state_set_text_rendering,
   op_canvas_2d_state_set_transform,
   op_canvas_2d_state_set_width,
+  op_canvas_2d_state_set_word_spacing,
   op_canvas_2d_state_shadow_blur,
   op_canvas_2d_state_shadow_color,
   op_canvas_2d_state_shadow_offset_x,
@@ -98,9 +117,14 @@ import {
   op_canvas_2d_state_stroke,
   op_canvas_2d_state_stroke_rect,
   op_canvas_2d_state_stroke_style,
+  op_canvas_2d_state_stroke_text,
+  op_canvas_2d_state_text_align,
+  op_canvas_2d_state_text_baseline,
+  op_canvas_2d_state_text_rendering,
   op_canvas_2d_state_transform,
   op_canvas_2d_state_translate,
   op_canvas_2d_state_width,
+  op_canvas_2d_state_word_spacing,
 } from "ext:deno_canvas_2d/00_ops.js";
 import { createSequenceFromIterable } from "ext:deno_canvas_2d/01_create_sequence_from_iterable.js";
 import { defaultTo } from "ext:deno_canvas_2d/01_default_to.js";
@@ -110,10 +134,7 @@ import { requireObject } from "ext:deno_canvas_2d/01_require_object.js";
 import { isBlob } from "ext:deno_canvas_2d/02_is_blob.js";
 import { isImageData } from "ext:deno_canvas_2d/02_is_image_data.js";
 import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
-import {
-  createEnumConverter,
-  createEnumConverterForSetter,
-} from "ext:deno_canvas_2d/04_create_enum_converter.js";
+import { createEnumConverter } from "ext:deno_canvas_2d/04_create_enum_converter.js";
 import { convertBoolean } from "ext:deno_canvas_2d/05_convert_boolean.js";
 import { convertDOMString } from "ext:deno_canvas_2d/05_convert_dom_string.js";
 import { convertDouble } from "ext:deno_canvas_2d/05_convert_double.js";
@@ -206,9 +227,6 @@ const readCanvasRenderingContext2DSettingsMembers = (value) => {
 const convertCanvasRenderingContext2DSettings = createDictionaryConverter(
   readCanvasRenderingContext2DSettingsMembers,
 );
-const convertImageSmoothingQuality = createEnumConverterForSetter(
-  ["low", "medium", "high"],
-);
 const convertDOMStringOrCanvasGradientOrCanvasPattern = (value) => {
   if (
     type(value) === "Object" &&
@@ -218,47 +236,6 @@ const convertDOMStringOrCanvasGradientOrCanvasPattern = (value) => {
   }
   return convertDOMString(value);
 };
-const convertCanvasLineCap = createEnumConverterForSetter(
-  ["butt", "round", "square"],
-);
-const convertCanvasLineJoin = createEnumConverterForSetter(
-  ["round", "bevel", "miter"],
-);
-const convertCanvasTextAlign = createEnumConverterForSetter(
-  ["start", "end", "left", "right", "center"],
-);
-const convertCanvasTextBaseline = createEnumConverterForSetter(
-  ["top", "hanging", "middle", "alphabetic", "ideographic", "bottom"],
-);
-const convertCanvasDirection = createEnumConverterForSetter(
-  ["ltr", "rtl", "inherit"],
-);
-const convertCanvasFontKerning = createEnumConverterForSetter(
-  ["auto", "normal", "none"],
-);
-const convertCanvasFontStretch = createEnumConverterForSetter([
-  "ultra-condensed",
-  "extra-condensed",
-  "condensed",
-  "semi-condensed",
-  "normal",
-  "semi-expanded",
-  "expanded",
-  "extra-expanded",
-  "ultra-expanded",
-]);
-const convertCanvasFontVariantCaps = createEnumConverterForSetter([
-  "normal",
-  "small-caps",
-  "all-small-caps",
-  "petite-caps",
-  "all-petite-caps",
-  "unicase",
-  "titling-caps",
-]);
-const convertCanvasTextRendering = createEnumConverterForSetter(
-  ["auto", "optimizeSpeed", "optimizeLegibility", "geometricPrecision"],
-);
 let objectIsCanvasGradient;
 let getCanvasGradientRaw;
 
@@ -1282,6 +1259,115 @@ const lineJoinToRepr = ObjectFreeze({
   "bevel": 1,
   "miter": 2,
 });
+const textAlignFromRepr = ObjectFreeze([
+  "start",
+  "end",
+  "left",
+  "right",
+  "center",
+]);
+const textAlignToRepr = ObjectFreeze({
+  __proto__: null,
+  "start": 0,
+  "end": 1,
+  "left": 2,
+  "right": 3,
+  "center": 4,
+});
+const textBaselineFromRepr = ObjectFreeze([
+  "top",
+  "hanging",
+  "middle",
+  "alphabetic",
+  "ideographic",
+  "bottom",
+]);
+const textBaselineToRepr = ObjectFreeze({
+  __proto__: null,
+  "top": 0,
+  "hanging": 1,
+  "middle": 2,
+  "alphabetic": 3,
+  "ideographic": 4,
+  "bottom": 5,
+});
+const directionFromRepr = ObjectFreeze([
+  "ltr",
+  "rtl",
+  "inherit",
+]);
+const directionToRepr = ObjectFreeze({
+  __proto__: null,
+  "ltr": 0,
+  "rtl": 1,
+  "inherit": 2,
+});
+const fontKerningFromRepr = ObjectFreeze([
+  "auto",
+  "normal",
+  "none",
+]);
+const fontKerningToRepr = ObjectFreeze({
+  __proto__: null,
+  "auto": 0,
+  "normal": 1,
+  "none": 2,
+});
+const fontStretchFromRepr = ObjectFreeze([
+  "ultra-condensed",
+  "extra-condensed",
+  "condensed",
+  "semi-condensed",
+  "normal",
+  "semi-expanded",
+  "expanded",
+  "extra-expanded",
+  "ultra-expanded",
+]);
+const fontStretchToRepr = ObjectFreeze({
+  __proto__: null,
+  "ultra-condensed": 0,
+  "extra-condensed": 1,
+  "condensed": 2,
+  "semi-condensed": 3,
+  "normal": 4,
+  "semi-expanded": 5,
+  "expanded": 6,
+  "extra-expanded": 7,
+  "ultra-expanded": 8,
+});
+const fontVariantCapsFromRepr = ObjectFreeze([
+  "normal",
+  "small-caps",
+  "all-small-caps",
+  "petite-caps",
+  "all-petite-caps",
+  "unicase",
+  "titling-caps",
+]);
+const fontVariantCapsToRepr = ObjectFreeze({
+  __proto__: null,
+  "normal": 0,
+  "small-caps": 1,
+  "all-small-caps": 2,
+  "petite-caps": 3,
+  "all-petite-caps": 4,
+  "unicase": 5,
+  "titling-caps": 6,
+});
+const textRenderingFromRepr = ObjectFreeze([
+  "auto",
+  "optimizeSpeed",
+  "optimizeLegibility",
+  "geometricPrecision",
+]);
+const textRenderingToRepr = ObjectFreeze({
+  __proto__: null,
+  "auto": 0,
+  "optimizeSpeed": 1,
+  "optimizeLegibility": 2,
+  "geometricPrecision": 3,
+});
 const fillRuleToRepr = ObjectFreeze({
   __proto__: null,
   "nonzero": 0,
@@ -1364,6 +1450,7 @@ const imageSmoothingQualityToRepr = ObjectFreeze({
   "high": 2,
 });
 const getTransformBuffer = new Float64Array(6);
+const measureTextBuffer = new Float64Array(12);
 
 export class OffscreenCanvasRenderingContext2D {
   #brand() {}
@@ -1371,10 +1458,14 @@ export class OffscreenCanvasRenderingContext2D {
   #canvas;
   #state;
   #colorSpace;
+  #cachedFont = "10px sans-serif";
+  #cachedLetterSpacing = "0px";
+  #cachedWordSpacing = "0px";
   #cachedFillStyle = null;
   #cachedStrokeStyle = null;
-  #cachedShadowColor = null;
   #cachedDefaultPath = null;
+  #cachedShadowColor = null;
+  #cachedFilter = "none";
 
   constructor(key = undefined, target, width, height, settings) {
     if (key !== illegalConstructorKey) {
@@ -1560,14 +1651,12 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'imageSmoothingQuality' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertImageSmoothingQuality(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = imageSmoothingQualityToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_image_smoothing_quality(
-      this.#state,
-      imageSmoothingQualityToRepr[value],
-    );
+    op_canvas_2d_state_set_image_smoothing_quality(this.#state, repr);
   }
 
   get strokeStyle() {
@@ -1583,8 +1672,9 @@ export class OffscreenCanvasRenderingContext2D {
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMStringOrCanvasGradientOrCanvasPattern(value);
     if (typeof value === "string") {
-      op_canvas_2d_state_set_stroke_style_color(this.#state, value);
-      this.#cachedStrokeStyle = null;
+      if (op_canvas_2d_state_set_stroke_style_color(this.#state, value)) {
+        this.#cachedStrokeStyle = null;
+      }
     } else {
       if (objectIsCanvasGradient(value)) {
         op_canvas_2d_state_set_stroke_style_gradient(
@@ -1614,8 +1704,9 @@ export class OffscreenCanvasRenderingContext2D {
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMStringOrCanvasGradientOrCanvasPattern(value);
     if (typeof value === "string") {
-      op_canvas_2d_state_set_fill_style_color(this.#state, value);
-      this.#cachedFillStyle = null;
+      if (op_canvas_2d_state_set_fill_style_color(this.#state, value)) {
+        this.#cachedFillStyle = null;
+      }
     } else {
       if (objectIsCanvasGradient(value)) {
         op_canvas_2d_state_set_fill_style_gradient(
@@ -1736,13 +1827,14 @@ export class OffscreenCanvasRenderingContext2D {
       "Failed to set 'shadowColor' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    op_canvas_2d_state_set_shadow_color(this.#state, value);
-    this.#cachedShadowColor = null;
+    if (op_canvas_2d_state_set_shadow_color(this.#state, value)) {
+      this.#cachedShadowColor = null;
+    }
   }
 
   get filter() {
     this.#brand;
-    return "none";
+    return this.#cachedFilter;
   }
 
   set filter(value) {
@@ -1751,8 +1843,9 @@ export class OffscreenCanvasRenderingContext2D {
       "Failed to set 'filter' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    if (op_canvas_2d_state_set_filter(this.#state, value)) {
+      this.#cachedFilter = value;
+    }
   }
 
   clearRect(x, y, w, h) {
@@ -1939,11 +2032,15 @@ export class OffscreenCanvasRenderingContext2D {
     text = convertDOMString(text);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    if (maxWidth !== undefined) {
+    if (maxWidth === undefined) {
+      maxWidth = Infinity;
+    } else {
       maxWidth = convertUnrestrictedDouble(maxWidth);
+      if (!NumberIsFinite(maxWidth)) {
+        return;
+      }
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_fill_text(this.#state, text, x, y, maxWidth);
   }
 
   strokeText(text, x, y, maxWidth = undefined) {
@@ -1954,11 +2051,15 @@ export class OffscreenCanvasRenderingContext2D {
     text = convertDOMString(text);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    if (maxWidth !== undefined) {
+    if (maxWidth === undefined) {
+      maxWidth = Infinity;
+    } else {
       maxWidth = convertUnrestrictedDouble(maxWidth);
+      if (!NumberIsFinite(maxWidth)) {
+        return;
+      }
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_stroke_text(this.#state, text, x, y, maxWidth);
   }
 
   measureText(text) {
@@ -1967,8 +2068,22 @@ export class OffscreenCanvasRenderingContext2D {
       "Failed to execute 'measureText' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     text = convertDOMString(text);
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_measure_text(this.#state, text, measureTextBuffer);
+    return new TextMetrics(
+      illegalConstructorKey,
+      measureTextBuffer[0],
+      measureTextBuffer[1],
+      measureTextBuffer[2],
+      measureTextBuffer[3],
+      measureTextBuffer[4],
+      measureTextBuffer[5],
+      measureTextBuffer[6],
+      measureTextBuffer[7],
+      measureTextBuffer[8],
+      measureTextBuffer[9],
+      measureTextBuffer[10],
+      measureTextBuffer[11],
+    );
   }
 
   drawImage(image, sx, sy, sw = undefined, sh, dx, dy, dw, dh) {
@@ -2233,11 +2348,12 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'lineCap' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasLineCap(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = lineCapToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_line_cap(this.#state, lineCapToRepr[value]);
+    op_canvas_2d_state_set_line_cap(this.#state, repr);
   }
 
   get lineJoin() {
@@ -2250,11 +2366,12 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'lineJoin' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasLineJoin(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = lineJoinToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_line_join(this.#state, lineJoinToRepr[value]);
+    op_canvas_2d_state_set_line_join(this.#state, repr);
   }
 
   get miterLimit() {
@@ -2310,7 +2427,8 @@ export class OffscreenCanvasRenderingContext2D {
 
   get font() {
     this.#brand;
-    return "10px sans-serif";
+    this.#cachedFont ??= op_canvas_2d_state_font(this.#state);
+    return this.#cachedFont;
   }
 
   set font(value) {
@@ -2319,13 +2437,14 @@ export class OffscreenCanvasRenderingContext2D {
       "Failed to set 'font' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    if (op_canvas_2d_state_set_font(this.#state, value)) {
+      this.#cachedFont = null;
+    }
   }
 
   get textAlign() {
     this.#brand;
-    return "start";
+    return textAlignFromRepr[op_canvas_2d_state_text_align(this.#state)];
   }
 
   set textAlign(value) {
@@ -2333,17 +2452,17 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'textAlign' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasTextAlign(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = textAlignToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_set_text_align(this.#state, repr);
   }
 
   get textBaseline() {
     this.#brand;
-    return "alphabetic";
+    return textBaselineFromRepr[op_canvas_2d_state_text_baseline(this.#state)];
   }
 
   set textBaseline(value) {
@@ -2351,17 +2470,17 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'textBaseline' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasTextBaseline(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = textBaselineToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_set_text_baseline(this.#state, repr);
   }
 
   get direction() {
     this.#brand;
-    return "inherit";
+    return directionFromRepr[op_canvas_2d_state_direction(this.#state)];
   }
 
   set direction(value) {
@@ -2369,17 +2488,20 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'direction' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasDirection(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = directionToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_set_direction(this.#state, repr);
   }
 
   get letterSpacing() {
     this.#brand;
-    return "0px";
+    this.#cachedLetterSpacing ??= op_canvas_2d_state_letter_spacing(
+      this.#state,
+    );
+    return this.#cachedLetterSpacing;
   }
 
   set letterSpacing(value) {
@@ -2388,13 +2510,14 @@ export class OffscreenCanvasRenderingContext2D {
       "Failed to set 'letterSpacing' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    if (op_canvas_2d_state_set_letter_spacing(this.#state, value)) {
+      this.#cachedLetterSpacing = null;
+    }
   }
 
   get fontKerning() {
     this.#brand;
-    return "auto";
+    return fontKerningFromRepr[op_canvas_2d_state_font_kerning(this.#state)];
   }
 
   set fontKerning(value) {
@@ -2402,17 +2525,17 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'fontKerning' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasFontKerning(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = fontKerningToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_set_font_kerning(this.#state, repr);
   }
 
   get fontStretch() {
     this.#brand;
-    return "normal";
+    return fontStretchFromRepr[op_canvas_2d_state_font_stretch(this.#state)];
   }
 
   set fontStretch(value) {
@@ -2420,17 +2543,19 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'fontStretch' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasFontStretch(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = fontStretchToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_set_font_stretch(this.#state, repr);
   }
 
   get fontVariantCaps() {
     this.#brand;
-    return "normal";
+    return fontVariantCapsFromRepr[
+      op_canvas_2d_state_font_variant_caps(this.#state)
+    ];
   }
 
   set fontVariantCaps(value) {
@@ -2438,17 +2563,19 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'fontVariantCaps' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasFontVariantCaps(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = fontVariantCapsToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_set_font_variant_caps(this.#state, repr);
   }
 
   get textRendering() {
     this.#brand;
-    return "auto";
+    return textRenderingFromRepr[
+      op_canvas_2d_state_text_rendering(this.#state)
+    ];
   }
 
   set textRendering(value) {
@@ -2456,17 +2583,18 @@ export class OffscreenCanvasRenderingContext2D {
     const prefix =
       "Failed to set 'textRendering' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
-    value = convertCanvasTextRendering(value);
-    if (value === null) {
+    value = convertDOMString(value);
+    const repr = textRenderingToRepr[value];
+    if (repr === undefined) {
       return;
     }
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    op_canvas_2d_state_set_text_rendering(this.#state, repr);
   }
 
   get wordSpacing() {
     this.#brand;
-    return "0px";
+    this.#cachedWordSpacing ??= op_canvas_2d_state_word_spacing(this.#state);
+    return this.#cachedWordSpacing;
   }
 
   set wordSpacing(value) {
@@ -2475,8 +2603,9 @@ export class OffscreenCanvasRenderingContext2D {
       "Failed to set 'wordSpacing' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    // TODO implement
-    throw new TypeError("Unimplemented");
+    if (op_canvas_2d_state_set_word_spacing(this.#state, value)) {
+      this.#cachedWordSpacing = null;
+    }
   }
 
   closePath() {

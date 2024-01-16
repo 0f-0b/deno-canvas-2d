@@ -12,11 +12,3 @@ export function createEnumConverter(name, values) {
     return value;
   };
 }
-
-export function createEnumConverterForSetter(values) {
-  const set = new SafeSet(values);
-  return (value) => {
-    value = `${value}`;
-    return set.has(value) ? value : null;
-  };
-}

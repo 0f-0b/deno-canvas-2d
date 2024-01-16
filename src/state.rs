@@ -74,6 +74,78 @@ impl CanvasLineJoin {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
+pub(super) enum CanvasTextAlign {
+    Start,
+    End,
+    Left,
+    Right,
+    Center,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub(super) enum CanvasTextBaseline {
+    Top,
+    Hanging,
+    Middle,
+    Alphabetic,
+    Ideographic,
+    Bottom,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub(super) enum CanvasDirection {
+    Ltr,
+    Rtl,
+    Inherit,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub(super) enum CanvasFontKerning {
+    Auto,
+    Normal,
+    None,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub(super) enum CanvasFontStretch {
+    UltraCondensed,
+    ExtraCondensed,
+    Condensed,
+    SemiCondensed,
+    Normal,
+    SemiExpanded,
+    Expanded,
+    ExtraExpanded,
+    UltraExpanded,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub(super) enum CanvasFontVariantCaps {
+    Normal,
+    SmallCaps,
+    AllSmallCaps,
+    PetiteCaps,
+    AllPetiteCaps,
+    Unicase,
+    TitlingCaps,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub(super) enum CanvasTextRendering {
+    Auto,
+    OptimizeSpeed,
+    OptimizeLegibility,
+    GeometricPrecision,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
 pub(super) enum BlendOrCompositeMode {
     Normal,
     Multiply,
@@ -188,6 +260,13 @@ pub(super) struct DrawingState {
     miter_limit: f64,
     dash_list: Box<[f64]>,
     line_dash_offset: f64,
+    text_align: CanvasTextAlign,
+    text_baseline: CanvasTextBaseline,
+    direction: CanvasDirection,
+    font_kerning: CanvasFontKerning,
+    font_stretch: CanvasFontStretch,
+    font_variant_caps: CanvasFontVariantCaps,
+    text_rendering: CanvasTextRendering,
     transformation_matrix: Transform2D<f64>,
     fill_style: FillOrStrokeStyle,
     stroke_style: FillOrStrokeStyle,
@@ -210,6 +289,13 @@ impl Default for DrawingState {
             miter_limit: 10.0,
             dash_list: Box::new([]),
             line_dash_offset: 0.0,
+            text_align: CanvasTextAlign::Start,
+            text_baseline: CanvasTextBaseline::Alphabetic,
+            direction: CanvasDirection::Inherit,
+            font_kerning: CanvasFontKerning::Auto,
+            font_stretch: CanvasFontStretch::Normal,
+            font_variant_caps: CanvasFontVariantCaps::Normal,
+            text_rendering: CanvasTextRendering::Auto,
             transformation_matrix: Transform2D::identity(),
             fill_style: FillOrStrokeStyle::Color(AbsoluteColor::OPAQUE_BLACK),
             stroke_style: FillOrStrokeStyle::Color(AbsoluteColor::OPAQUE_BLACK),
@@ -372,6 +458,62 @@ impl CanvasState {
 
     pub fn set_line_dash_offset(&mut self, value: f64) {
         self.current_drawing_state.line_dash_offset = value;
+    }
+
+    pub fn text_align(&self) -> CanvasTextAlign {
+        self.current_drawing_state.text_align
+    }
+
+    pub fn set_text_align(&mut self, value: CanvasTextAlign) {
+        self.current_drawing_state.text_align = value;
+    }
+
+    pub fn text_baseline(&self) -> CanvasTextBaseline {
+        self.current_drawing_state.text_baseline
+    }
+
+    pub fn set_text_baseline(&mut self, value: CanvasTextBaseline) {
+        self.current_drawing_state.text_baseline = value;
+    }
+
+    pub fn direction(&self) -> CanvasDirection {
+        self.current_drawing_state.direction
+    }
+
+    pub fn set_direction(&mut self, value: CanvasDirection) {
+        self.current_drawing_state.direction = value;
+    }
+
+    pub fn font_kerning(&self) -> CanvasFontKerning {
+        self.current_drawing_state.font_kerning
+    }
+
+    pub fn set_font_kerning(&mut self, value: CanvasFontKerning) {
+        self.current_drawing_state.font_kerning = value;
+    }
+
+    pub fn font_stretch(&self) -> CanvasFontStretch {
+        self.current_drawing_state.font_stretch
+    }
+
+    pub fn set_font_stretch(&mut self, value: CanvasFontStretch) {
+        self.current_drawing_state.font_stretch = value;
+    }
+
+    pub fn font_variant_caps(&self) -> CanvasFontVariantCaps {
+        self.current_drawing_state.font_variant_caps
+    }
+
+    pub fn set_font_variant_caps(&mut self, value: CanvasFontVariantCaps) {
+        self.current_drawing_state.font_variant_caps = value;
+    }
+
+    pub fn text_rendering(&self) -> CanvasTextRendering {
+        self.current_drawing_state.text_rendering
+    }
+
+    pub fn set_text_rendering(&mut self, value: CanvasTextRendering) {
+        self.current_drawing_state.text_rendering = value;
     }
 
     fn update_transform(&mut self) {
@@ -1015,7 +1157,7 @@ pub fn op_canvas_2d_state_line_cap(state: &OpState, this: *const c_void) -> i32 
 pub fn op_canvas_2d_state_set_line_cap(state: &OpState, this: *const c_void, value: i32) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     let value = CanvasLineCap::from_repr(value).unwrap();
-    this.set_line_cap(value);
+    this.set_line_cap(value)
 }
 
 #[op2(fast)]
@@ -1028,7 +1170,7 @@ pub fn op_canvas_2d_state_line_join(state: &OpState, this: *const c_void) -> i32
 pub fn op_canvas_2d_state_set_line_join(state: &OpState, this: *const c_void, value: i32) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     let value = CanvasLineJoin::from_repr(value).unwrap();
-    this.set_line_join(value);
+    this.set_line_join(value)
 }
 
 #[op2(fast)]
@@ -1085,6 +1227,154 @@ pub fn op_canvas_2d_state_set_line_dash_offset(state: &OpState, this: *const c_v
     if value.is_finite() {
         this.set_line_dash_offset(value);
     }
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_state_font(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<CanvasState>(state, this);
+    todo!("(CanvasState @ {:p}).font()", &*this)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_font(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> bool {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    todo!("(CanvasState @ {:p}).set_font({value:?})", &mut *this)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_text_align(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<CanvasState>(state, this);
+    this.text_align() as i32
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_text_align(state: &OpState, this: *const c_void, value: i32) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let value = CanvasTextAlign::from_repr(value).unwrap();
+    this.set_text_align(value)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_text_baseline(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<CanvasState>(state, this);
+    this.text_baseline() as i32
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_text_baseline(state: &OpState, this: *const c_void, value: i32) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let value = CanvasTextBaseline::from_repr(value).unwrap();
+    this.set_text_baseline(value)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_direction(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<CanvasState>(state, this);
+    this.direction() as i32
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_direction(state: &OpState, this: *const c_void, value: i32) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let value = CanvasDirection::from_repr(value).unwrap();
+    this.set_direction(value)
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_state_letter_spacing(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<CanvasState>(state, this);
+    todo!("(CanvasState @ {:p}).letter_spacing()", &*this)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_letter_spacing(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> bool {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    todo!(
+        "(CanvasState @ {:p}).set_letter_spacing({value:?})",
+        &mut *this
+    )
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_state_word_spacing(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<CanvasState>(state, this);
+    todo!("(CanvasState @ {:p}).word_spacing()", &*this)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_word_spacing(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> bool {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    todo!(
+        "(CanvasState @ {:p}).set_word_spacing({value:?})",
+        &mut *this
+    )
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_font_kerning(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<CanvasState>(state, this);
+    this.font_kerning() as i32
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_font_kerning(state: &OpState, this: *const c_void, value: i32) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let value = CanvasFontKerning::from_repr(value).unwrap();
+    this.set_font_kerning(value)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_font_stretch(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<CanvasState>(state, this);
+    this.font_stretch() as i32
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_font_stretch(state: &OpState, this: *const c_void, value: i32) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let value = CanvasFontStretch::from_repr(value).unwrap();
+    this.set_font_stretch(value)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_font_variant_caps(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<CanvasState>(state, this);
+    this.font_variant_caps() as i32
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_font_variant_caps(state: &OpState, this: *const c_void, value: i32) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let value = CanvasFontVariantCaps::from_repr(value).unwrap();
+    this.set_font_variant_caps(value)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_text_rendering(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<CanvasState>(state, this);
+    this.text_rendering() as i32
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_text_rendering(state: &OpState, this: *const c_void, value: i32) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let value = CanvasTextRendering::from_repr(value).unwrap();
+    this.set_text_rendering(value)
 }
 
 #[op2(fast)]
@@ -1179,10 +1469,13 @@ pub fn op_canvas_2d_state_set_fill_style_color(
     state: &OpState,
     this: *const c_void,
     #[string] value: &str,
-) {
+) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if let Ok(value) = parse_color_for_canvas(value) {
         this.set_fill_style(FillOrStrokeStyle::Color(value));
+        true
+    } else {
+        false
     }
 }
 
@@ -1224,10 +1517,13 @@ pub fn op_canvas_2d_state_set_stroke_style_color(
     state: &OpState,
     this: *const c_void,
     #[string] value: &str,
-) {
+) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if let Ok(value) = parse_color_for_canvas(value) {
         this.set_stroke_style(FillOrStrokeStyle::Color(value));
+        true
+    } else {
+        false
     }
 }
 
@@ -1299,6 +1595,56 @@ pub fn op_canvas_2d_state_stroke_rect(
 }
 
 #[op2(fast)]
+pub fn op_canvas_2d_state_fill_text(
+    state: &OpState,
+    this: *const c_void,
+    #[string] text: &str,
+    x: f64,
+    y: f64,
+    max_width: f64,
+) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    if [x, y].into_iter().all(f64::is_finite) {
+        todo!(
+            "(CanvasState @ {:p}).fill_text(text = {text:?}, x = {x:?}, y = {y:?}, max_width = {max_width:?})",
+            &mut *this
+        )
+    }
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_stroke_text(
+    state: &OpState,
+    this: *const c_void,
+    #[string] text: &str,
+    x: f64,
+    y: f64,
+    max_width: f64,
+) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    if [x, y].into_iter().all(f64::is_finite) {
+        todo!(
+            "(CanvasState @ {:p}).stroke_text(text = {text:?}, x = {x:?}, y = {y:?}, max_width = {max_width:?})",
+            &mut *this
+        )
+    }
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_measure_text(
+    state: &OpState,
+    this: *const c_void,
+    #[string] text: &str,
+    #[buffer] out: &mut [f64],
+) {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    todo!(
+        "(CanvasState @ {:p}).measure_text(text = {text:?}, out = {out:p})",
+        &mut *this
+    )
+}
+
+#[op2(fast)]
 pub fn op_canvas_2d_state_fill(
     state: &OpState,
     this: *const c_void,
@@ -1308,14 +1654,14 @@ pub fn op_canvas_2d_state_fill(
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     let path = borrow_v8::<Path>(state, path);
     let fill_rule = CanvasFillRule::from_repr(fill_rule).unwrap();
-    this.fill(&path, fill_rule);
+    this.fill(&path, fill_rule)
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_stroke(state: &OpState, this: *const c_void, path: *const c_void) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     let path = borrow_v8::<Path>(state, path);
-    this.stroke(&path);
+    this.stroke(&path)
 }
 
 #[op2(fast)]
@@ -1328,7 +1674,7 @@ pub fn op_canvas_2d_state_clip(
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     let path = borrow_v8::<Path>(state, path);
     let fill_rule = CanvasFillRule::from_repr(fill_rule).unwrap();
-    this.clip(&path, fill_rule);
+    this.clip(&path, fill_rule)
 }
 
 #[op2(fast)]
@@ -1509,10 +1855,13 @@ pub fn op_canvas_2d_state_set_shadow_color(
     state: &OpState,
     this: *const c_void,
     #[string] value: &str,
-) {
+) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if let Ok(value) = parse_color_for_canvas(value) {
         this.set_shadow_color(value);
+        true
+    } else {
+        false
     }
 }
 
@@ -1556,4 +1905,14 @@ pub fn op_canvas_2d_state_set_shadow_blur(state: &OpState, this: *const c_void, 
     if value.is_finite() && value >= 0.0 {
         this.set_shadow_blur(value);
     }
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_filter(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> bool {
+    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    todo!("(CanvasState @ {:p}).set_filter({value:?})", &mut *this)
 }
