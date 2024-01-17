@@ -1,6 +1,5 @@
-#![feature(try_trait_v2, try_trait_v2_residual)]
-
 mod blur;
+mod codec;
 mod convert;
 mod css_color;
 mod gc;
@@ -14,8 +13,8 @@ pub mod state;
 
 use css_color::{parse_and_compute_color, AbsoluteColor, ComputedColor};
 use cssparser::BasicParseError;
+use deno_core::anyhow;
 use deno_core::error::range_error;
-use deno_core::{anyhow, op2};
 use euclid::default::{Point2D, Size2D};
 use euclid::{point2, size2};
 use palette::stimulus::IntoStimulus as _;
@@ -111,45 +110,11 @@ fn premultiply(c: u8, a: u8) -> u8 {
     (((c as u32 * a as u32 + 128) * 257) >> 16) as u8
 }
 
-#[op2]
-#[buffer]
-pub fn op_canvas_2d_encode_png(
-    #[buffer] data: &[u8],
-    #[number] width: u64,
-    #[number] height: u64,
-    color_space: i32,
-) -> Result<Vec<u8>, png::EncodingError> {
-    use png::EncodingError::LimitsExceeded;
-
-    mod chunk {
-        #![allow(non_upper_case_globals)]
-        use png::chunk::*;
-
-        pub const cICP: ChunkType = ChunkType(*b"cICP");
-    }
-
-    let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
-    let width = width.try_into().map_err(|_| LimitsExceeded)?;
-    let height = height.try_into().map_err(|_| LimitsExceeded)?;
-    let mut buf = Vec::new();
-    let mut encoder = png::Encoder::new(&mut buf, width, height);
-    encoder.set_color(png::ColorType::Rgba);
-    encoder.set_depth(png::BitDepth::Eight);
-    let mut writer = encoder.write_header()?;
-    match color_space {
-        CanvasColorSpace::Srgb => writer.write_chunk(chunk::cICP, &[1, 13, 0, 1])?,
-        CanvasColorSpace::DisplayP3 => writer.write_chunk(chunk::cICP, &[12, 13, 0, 1])?,
-    }
-    writer.write_image_data(data)?;
-    writer.finish()?;
-    Ok(buf)
-}
-
 deno_core::extension!(
     deno_canvas_2d,
     deps = [deno_web],
     ops = [
-        op_canvas_2d_encode_png,
+        codec::op_canvas_2d_encode_png,
         state::op_canvas_2d_state_new,
         state::op_canvas_2d_state_width,
         state::op_canvas_2d_state_set_width,
