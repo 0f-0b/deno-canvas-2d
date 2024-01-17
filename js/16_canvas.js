@@ -157,6 +157,7 @@ import {
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import { EventTarget } from "ext:deno_web/02_event.js";
+import { defer } from "ext:deno_web/02_timers.js";
 import { Blob } from "ext:deno_web/09_file.js";
 import { ImageData } from "ext:deno_web/16_image_data.js";
 import {
@@ -1082,17 +1083,23 @@ export class OffscreenCanvas extends EventTarget {
   }
 
   #encode(type) {
-    const { data, width, height } = this.#getAllData();
     switch (type) {
-      default:
+      default: {
+        const { data, width, height, colorSpace } = this.#getAllData();
         return {
-          data: op_canvas_2d_encode_png(data, width, height),
+          data: op_canvas_2d_encode_png(
+            data,
+            width,
+            height,
+            colorSpaceToRepr[colorSpace],
+          ),
           type: "image/png",
         };
+      }
     }
   }
 
-  #getAllData() {
+  #getAllData(colorSpace) {
     const ctx = this.#context;
     if (!ctx) {
       throw new DOMException("Canvas is detached", "InvalidStateError");
@@ -1104,7 +1111,11 @@ export class OffscreenCanvas extends EventTarget {
     }
     const data = new Uint8Array(width * height * 4);
     switch (getOffscreenCanvasContextMode(ctx)) {
+      case "none":
+        colorSpace ??= "srgb";
+        break;
       case "2d": {
+        colorSpace ??= getOffscreenCanvasRenderingContext2DColorSpace(ctx);
         const state = getOffscreenCanvasRenderingContext2DState(ctx);
         const buf = new Uint32Array(TypedArrayPrototypeGetBuffer(data));
         op_canvas_2d_state_get_image_data(
@@ -1112,14 +1123,14 @@ export class OffscreenCanvas extends EventTarget {
           buf,
           width,
           height,
-          0, // TODO support display-p3
+          colorSpaceToRepr[colorSpace],
           0,
           0,
         );
         break;
       }
     }
-    return { data, width, height };
+    return { data, width, height, colorSpace };
   }
 
   get oncontextlost() {
@@ -1232,6 +1243,7 @@ const alignUint8ClampedArrayToUint32 = (data) => {
 };
 let objectIsOffscreenCanvasRenderingContext2D;
 let getOffscreenCanvasRenderingContext2DState;
+let getOffscreenCanvasRenderingContext2DColorSpace;
 const colorSpaceToRepr = ObjectFreeze({
   __proto__: null,
   "srgb": 0,
@@ -2846,6 +2858,7 @@ export class OffscreenCanvasRenderingContext2D {
     // deno-lint-ignore prefer-primordials
     objectIsOffscreenCanvasRenderingContext2D = (o) => #brand in o;
     getOffscreenCanvasRenderingContext2DState = (o) => o.#state;
+    getOffscreenCanvasRenderingContext2DColorSpace = (o) => o.#colorSpace;
     hideSourceText(this);
     const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
     hideSourceText(proto.commit.value);
