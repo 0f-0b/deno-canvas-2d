@@ -272,6 +272,7 @@ deno_core::extension!(
         "15_event.js",
         "15_geometry.js",
         "16_canvas.js",
+        "17_context_2d.js",
     ],
     state = |state| {
         gc::init(state);
