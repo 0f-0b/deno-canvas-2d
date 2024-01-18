@@ -585,6 +585,7 @@ export class Path2D {
       path = convertPath2DOrDOMString(path);
     }
     if (typeof path === "string") {
+      // TODO parse svg path
       throw new TypeError("Unimplemented");
     }
     this.#raw = path === undefined
@@ -1056,6 +1057,7 @@ export class OffscreenCanvasRenderingContext2D {
     }
     settings = convertCanvasRenderingContext2DSettings(settings);
     if (!settings.alpha) {
+      // TODO support `alpha: false`
       throw new TypeError("Unsupported opaque canvas");
     }
     this.#canvas = target;

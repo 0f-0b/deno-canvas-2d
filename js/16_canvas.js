@@ -560,6 +560,7 @@ const checkUsabilityAndCropWithFormatting = (
     );
   }
   if (isBlob(image)) {
+    // TODO decode blob
     throw new DOMException("Unsupported image format", "InvalidStateError");
   }
   const data = ImageDataPrototypeGetData(image);

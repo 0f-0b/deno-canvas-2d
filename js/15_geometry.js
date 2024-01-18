@@ -680,6 +680,7 @@ export class DOMMatrixReadOnly {
     } else if (initOrKey !== directConstruct) {
       const init = convertDOMStringOrSequenceOfUnrestrictedDouble(initOrKey);
       if (typeof init === "string") {
+        // TODO parse css transform
         throw new TypeError("Unimplemented");
       }
       switch (init.length) {
