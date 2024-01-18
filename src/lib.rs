@@ -243,7 +243,6 @@ deno_core::extension!(
         "00_image_data_primordials.js",
         "00_ops.js",
         "01_default_to.js",
-        "01_hide_source_text.js",
         "01_promise.js",
         "01_require_object.js",
         "01_same_value_zero.js",

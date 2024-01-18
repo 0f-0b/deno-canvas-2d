@@ -17,7 +17,6 @@ import {
   op_canvas_2d_image_bitmap_resize,
   op_canvas_2d_image_bitmap_width,
 } from "ext:deno_canvas_2d/00_ops.js";
-import { hideSourceText } from "ext:deno_canvas_2d/01_hide_source_text.js";
 import { makeSafePromise } from "ext:deno_canvas_2d/01_promise.js";
 import { isBlob } from "ext:deno_canvas_2d/02_is_blob.js";
 import { isImageData } from "ext:deno_canvas_2d/02_is_image_data.js";
@@ -45,7 +44,6 @@ import {
 const {
   MathMin,
   ObjectFreeze,
-  ObjectGetOwnPropertyDescriptors,
   ObjectGetPrototypeOf,
   Promise,
   RangeError,
@@ -344,19 +342,6 @@ export class OffscreenCanvas extends EventTarget {
     getOffscreenCanvasContext = (o) => o.#context;
     getOffscreenCanvasWidth = (o) => o.#width;
     getOffscreenCanvasHeight = (o) => o.#height;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.width.get);
-    hideSourceText(proto.width.set);
-    hideSourceText(proto.height.get);
-    hideSourceText(proto.height.set);
-    hideSourceText(proto.getContext.value);
-    hideSourceText(proto.transferToImageBitmap.value);
-    hideSourceText(proto.convertToBlob.value);
-    hideSourceText(proto.oncontextlost.get);
-    hideSourceText(proto.oncontextlost.set);
-    hideSourceText(proto.oncontextrestored.get);
-    hideSourceText(proto.oncontextrestored.set);
   }
 }
 
@@ -440,11 +425,6 @@ export class ImageBitmap {
     // deno-lint-ignore prefer-primordials
     objectIsImageBitmap = (o) => #brand in o;
     getImageBitmapRaw = (o) => o.#raw;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.width.get);
-    hideSourceText(proto.height.get);
-    hideSourceText(proto.close.value);
   }
 }
 
@@ -609,14 +589,7 @@ const checkUsabilityAndCropWithFormatting = (
 };
 export const makeCreateImageBitmap = (prefix) =>
   // deno-lint-ignore require-await
-  hideSourceText(async function createImageBitmap(
-    image,
-    sx = undefined,
-    sy,
-    sw,
-    sh,
-    options,
-  ) {
+  async function createImageBitmap(image, sx = undefined, sy, sw, sh, options) {
     if (this !== null && this !== undefined && this !== globalThis) {
       throw new TypeError("Illegal invocation");
     }
@@ -681,4 +654,4 @@ export const makeCreateImageBitmap = (prefix) =>
       imageOrientation,
     );
     return new ImageBitmap(illegalConstructor, bitmap);
-  });
+  };

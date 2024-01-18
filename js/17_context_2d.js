@@ -119,7 +119,6 @@ import {
   op_canvas_2d_state_word_spacing,
 } from "ext:deno_canvas_2d/00_ops.js";
 import { defaultTo } from "ext:deno_canvas_2d/01_default_to.js";
-import { hideSourceText } from "ext:deno_canvas_2d/01_hide_source_text.js";
 import { requireObject } from "ext:deno_canvas_2d/01_require_object.js";
 import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
 import { createEnumConverter } from "ext:deno_canvas_2d/04_create_enum_converter.js";
@@ -166,7 +165,6 @@ const {
   MathSign,
   NumberIsFinite,
   ObjectFreeze,
-  ObjectGetOwnPropertyDescriptors,
   RangeError,
   SymbolFor,
   SymbolIterator,
@@ -253,9 +251,6 @@ export class CanvasGradient {
     // deno-lint-ignore prefer-primordials
     objectIsCanvasGradient = (o) => #brand in o;
     getCanvasGradientRaw = (o) => o.#raw;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.addColorStop.value);
   }
 }
 
@@ -309,9 +304,6 @@ export class CanvasPattern {
     // deno-lint-ignore prefer-primordials
     objectIsCanvasPattern = (o) => #brand in o;
     getCanvasPatternRaw = (o) => o.#raw;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.setTransform.value);
   }
 }
 
@@ -469,20 +461,6 @@ export class TextMetrics {
 
   static {
     configureInterface(this);
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.width.get);
-    hideSourceText(proto.actualBoundingBoxLeft.get);
-    hideSourceText(proto.actualBoundingBoxRight.get);
-    hideSourceText(proto.fontBoundingBoxAscent.get);
-    hideSourceText(proto.fontBoundingBoxDescent.get);
-    hideSourceText(proto.actualBoundingBoxAscent.get);
-    hideSourceText(proto.actualBoundingBoxDescent.get);
-    hideSourceText(proto.emHeightAscent.get);
-    hideSourceText(proto.emHeightDescent.get);
-    hideSourceText(proto.hangingBaseline.get);
-    hideSourceText(proto.alphabeticBaseline.get);
-    hideSourceText(proto.ideographicBaseline.get);
   }
 }
 
@@ -815,19 +793,6 @@ export class Path2D {
     // deno-lint-ignore prefer-primordials
     objectIsPath2D = (o) => #brand in o;
     getPath2DRaw = (o) => o.#raw;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.addPath.value);
-    hideSourceText(proto.closePath.value);
-    hideSourceText(proto.moveTo.value);
-    hideSourceText(proto.lineTo.value);
-    hideSourceText(proto.quadraticCurveTo.value);
-    hideSourceText(proto.bezierCurveTo.value);
-    hideSourceText(proto.arcTo.value);
-    hideSourceText(proto.rect.value);
-    hideSourceText(proto.roundRect.value);
-    hideSourceText(proto.arc.value);
-    hideSourceText(proto.ellipse.value);
   }
 }
 
@@ -2465,101 +2430,6 @@ export class OffscreenCanvasRenderingContext2D {
     objectIsOffscreenCanvasRenderingContext2D = (o) => #brand in o;
     getOffscreenCanvasRenderingContext2DState = (o) => o.#state;
     getOffscreenCanvasRenderingContext2DColorSpace = (o) => o.#colorSpace;
-    hideSourceText(this);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.commit.value);
-    hideSourceText(proto.canvas.get);
-    hideSourceText(proto.save.value);
-    hideSourceText(proto.restore.value);
-    hideSourceText(proto.reset.value);
-    hideSourceText(proto.isContextLost.value);
-    hideSourceText(proto.scale.value);
-    hideSourceText(proto.rotate.value);
-    hideSourceText(proto.translate.value);
-    hideSourceText(proto.transform.value);
-    hideSourceText(proto.getTransform.value);
-    hideSourceText(proto.setTransform.value);
-    hideSourceText(proto.resetTransform.value);
-    hideSourceText(proto.globalAlpha.get);
-    hideSourceText(proto.globalAlpha.set);
-    hideSourceText(proto.globalCompositeOperation.get);
-    hideSourceText(proto.globalCompositeOperation.set);
-    hideSourceText(proto.imageSmoothingEnabled.get);
-    hideSourceText(proto.imageSmoothingEnabled.set);
-    hideSourceText(proto.imageSmoothingQuality.get);
-    hideSourceText(proto.imageSmoothingQuality.set);
-    hideSourceText(proto.strokeStyle.get);
-    hideSourceText(proto.strokeStyle.set);
-    hideSourceText(proto.fillStyle.get);
-    hideSourceText(proto.fillStyle.set);
-    hideSourceText(proto.shadowOffsetX.get);
-    hideSourceText(proto.shadowOffsetX.set);
-    hideSourceText(proto.shadowOffsetY.get);
-    hideSourceText(proto.shadowOffsetY.set);
-    hideSourceText(proto.shadowBlur.get);
-    hideSourceText(proto.shadowBlur.set);
-    hideSourceText(proto.shadowColor.get);
-    hideSourceText(proto.shadowColor.set);
-    hideSourceText(proto.filter.get);
-    hideSourceText(proto.filter.set);
-    hideSourceText(proto.clearRect.value);
-    hideSourceText(proto.fillRect.value);
-    hideSourceText(proto.strokeRect.value);
-    hideSourceText(proto.beginPath.value);
-    hideSourceText(proto.fill.value);
-    hideSourceText(proto.stroke.value);
-    hideSourceText(proto.clip.value);
-    hideSourceText(proto.isPointInPath.value);
-    hideSourceText(proto.isPointInStroke.value);
-    hideSourceText(proto.fillText.value);
-    hideSourceText(proto.strokeText.value);
-    hideSourceText(proto.measureText.value);
-    hideSourceText(proto.drawImage.value);
-    hideSourceText(proto.createImageData.value);
-    hideSourceText(proto.getImageData.value);
-    hideSourceText(proto.putImageData.value);
-    hideSourceText(proto.lineWidth.get);
-    hideSourceText(proto.lineWidth.set);
-    hideSourceText(proto.lineCap.get);
-    hideSourceText(proto.lineCap.set);
-    hideSourceText(proto.lineJoin.get);
-    hideSourceText(proto.lineJoin.set);
-    hideSourceText(proto.miterLimit.get);
-    hideSourceText(proto.miterLimit.set);
-    hideSourceText(proto.setLineDash.value);
-    hideSourceText(proto.getLineDash.value);
-    hideSourceText(proto.lineDashOffset.get);
-    hideSourceText(proto.lineDashOffset.set);
-    hideSourceText(proto.font.get);
-    hideSourceText(proto.font.set);
-    hideSourceText(proto.textAlign.get);
-    hideSourceText(proto.textAlign.set);
-    hideSourceText(proto.textBaseline.get);
-    hideSourceText(proto.textBaseline.set);
-    hideSourceText(proto.direction.get);
-    hideSourceText(proto.direction.set);
-    hideSourceText(proto.letterSpacing.get);
-    hideSourceText(proto.letterSpacing.set);
-    hideSourceText(proto.fontKerning.get);
-    hideSourceText(proto.fontKerning.set);
-    hideSourceText(proto.fontStretch.get);
-    hideSourceText(proto.fontStretch.set);
-    hideSourceText(proto.fontVariantCaps.get);
-    hideSourceText(proto.fontVariantCaps.set);
-    hideSourceText(proto.textRendering.get);
-    hideSourceText(proto.textRendering.set);
-    hideSourceText(proto.wordSpacing.get);
-    hideSourceText(proto.wordSpacing.set);
-    hideSourceText(proto.closePath.value);
-    hideSourceText(proto.moveTo.value);
-    hideSourceText(proto.lineTo.value);
-    hideSourceText(proto.quadraticCurveTo.value);
-    hideSourceText(proto.bezierCurveTo.value);
-    hideSourceText(proto.arcTo.value);
-    hideSourceText(proto.rect.value);
-    hideSourceText(proto.roundRect.value);
-    hideSourceText(proto.arc.value);
-    hideSourceText(proto.ellipse.value);
   }
 }
 

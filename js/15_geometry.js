@@ -1,5 +1,4 @@
 import { primordials } from "ext:core/mod.js";
-import { hideSourceText } from "ext:deno_canvas_2d/01_hide_source_text.js";
 import { sameValueZero } from "ext:deno_canvas_2d/01_same_value_zero.js";
 import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
 import { createSequenceFromIterable } from "ext:deno_canvas_2d/04_create_sequence_from_iterable.js";
@@ -26,7 +25,6 @@ const {
   MathSin,
   MathTan,
   ObjectFreeze,
-  ObjectGetOwnPropertyDescriptors,
   Symbol,
   SymbolFor,
   SymbolIterator,
@@ -130,16 +128,6 @@ export class DOMPointReadOnly {
     setDOMPointZ = (o, v) => o.#z = v;
     getDOMPointW = (o) => o.#w;
     setDOMPointW = (o, v) => o.#w = v;
-    hideSourceText(this);
-    const ctor = ObjectGetOwnPropertyDescriptors(this);
-    hideSourceText(ctor.fromPoint.value);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.x.get);
-    hideSourceText(proto.y.get);
-    hideSourceText(proto.z.get);
-    hideSourceText(proto.w.get);
-    hideSourceText(proto.matrixTransform.value);
-    hideSourceText(proto.toJSON.value);
   }
 }
 
@@ -205,18 +193,6 @@ export class DOMPoint extends DOMPointReadOnly {
 
   static {
     configureInterface(this);
-    hideSourceText(this);
-    const ctor = ObjectGetOwnPropertyDescriptors(this);
-    hideSourceText(ctor.fromPoint.value);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.x.get);
-    hideSourceText(proto.x.set);
-    hideSourceText(proto.y.get);
-    hideSourceText(proto.y.set);
-    hideSourceText(proto.z.get);
-    hideSourceText(proto.z.set);
-    hideSourceText(proto.w.get);
-    hideSourceText(proto.w.set);
   }
 }
 
@@ -397,19 +373,6 @@ export class DOMRectReadOnly {
     setDOMRectWidth = (o, v) => o.#width = v;
     getDOMRectHeight = (o) => o.#height;
     setDOMRectHeight = (o, v) => o.#height = v;
-    hideSourceText(this);
-    const ctor = ObjectGetOwnPropertyDescriptors(this);
-    hideSourceText(ctor.fromRect.value);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.x.get);
-    hideSourceText(proto.y.get);
-    hideSourceText(proto.width.get);
-    hideSourceText(proto.height.get);
-    hideSourceText(proto.top.get);
-    hideSourceText(proto.right.get);
-    hideSourceText(proto.bottom.get);
-    hideSourceText(proto.left.get);
-    hideSourceText(proto.toJSON.value);
   }
 }
 
@@ -475,18 +438,6 @@ export class DOMRect extends DOMRectReadOnly {
 
   static {
     configureInterface(this);
-    hideSourceText(this);
-    const ctor = ObjectGetOwnPropertyDescriptors(this);
-    hideSourceText(ctor.fromRect.value);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.x.get);
-    hideSourceText(proto.x.set);
-    hideSourceText(proto.y.get);
-    hideSourceText(proto.y.set);
-    hideSourceText(proto.width.get);
-    hideSourceText(proto.width.set);
-    hideSourceText(proto.height.get);
-    hideSourceText(proto.height.set);
   }
 }
 
@@ -604,17 +555,6 @@ export class DOMQuad {
 
   static {
     configureInterface(this);
-    hideSourceText(this);
-    const ctor = ObjectGetOwnPropertyDescriptors(this);
-    hideSourceText(ctor.fromRect.value);
-    hideSourceText(ctor.fromQuad.value);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.p1.get);
-    hideSourceText(proto.p2.get);
-    hideSourceText(proto.p3.get);
-    hideSourceText(proto.p4.get);
-    hideSourceText(proto.getBounds.value);
-    hideSourceText(proto.toJSON.value);
   }
 }
 
@@ -1266,53 +1206,6 @@ export class DOMMatrixReadOnly {
     setDOMMatrixM44 = (o, v) => o.#m44 = v;
     getDOMMatrixIs2D = (o) => o.#is2D;
     setDOMMatrixIs2D = (o, v) => o.#is2D = v;
-    hideSourceText(this);
-    const ctor = ObjectGetOwnPropertyDescriptors(this);
-    hideSourceText(ctor.fromMatrix.value);
-    hideSourceText(ctor.fromFloat32Array.value);
-    hideSourceText(ctor.fromFloat64Array.value);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.a.get);
-    hideSourceText(proto.b.get);
-    hideSourceText(proto.c.get);
-    hideSourceText(proto.d.get);
-    hideSourceText(proto.e.get);
-    hideSourceText(proto.f.get);
-    hideSourceText(proto.m11.get);
-    hideSourceText(proto.m12.get);
-    hideSourceText(proto.m13.get);
-    hideSourceText(proto.m14.get);
-    hideSourceText(proto.m21.get);
-    hideSourceText(proto.m22.get);
-    hideSourceText(proto.m23.get);
-    hideSourceText(proto.m24.get);
-    hideSourceText(proto.m31.get);
-    hideSourceText(proto.m32.get);
-    hideSourceText(proto.m33.get);
-    hideSourceText(proto.m34.get);
-    hideSourceText(proto.m41.get);
-    hideSourceText(proto.m42.get);
-    hideSourceText(proto.m43.get);
-    hideSourceText(proto.m44.get);
-    hideSourceText(proto.is2D.get);
-    hideSourceText(proto.isIdentity.get);
-    hideSourceText(proto.translate.value);
-    hideSourceText(proto.scale.value);
-    hideSourceText(proto.scaleNonUniform.value);
-    hideSourceText(proto.scale3d.value);
-    hideSourceText(proto.rotate.value);
-    hideSourceText(proto.rotateFromVector.value);
-    hideSourceText(proto.rotateAxisAngle.value);
-    hideSourceText(proto.skewX.value);
-    hideSourceText(proto.skewY.value);
-    hideSourceText(proto.multiply.value);
-    hideSourceText(proto.flipX.value);
-    hideSourceText(proto.flipY.value);
-    hideSourceText(proto.inverse.value);
-    hideSourceText(proto.transformPoint.value);
-    hideSourceText(proto.toFloat32Array.value);
-    hideSourceText(proto.toFloat64Array.value);
-    hideSourceText(proto.toJSON.value);
   }
 }
 
@@ -1897,67 +1790,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   static {
     configureInterface(this);
-    hideSourceText(this);
-    const ctor = ObjectGetOwnPropertyDescriptors(this);
-    hideSourceText(ctor.fromMatrix.value);
-    hideSourceText(ctor.fromFloat32Array.value);
-    hideSourceText(ctor.fromFloat64Array.value);
-    const proto = ObjectGetOwnPropertyDescriptors(this.prototype);
-    hideSourceText(proto.a.get);
-    hideSourceText(proto.a.set);
-    hideSourceText(proto.b.get);
-    hideSourceText(proto.b.set);
-    hideSourceText(proto.c.get);
-    hideSourceText(proto.c.set);
-    hideSourceText(proto.d.get);
-    hideSourceText(proto.d.set);
-    hideSourceText(proto.e.get);
-    hideSourceText(proto.e.set);
-    hideSourceText(proto.f.get);
-    hideSourceText(proto.f.set);
-    hideSourceText(proto.m11.get);
-    hideSourceText(proto.m11.set);
-    hideSourceText(proto.m12.get);
-    hideSourceText(proto.m12.set);
-    hideSourceText(proto.m13.get);
-    hideSourceText(proto.m13.set);
-    hideSourceText(proto.m14.get);
-    hideSourceText(proto.m14.set);
-    hideSourceText(proto.m21.get);
-    hideSourceText(proto.m21.set);
-    hideSourceText(proto.m22.get);
-    hideSourceText(proto.m22.set);
-    hideSourceText(proto.m23.get);
-    hideSourceText(proto.m23.set);
-    hideSourceText(proto.m24.get);
-    hideSourceText(proto.m24.set);
-    hideSourceText(proto.m31.get);
-    hideSourceText(proto.m31.set);
-    hideSourceText(proto.m32.get);
-    hideSourceText(proto.m32.set);
-    hideSourceText(proto.m33.get);
-    hideSourceText(proto.m33.set);
-    hideSourceText(proto.m34.get);
-    hideSourceText(proto.m34.set);
-    hideSourceText(proto.m41.get);
-    hideSourceText(proto.m41.set);
-    hideSourceText(proto.m42.get);
-    hideSourceText(proto.m42.set);
-    hideSourceText(proto.m43.get);
-    hideSourceText(proto.m43.set);
-    hideSourceText(proto.m44.get);
-    hideSourceText(proto.m44.set);
-    hideSourceText(proto.multiplySelf.value);
-    hideSourceText(proto.preMultiplySelf.value);
-    hideSourceText(proto.translateSelf.value);
-    hideSourceText(proto.scaleSelf.value);
-    hideSourceText(proto.scale3dSelf.value);
-    hideSourceText(proto.rotateSelf.value);
-    hideSourceText(proto.rotateFromVectorSelf.value);
-    hideSourceText(proto.rotateAxisAngleSelf.value);
-    hideSourceText(proto.skewXSelf.value);
-    hideSourceText(proto.skewYSelf.value);
-    hideSourceText(proto.invertSelf.value);
   }
 }
 
