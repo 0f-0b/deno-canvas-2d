@@ -118,12 +118,12 @@ import {
   op_canvas_2d_state_width,
   op_canvas_2d_state_word_spacing,
 } from "ext:deno_canvas_2d/00_ops.js";
-import { createSequenceFromIterable } from "ext:deno_canvas_2d/01_create_sequence_from_iterable.js";
 import { defaultTo } from "ext:deno_canvas_2d/01_default_to.js";
 import { hideSourceText } from "ext:deno_canvas_2d/01_hide_source_text.js";
 import { requireObject } from "ext:deno_canvas_2d/01_require_object.js";
 import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
 import { createEnumConverter } from "ext:deno_canvas_2d/04_create_enum_converter.js";
+import { createSequenceFromIterable } from "ext:deno_canvas_2d/04_create_sequence_from_iterable.js";
 import { convertBoolean } from "ext:deno_canvas_2d/05_convert_boolean.js";
 import { convertDOMString } from "ext:deno_canvas_2d/05_convert_dom_string.js";
 import { convertDouble } from "ext:deno_canvas_2d/05_convert_double.js";

@@ -1,8 +1,8 @@
 import { primordials } from "ext:core/mod.js";
-import { createSequenceFromIterable } from "ext:deno_canvas_2d/01_create_sequence_from_iterable.js";
 import { hideSourceText } from "ext:deno_canvas_2d/01_hide_source_text.js";
 import { sameValueZero } from "ext:deno_canvas_2d/01_same_value_zero.js";
 import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
+import { createSequenceFromIterable } from "ext:deno_canvas_2d/04_create_sequence_from_iterable.js";
 import { convertBoolean } from "ext:deno_canvas_2d/05_convert_boolean.js";
 import { convertDOMString } from "ext:deno_canvas_2d/05_convert_dom_string.js";
 import { convertFloat32Array } from "ext:deno_canvas_2d/05_convert_float32_array.js";
