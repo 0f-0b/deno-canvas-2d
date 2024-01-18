@@ -115,6 +115,7 @@ deno_core::extension!(
     deps = [deno_web],
     ops = [
         codec::op_canvas_2d_encode_png,
+        codec::op_canvas_2d_decode_image,
         state::op_canvas_2d_state_new,
         state::op_canvas_2d_state_width,
         state::op_canvas_2d_state_set_width,
@@ -223,8 +224,8 @@ deno_core::extension!(
         path::op_canvas_2d_path_round_rect,
         path::op_canvas_2d_path_close,
         image_bitmap::op_canvas_2d_image_bitmap_from_canvas_state,
-        image_bitmap::op_canvas_2d_image_bitmap_from_canvas_state_cropped,
-        image_bitmap::op_canvas_2d_image_bitmap_from_image_data_cropped,
+        image_bitmap::op_canvas_2d_image_bitmap_from_canvas_state_crop,
+        image_bitmap::op_canvas_2d_image_bitmap_from_image_data_crop_and_resize,
         image_bitmap::op_canvas_2d_image_bitmap_empty,
         image_bitmap::op_canvas_2d_image_bitmap_empty_resize,
         image_bitmap::op_canvas_2d_image_bitmap_width,
@@ -279,6 +280,11 @@ deno_core::extension!(
 );
 
 pub fn get_error_class_name(e: &anyhow::Error) -> Option<&'static str> {
-    e.downcast_ref::<png::EncodingError>()
-        .map(|_| "DOMExceptionEncodingError")
+    if e.is::<png::EncodingError>() {
+        return Some("DOMExceptionEncodingError");
+    }
+    if e.is::<image::ImageError>() {
+        return Some("DOMExceptionInvalidStateError");
+    }
+    None
 }

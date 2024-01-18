@@ -6,3 +6,4 @@ export const BlobPrototype = Blob.prototype;
 const proto = ObjectGetOwnPropertyDescriptors(BlobPrototype);
 export const BlobPrototypeArrayBuffer = uncurryThis(proto.arrayBuffer.value);
 export const BlobPrototypeGetSize = uncurryThis(proto.size.get);
+export const BlobPrototypeGetType = uncurryThis(proto.type.get);

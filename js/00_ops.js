@@ -2,6 +2,7 @@ import { core } from "ext:core/mod.js";
 
 export const {
   op_canvas_2d_encode_png,
+  op_canvas_2d_decode_image,
   op_canvas_2d_state_new,
   op_canvas_2d_state_width,
   op_canvas_2d_state_set_width,
@@ -110,8 +111,8 @@ export const {
   op_canvas_2d_path_round_rect,
   op_canvas_2d_path_close,
   op_canvas_2d_image_bitmap_from_canvas_state,
-  op_canvas_2d_image_bitmap_from_canvas_state_cropped,
-  op_canvas_2d_image_bitmap_from_image_data_cropped,
+  op_canvas_2d_image_bitmap_from_canvas_state_crop,
+  op_canvas_2d_image_bitmap_from_image_data_crop_and_resize,
   op_canvas_2d_image_bitmap_empty,
   op_canvas_2d_image_bitmap_empty_resize,
   op_canvas_2d_image_bitmap_width,

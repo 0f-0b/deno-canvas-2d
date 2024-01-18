@@ -20,7 +20,7 @@ use super::css_color::AbsoluteColor;
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
-use super::image_data::{BorrowedImageData, BorrowedMutImageData};
+use super::image_data::{AlignedImageDataView, AlignedImageDataViewMut};
 use super::path::{CanvasFillRule, Path};
 use super::pattern::CanvasPattern;
 use super::{
@@ -935,7 +935,7 @@ impl CanvasState {
 
     pub fn get_image_data(
         &self,
-        mut dst: BorrowedMutImageData,
+        mut dst: AlignedImageDataViewMut,
         x: i64,
         y: i64,
     ) -> anyhow::Result<()> {
@@ -968,7 +968,7 @@ impl CanvasState {
     #[allow(clippy::too_many_arguments)]
     pub fn put_image_data(
         &mut self,
-        src: BorrowedImageData,
+        src: AlignedImageDataView,
         sx: i64,
         sy: i64,
         sw: u64,
@@ -1755,7 +1755,7 @@ pub fn op_canvas_2d_state_get_image_data(
     #[number] y: i64,
 ) -> anyhow::Result<()> {
     let this = borrow_v8::<CanvasState>(state, this);
-    let dst = BorrowedMutImageData {
+    let dst = AlignedImageDataViewMut {
         width: dst_width,
         height: dst_height,
         color_space: CanvasColorSpace::from_repr(dst_color_space).unwrap(),
@@ -1781,7 +1781,7 @@ pub fn op_canvas_2d_state_put_image_data(
     #[number] dy: i64,
 ) -> anyhow::Result<()> {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let src = BorrowedImageData {
+    let src = AlignedImageDataView {
         width: src_width,
         height: src_height,
         color_space: CanvasColorSpace::from_repr(src_color_space).unwrap(),

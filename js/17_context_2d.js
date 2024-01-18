@@ -11,7 +11,7 @@ import {
   op_canvas_2d_gradient_new_linear,
   op_canvas_2d_gradient_new_radial,
   op_canvas_2d_image_bitmap_from_canvas_state,
-  op_canvas_2d_image_bitmap_from_canvas_state_cropped,
+  op_canvas_2d_image_bitmap_from_canvas_state_crop,
   op_canvas_2d_image_bitmap_height,
   op_canvas_2d_image_bitmap_width,
   op_canvas_2d_path_arc_to,
@@ -2477,7 +2477,7 @@ registerCanvasContextMode("2d", {
   cropToImageBitmap(ctx, sx, sy, sw, sh) {
     const state = getOffscreenCanvasRenderingContext2DState(ctx);
     return {
-      bitmap: op_canvas_2d_image_bitmap_from_canvas_state_cropped(
+      bitmap: op_canvas_2d_image_bitmap_from_canvas_state_crop(
         state,
         sx,
         sy,

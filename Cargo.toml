@@ -8,6 +8,12 @@ cssparser = "0.33.0"
 cssparser-color = "0.1.0"
 deno_core = "0.246.0"
 euclid = "0.22.9"
+image = { version = "0.24.8", default-features = false, features = [
+  "bmp",
+  "gif",
+  "jpeg",
+  "png",
+] }
 lyon_geom = "1.0.5"
 palette = "0.7.3"
 png = "0.17.11"

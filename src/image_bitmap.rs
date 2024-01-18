@@ -8,20 +8,20 @@ use euclid::size2;
 use strum_macros::FromRepr;
 
 use super::convert::{
-    pack_rgba8_to_argb32, premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
+    premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
     premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
     srgb_to_premultiplied_linear_srgb, transform_argb32,
 };
 use super::gc::{borrow_v8, from_v8, into_v8};
-use super::image_data::BorrowedImageData;
+use super::image_data::{ImageData, ImageDataView};
 use super::state::CanvasState;
 use super::{raqote_ext, to_raqote_point, to_raqote_size, CanvasColorSpace};
 
-fn non_zero_u32(x: u32) -> Option<u32> {
+pub(super) fn non_zero_u32(x: u32) -> Option<u32> {
     (x != 0).then_some(x)
 }
 
-fn out_of_bounds(
+pub(super) fn out_of_bounds(
     width: u32,
     height: u32,
     crop_x: i64,
@@ -35,7 +35,7 @@ fn out_of_bounds(
         || crop_y >= height as i64
 }
 
-fn same_size(
+pub(super) fn same_size(
     width: u32,
     height: u32,
     crop_x: i64,
@@ -46,7 +46,7 @@ fn same_size(
     crop_x == 0 && crop_y == 0 && crop_width == width && crop_height == height
 }
 
-fn aspect_resize(
+pub(super) fn aspect_resize(
     sw: u64,
     sh: u64,
     dw: Option<u32>,
@@ -103,7 +103,7 @@ impl ImageBitmap {
         }
     }
 
-    pub fn from_canvas_state_cropped(
+    pub fn from_canvas_state_crop(
         src: &CanvasState,
         x: i64,
         y: i64,
@@ -139,48 +139,105 @@ impl ImageBitmap {
         })
     }
 
-    pub fn from_image_data_cropped(
-        src: BorrowedImageData,
-        x: i64,
-        y: i64,
-        width: u32,
-        height: u32,
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_image_data_crop_and_resize(
+        src: ImageDataView,
+        sx: i64,
+        sy: i64,
+        sw: Option<u32>,
+        sh: Option<u32>,
+        dw: Option<u32>,
+        dh: Option<u32>,
+        resize_quality: ResizeQuality,
+        image_orientation: ImageOrientation,
     ) -> anyhow::Result<Self> {
+        use image::imageops::replace;
+        use image::{ImageBuffer, Rgba, RgbaImage};
+
         let color_space = src.color_space;
-        if out_of_bounds(src.width, src.height, x, y, width, height) {
+        let sw = sw.unwrap_or(src.width);
+        let sh = sh.unwrap_or(src.height);
+        let (dw, dh) = aspect_resize(sw as u64, sh as u64, dw, dh)?.to_tuple();
+        if out_of_bounds(src.width, src.height, sx, sy, sw, sh) {
             return Ok(Self {
-                width,
-                height,
+                width: dw,
+                height: dh,
                 color_space,
                 data: None,
             });
         }
-        if same_size(src.width, src.height, x, y, width, height) {
-            let mut data = src.data.as_ref().into();
-            pack_rgba8_to_argb32(
-                Rc::get_mut(&mut data).unwrap(),
-                srgb_to_premultiplied_linear_srgb,
+        let flip_y = match image_orientation {
+            ImageOrientation::FromImage => false,
+            ImageOrientation::FlipY => true,
+        };
+        let cropped = if same_size(src.width, src.height, sx, sy, sw, sh) {
+            RgbaImage::from_vec(src.width, src.height, src.data.to_owned()).unwrap()
+        } else {
+            let mut tmp = RgbaImage::new(sw, sh);
+            replace(
+                &mut tmp,
+                &ImageBuffer::<Rgba<u8>, _>::from_raw(src.width, src.height, src.data).unwrap(),
+                -sx,
+                -sy,
             );
-            return Ok(Self {
-                width,
-                height,
-                color_space,
-                data: Some(data),
-            });
+            tmp
+        };
+        Ok(Self::from_image_data_resize(
+            ImageData {
+                width: sw,
+                height: sh,
+                color_space: CanvasColorSpace::Srgb,
+                data: cropped.into_vec(),
+            },
+            dw,
+            dh,
+            resize_quality,
+            flip_y,
+        ))
+    }
+
+    pub fn from_image_data_resize(
+        src: ImageData,
+        width: u32,
+        height: u32,
+        quality: ResizeQuality,
+        flip_y: bool,
+    ) -> Self {
+        use image::imageops::{flip_vertical_in_place, resize, FilterType};
+        use image::RgbaImage;
+
+        let color_space = src.color_space;
+        let mut tmp = RgbaImage::from_vec(src.width, src.height, src.data).unwrap();
+        for pixel in tmp.pixels_mut() {
+            let [r, g, b, a] = pixel.0;
+            let (r, g, b, a) = srgb_to_premultiplied_linear_srgb((r, g, b, a));
+            pixel.0 = [r, g, b, a];
         }
-        let src_origin = to_raqote_point(x, y)?;
-        let src = src.as_raqote_surface_rgba8()?;
-        Self::new_with(width, height, color_space, |dst| {
-            dst.composite_surface(
-                &src,
-                Box2D::from_origin_and_size(src_origin, size2(dst.width(), dst.height())),
-                Point2D::origin(),
-                |src, dst| {
-                    dst.copy_from_slice(src);
-                    pack_rgba8_to_argb32(dst, srgb_to_premultiplied_linear_srgb);
-                },
-            );
-        })
+        if src.width != width || src.height != height {
+            let filter = match quality {
+                ResizeQuality::Pixelated => FilterType::Nearest,
+                ResizeQuality::Low => FilterType::Triangle,
+                ResizeQuality::Medium => FilterType::CatmullRom,
+                ResizeQuality::High => FilterType::Lanczos3,
+            };
+            tmp = resize(&tmp, width, height, filter);
+        }
+        if flip_y {
+            flip_vertical_in_place(&mut tmp);
+        }
+        let data = tmp
+            .pixels()
+            .map(|pixel| {
+                let [r, g, b, a] = pixel.0;
+                u32::from_be_bytes([a, r, g, b])
+            })
+            .collect();
+        Self {
+            width,
+            height,
+            color_space,
+            data: Some(data),
+        }
     }
 
     pub fn empty(width: u32, height: u32, color_space: CanvasColorSpace) -> Self {
@@ -371,7 +428,7 @@ pub fn op_canvas_2d_image_bitmap_from_canvas_state<'a>(
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_from_canvas_state_cropped<'a>(
+pub fn op_canvas_2d_image_bitmap_from_canvas_state_crop<'a>(
     scope: &mut v8::HandleScope<'a>,
     state: &OpState,
     canvas_state: *const c_void,
@@ -381,33 +438,47 @@ pub fn op_canvas_2d_image_bitmap_from_canvas_state_cropped<'a>(
     height: u32,
 ) -> anyhow::Result<v8::Local<'a, v8::External>> {
     let canvas_state = borrow_v8::<CanvasState>(state, canvas_state);
-    let result = ImageBitmap::from_canvas_state_cropped(&canvas_state, x, y, width, height)?;
+    let result = ImageBitmap::from_canvas_state_crop(&canvas_state, x, y, width, height)?;
     Ok(into_v8(state, scope, result))
 }
 
 #[op2]
 #[allow(clippy::too_many_arguments)]
-pub fn op_canvas_2d_image_bitmap_from_image_data_cropped<'a>(
+pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize<'a>(
     scope: &mut v8::HandleScope<'a>,
     state: &OpState,
-    #[buffer] src_data: &[u32],
+    #[buffer] src_data: &[u8],
     src_width: u32,
     src_height: u32,
     src_color_space: i32,
-    #[number] x: i64,
-    #[number] y: i64,
-    width: u32,
-    height: u32,
+    #[number] sx: i64,
+    #[number] sy: i64,
+    sw: u32,
+    sh: u32,
+    dw: u32,
+    dh: u32,
+    resize_quality: i32,
+    image_orientation: i32,
 ) -> anyhow::Result<v8::Local<'a, v8::External>> {
-    let src = BorrowedImageData {
+    let src = ImageDataView {
         width: src_width,
         height: src_height,
         color_space: CanvasColorSpace::from_repr(src_color_space).unwrap(),
         data: src_data,
     };
-    let width = non_zero_u32(width).unwrap_or(src.width);
-    let height = non_zero_u32(height).unwrap_or(src.height);
-    let result = ImageBitmap::from_image_data_cropped(src, x, y, width, height)?;
+    let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
+    let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
+    let result = ImageBitmap::from_image_data_crop_and_resize(
+        src,
+        sx,
+        sy,
+        non_zero_u32(sw),
+        non_zero_u32(sh),
+        non_zero_u32(dw),
+        non_zero_u32(dh),
+        resize_quality,
+        image_orientation,
+    )?;
     Ok(into_v8(state, scope, result))
 }
 

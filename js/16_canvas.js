@@ -1,18 +1,23 @@
 import { primordials } from "ext:core/mod.js";
 import {
+  BlobPrototypeArrayBuffer,
+  BlobPrototypeGetType,
+} from "ext:deno_canvas_2d/00_blob_primordials.js";
+import {
   ImageDataPrototypeGetColorSpace,
   ImageDataPrototypeGetData,
   ImageDataPrototypeGetHeight,
   ImageDataPrototypeGetWidth,
 } from "ext:deno_canvas_2d/00_image_data_primordials.js";
 import {
+  op_canvas_2d_decode_image,
   op_canvas_2d_encode_png,
   op_canvas_2d_image_bitmap_clone,
   op_canvas_2d_image_bitmap_close,
   op_canvas_2d_image_bitmap_crop,
   op_canvas_2d_image_bitmap_empty,
   op_canvas_2d_image_bitmap_empty_resize,
-  op_canvas_2d_image_bitmap_from_image_data_cropped,
+  op_canvas_2d_image_bitmap_from_image_data_crop_and_resize,
   op_canvas_2d_image_bitmap_height,
   op_canvas_2d_image_bitmap_resize,
   op_canvas_2d_image_bitmap_width,
@@ -428,7 +433,7 @@ export class ImageBitmap {
   }
 }
 
-export const checkUsabilityAndClone = (image) => {
+export function checkUsabilityAndClone(image) {
   if (objectIsImageBitmap(image)) {
     const raw = getImageBitmapRaw(image);
     if (raw === null) {
@@ -447,7 +452,8 @@ export const checkUsabilityAndClone = (image) => {
   }
   const mode = getOffscreenCanvasContextMode(ctx);
   return mode.cloneToImageBitmap(ctx);
-};
+}
+
 const convertImageBitmapSource = (value) => {
   if (
     (type(value) === "Object" &&
@@ -511,7 +517,8 @@ const resizeQualityToRepr = ObjectFreeze({
   "medium": 2,
   "high": 3,
 });
-const checkUsabilityAndCropWithFormatting = (
+
+async function checkUsabilityAndCropWithFormatting(
   image,
   sx,
   sy,
@@ -521,7 +528,7 @@ const checkUsabilityAndCropWithFormatting = (
   dh,
   resizeQuality,
   imageOrientation,
-) => {
+) {
   if (objectIsOffscreenCanvas(image)) {
     const ctx = getOffscreenCanvasContext(image);
     if (!ctx) {
@@ -560,36 +567,46 @@ const checkUsabilityAndCropWithFormatting = (
     );
   }
   if (isBlob(image)) {
-    // TODO decode blob
-    throw new DOMException("Unsupported image format", "InvalidStateError");
+    return op_canvas_2d_decode_image(
+      new Uint8Array(await makeSafePromise(BlobPrototypeArrayBuffer(image))),
+      BlobPrototypeGetType(image),
+      sx,
+      sy,
+      sw ?? 0,
+      sh ?? 0,
+      dw ?? 0,
+      dh ?? 0,
+      resizeQualityToRepr[resizeQuality],
+      imageOrientationToRepr[imageOrientation],
+    );
   }
   const data = ImageDataPrototypeGetData(image);
   if (TypedArrayPrototypeGetLength(data) === 0) {
     throw new DOMException("Image data is detached", "InvalidStateError");
   }
-  const buf = alignUint8ClampedArrayToUint32(data);
   const width = ImageDataPrototypeGetWidth(image);
   const height = ImageDataPrototypeGetHeight(image);
   const colorSpace = ImageDataPrototypeGetColorSpace(image);
-  return op_canvas_2d_image_bitmap_resize(
-    op_canvas_2d_image_bitmap_from_image_data_cropped(
-      buf,
-      width,
-      height,
-      colorSpaceToRepr[colorSpace],
-      sx,
-      sy,
-      sw ?? 0,
-      sh ?? 0,
+  return op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
+    new Uint8Array(
+      TypedArrayPrototypeGetBuffer(data),
+      TypedArrayPrototypeGetByteOffset(data),
+      TypedArrayPrototypeGetByteLength(data),
     ),
+    width,
+    height,
+    colorSpaceToRepr[colorSpace],
+    sx,
+    sy,
+    sw ?? 0,
+    sh ?? 0,
     dw ?? 0,
     dh ?? 0,
     resizeQualityToRepr[resizeQuality],
     imageOrientationToRepr[imageOrientation],
   );
-};
+}
 export const makeCreateImageBitmap = (prefix) =>
-  // deno-lint-ignore require-await
   async function createImageBitmap(image, sx = undefined, sy, sw, sh, options) {
     if (this !== null && this !== undefined && this !== globalThis) {
       throw new TypeError("Illegal invocation");
@@ -643,7 +660,7 @@ export const makeCreateImageBitmap = (prefix) =>
         "InvalidStateError",
       );
     }
-    const bitmap = checkUsabilityAndCropWithFormatting(
+    const bitmap = await makeSafePromise(checkUsabilityAndCropWithFormatting(
       image,
       sx,
       sy,
@@ -653,6 +670,6 @@ export const makeCreateImageBitmap = (prefix) =>
       resizeHeight,
       resizeQuality,
       imageOrientation,
-    );
+    ));
     return new ImageBitmap(illegalConstructor, bitmap);
   };
