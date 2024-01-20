@@ -34,6 +34,12 @@ const TRANSPARENT_SOLID_SOURCE: raqote::SolidSource = raqote::SolidSource {
     b: 0,
     a: 0,
 };
+const OPAQUE_BLACK_SOLID_SOURCE: raqote::SolidSource = raqote::SolidSource {
+    r: 0,
+    g: 0,
+    b: 0,
+    a: 255,
+};
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
@@ -179,7 +185,7 @@ pub(super) enum BlendOrCompositeMode {
 }
 
 impl BlendOrCompositeMode {
-    pub fn to_raqote(self) -> raqote::BlendMode {
+    pub fn to_raqote(self, alpha: bool) -> raqote::BlendMode {
         match self {
             Self::Normal => raqote::BlendMode::SrcOver,
             Self::Multiply => raqote::BlendMode::Multiply,
@@ -197,17 +203,77 @@ impl BlendOrCompositeMode {
             Self::Saturation => raqote::BlendMode::Saturation,
             Self::Color => raqote::BlendMode::Color,
             Self::Luminosity => raqote::BlendMode::Luminosity,
-            Self::Clear => raqote::BlendMode::Clear,
-            Self::Copy => raqote::BlendMode::Src,
+            Self::Clear => {
+                if alpha {
+                    raqote::BlendMode::Clear
+                } else {
+                    raqote::BlendMode::ClearOpaque
+                }
+            }
+            Self::Copy => {
+                if alpha {
+                    raqote::BlendMode::Src
+                } else {
+                    raqote::BlendMode::SrcOpaque
+                }
+            }
             Self::SourceOver => raqote::BlendMode::SrcOver,
-            Self::DestinationOver => raqote::BlendMode::DstOver,
-            Self::SourceIn => raqote::BlendMode::SrcIn,
-            Self::DestinationIn => raqote::BlendMode::DstIn,
-            Self::SourceOut => raqote::BlendMode::SrcOut,
-            Self::DestinationOut => raqote::BlendMode::DstOut,
-            Self::SourceAtop => raqote::BlendMode::SrcAtop,
-            Self::DestinationAtop => raqote::BlendMode::DstAtop,
-            Self::Xor => raqote::BlendMode::Xor,
+            Self::DestinationOver => {
+                if alpha {
+                    raqote::BlendMode::DstOver
+                } else {
+                    raqote::BlendMode::Dst
+                }
+            }
+            Self::SourceIn => {
+                if alpha {
+                    raqote::BlendMode::SrcIn
+                } else {
+                    raqote::BlendMode::SrcOpaque
+                }
+            }
+            Self::DestinationIn => {
+                if alpha {
+                    raqote::BlendMode::DstIn
+                } else {
+                    raqote::BlendMode::DstInOpaque
+                }
+            }
+            Self::SourceOut => {
+                if alpha {
+                    raqote::BlendMode::SrcOut
+                } else {
+                    raqote::BlendMode::ClearOpaque
+                }
+            }
+            Self::DestinationOut => {
+                if alpha {
+                    raqote::BlendMode::DstOut
+                } else {
+                    raqote::BlendMode::DstOutOpaque
+                }
+            }
+            Self::SourceAtop => {
+                if alpha {
+                    raqote::BlendMode::SrcAtop
+                } else {
+                    raqote::BlendMode::SrcOver
+                }
+            }
+            Self::DestinationAtop => {
+                if alpha {
+                    raqote::BlendMode::DstAtop
+                } else {
+                    raqote::BlendMode::DstInOpaque
+                }
+            }
+            Self::Xor => {
+                if alpha {
+                    raqote::BlendMode::Xor
+                } else {
+                    raqote::BlendMode::DstOutOpaque
+                }
+            }
             Self::Lighter => raqote::BlendMode::Add,
             Self::PlusDarker => unimplemented!(),
             Self::PlusLighter => raqote::BlendMode::Add,
@@ -341,6 +407,7 @@ impl DrawingState {
 
 pub(super) struct CanvasState {
     draw_target: raqote::DrawTarget,
+    alpha: bool,
     color_space: CanvasColorSpace,
     current_drawing_state: DrawingState,
     drawing_state_stack: Vec<DrawingState>,
@@ -350,6 +417,7 @@ impl Debug for CanvasState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("CanvasState")
             .field("color_space", &self.color_space)
+            .field("alpha", &self.alpha)
             .field("current_drawing_state", &self.current_drawing_state)
             .field("drawing_state_stack", &self.drawing_state_stack)
             .finish_non_exhaustive()
@@ -357,10 +425,20 @@ impl Debug for CanvasState {
 }
 
 impl CanvasState {
-    pub fn new(width: u64, height: u64, color_space: CanvasColorSpace) -> anyhow::Result<Self> {
+    pub fn new(
+        width: u64,
+        height: u64,
+        alpha: bool,
+        color_space: CanvasColorSpace,
+    ) -> anyhow::Result<Self> {
         let size = to_raqote_size(width, height)?;
+        let mut draw_target = raqote::DrawTarget::new(size.width, size.height);
+        if !alpha {
+            draw_target.get_data_mut().fill(0xff000000);
+        }
         Ok(CanvasState {
-            draw_target: raqote::DrawTarget::new(size.width, size.height),
+            draw_target,
+            alpha,
             color_space,
             current_drawing_state: Default::default(),
             drawing_state_stack: Vec::new(),
@@ -403,12 +481,16 @@ impl CanvasState {
     }
 
     pub fn reset(&mut self, width: u64, height: u64) -> anyhow::Result<()> {
-        *self = Self::new(width, height, self.color_space)?;
+        *self = Self::new(width, height, self.alpha, self.color_space)?;
         Ok(())
     }
 
     pub fn clear(&mut self) {
-        self.draw_target.get_data_mut().fill(0);
+        if self.alpha {
+            self.draw_target.get_data_mut().fill(0x00000000);
+        } else {
+            self.draw_target.get_data_mut().fill(0xff000000);
+        }
     }
 
     pub fn line_width(&self) -> f64 {
@@ -581,15 +663,18 @@ impl CanvasState {
     }
 
     pub fn clear_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
-        const DUMMY_SOURCE: raqote::Source = raqote::Source::Solid(TRANSPARENT_SOLID_SOURCE);
         self.draw_target.fill_rect(
             x as f32,
             y as f32,
             width as f32,
             height as f32,
-            &DUMMY_SOURCE,
+            &raqote::Source::Solid(OPAQUE_BLACK_SOLID_SOURCE),
             &raqote::DrawOptions {
-                blend_mode: raqote::BlendMode::Clear,
+                blend_mode: if self.alpha {
+                    raqote::BlendMode::Clear
+                } else {
+                    raqote::BlendMode::Src
+                },
                 ..Default::default()
             },
         );
@@ -684,7 +769,7 @@ impl CanvasState {
                 blend_mode: self
                     .current_drawing_state
                     .compositing_and_blending_operator
-                    .to_raqote(),
+                    .to_raqote(self.alpha),
                 ..Default::default()
             },
         );
@@ -703,17 +788,27 @@ impl CanvasState {
         RF: Fn(&mut raqote::DrawTarget, raqote::DrawOptions),
     {
         match self.current_drawing_state.compositing_and_blending_operator {
-            BlendOrCompositeMode::Clear => self.draw_target.clear(TRANSPARENT_SOLID_SOURCE),
+            BlendOrCompositeMode::Clear => {
+                if self.alpha {
+                    self.draw_target.clear(TRANSPARENT_SOLID_SOURCE);
+                } else {
+                    self.draw_target.clear(OPAQUE_BLACK_SOLID_SOURCE);
+                }
+            }
             BlendOrCompositeMode::Copy => {
                 let render = prepare(self)?;
-                self.draw_target.clear(TRANSPARENT_SOLID_SOURCE);
+                if self.alpha {
+                    self.draw_target.clear(TRANSPARENT_SOLID_SOURCE);
+                } else {
+                    self.draw_target.clear(OPAQUE_BLACK_SOLID_SOURCE);
+                }
                 render(
                     &mut self.draw_target,
                     raqote::DrawOptions {
                         blend_mode: self
                             .current_drawing_state
                             .compositing_and_blending_operator
-                            .to_raqote(),
+                            .to_raqote(self.alpha),
                         alpha: self.current_drawing_state.global_alpha as f32,
                         ..Default::default()
                     },
@@ -729,7 +824,7 @@ impl CanvasState {
                     1.0,
                     self.current_drawing_state
                         .compositing_and_blending_operator
-                        .to_raqote(),
+                        .to_raqote(self.alpha),
                 );
                 render(
                     &mut self.draw_target,
@@ -750,7 +845,7 @@ impl CanvasState {
                         blend_mode: self
                             .current_drawing_state
                             .compositing_and_blending_operator
-                            .to_raqote(),
+                            .to_raqote(self.alpha),
                         alpha: self.current_drawing_state.global_alpha as f32,
                         ..Default::default()
                     },
@@ -999,6 +1094,11 @@ impl CanvasState {
                         pack_rgba8_to_argb32(dst, display_p3_to_premultiplied_linear_srgb);
                     }
                 }
+                if !self.alpha {
+                    for pixel in dst {
+                        *pixel |= 0xff000000;
+                    }
+                }
             },
         );
         Ok(())
@@ -1075,10 +1175,11 @@ pub fn op_canvas_2d_state_new<'a>(
     state: &OpState,
     #[number] width: u64,
     #[number] height: u64,
+    alpha: bool,
     color_space: i32,
 ) -> anyhow::Result<v8::Local<'a, v8::External>> {
     let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
-    let result = CanvasState::new(width, height, color_space)?;
+    let result = CanvasState::new(width, height, alpha, color_space)?;
     Ok(into_v8(state, scope, result))
 }
 

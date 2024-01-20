@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 cssparser = "0.33.0"
 cssparser-color = "0.1.0"
-deno_core = "0.246.0"
+deno_core = "0.247.0"
 euclid = "0.22.9"
 image = { version = "0.24.8", default-features = false, features = [
   "bmp",
@@ -17,5 +17,5 @@ image = { version = "0.24.8", default-features = false, features = [
 lyon_geom = "1.0.5"
 palette = "0.7.3"
 png = "0.17.11"
-raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "426a32cd78746f71551060bb2e03905d545bf158", default-features = false }
+raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "dea2df32a58b51539e93ba74140cf702292d5d02", default-features = false }
 strum_macros = "0.25.3"

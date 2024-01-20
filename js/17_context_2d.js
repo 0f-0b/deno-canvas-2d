@@ -1056,14 +1056,11 @@ export class OffscreenCanvasRenderingContext2D {
       illegalConstructor();
     }
     settings = convertCanvasRenderingContext2DSettings(settings);
-    if (!settings.alpha) {
-      // TODO support `alpha: false`
-      throw new TypeError("Unsupported opaque canvas");
-    }
     this.#canvas = target;
     this.#state = op_canvas_2d_state_new(
       width,
       height,
+      settings.alpha,
       colorSpaceToRepr[settings.colorSpace],
     );
     this.#colorSpace = settings.colorSpace;
