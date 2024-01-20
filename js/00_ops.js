@@ -1,6 +1,7 @@
 import { core } from "ext:core/mod.js";
 
 export const {
+  op_canvas_2d_parse_matrix,
   op_canvas_2d_encode_png,
   op_canvas_2d_decode_image,
   op_canvas_2d_state_new,

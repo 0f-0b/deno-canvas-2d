@@ -158,7 +158,6 @@ import {
 
 const {
   ArrayIsArray,
-  ArrayPrototypeEvery,
   Float64Array,
   MathAbs,
   MathMin,
@@ -486,12 +485,11 @@ const convertPath2DOrDOMString = (value) =>
     ? value
     : convertDOMString(value);
 
-function allFinite(...args) {
-  return ArrayPrototypeEvery(args, NumberIsFinite);
-}
-
 function normalizeAndScaleRadii(x, y, w, h, radii) {
-  if (!allFinite(x, y, w, h)) {
+  if (
+    !(NumberIsFinite(x) && NumberIsFinite(y) &&
+      NumberIsFinite(w) && NumberIsFinite(h))
+  ) {
     return null;
   }
   if (!ArrayIsArray(radii)) {
@@ -513,7 +511,7 @@ function normalizeAndScaleRadii(x, y, w, h, radii) {
       radii[i] = { x: radius, y: radius };
     } else {
       const { x, y } = radius;
-      if (!allFinite(x, y)) {
+      if (!(NumberIsFinite(x) && NumberIsFinite(y))) {
         return null;
       }
       if (x < 0 || y < 0) {
@@ -668,7 +666,10 @@ export class Path2D {
     x2 = convertUnrestrictedDouble(x2);
     y2 = convertUnrestrictedDouble(y2);
     radius = convertUnrestrictedDouble(radius);
-    if (!allFinite(x1, y1, x2, y2, radius)) {
+    if (
+      !(NumberIsFinite(x1) && NumberIsFinite(y1) &&
+        NumberIsFinite(x2) && NumberIsFinite(y2) && NumberIsFinite(radius))
+    ) {
       return;
     }
     if (radius < 0) {
@@ -730,7 +731,10 @@ export class Path2D {
     startAngle = convertUnrestrictedDouble(startAngle);
     endAngle = convertUnrestrictedDouble(endAngle);
     counterclockwise = convertBoolean(counterclockwise);
-    if (!allFinite(x, y, radius, startAngle, endAngle)) {
+    if (
+      !(NumberIsFinite(x) && NumberIsFinite(y) && NumberIsFinite(radius) &&
+        NumberIsFinite(startAngle) && NumberIsFinite(endAngle))
+    ) {
       return;
     }
     if (radius < 0) {
@@ -770,7 +774,12 @@ export class Path2D {
     startAngle = convertUnrestrictedDouble(startAngle);
     endAngle = convertUnrestrictedDouble(endAngle);
     counterclockwise = convertBoolean(counterclockwise);
-    if (!allFinite(x, y, radiusX, radiusY, rotation, startAngle, endAngle)) {
+    if (
+      !(NumberIsFinite(x) && NumberIsFinite(y) &&
+        NumberIsFinite(radiusX) && NumberIsFinite(radiusY) &&
+        NumberIsFinite(rotation) && NumberIsFinite(startAngle) &&
+        NumberIsFinite(endAngle))
+    ) {
       return;
     }
     if (radiusX < 0 || radiusY < 0) {
@@ -1680,7 +1689,7 @@ export class OffscreenCanvasRenderingContext2D {
       dy = convertUnrestrictedDouble(sy);
       sx = 0;
       sy = 0;
-      if (!allFinite(dx, dy)) {
+      if (!(NumberIsFinite(dx) && NumberIsFinite(dy))) {
         return;
       }
     } else if (nArgs === 5) {
@@ -1701,7 +1710,10 @@ export class OffscreenCanvasRenderingContext2D {
         dy += dh;
         dh = -dh;
       }
-      if (!allFinite(dx, dy, dw, dh)) {
+      if (
+        !(NumberIsFinite(dx) && NumberIsFinite(dy) &&
+          NumberIsFinite(dw) && NumberIsFinite(dh))
+      ) {
         return;
       }
     } else if (nArgs === 9) {
@@ -1730,7 +1742,12 @@ export class OffscreenCanvasRenderingContext2D {
         dy += dh;
         dh = -dh;
       }
-      if (!allFinite(sx, sy, sw, sh, dx, dy, dw, dh)) {
+      if (
+        !(NumberIsFinite(sx) && NumberIsFinite(sy) &&
+          NumberIsFinite(sw) && NumberIsFinite(sh) &&
+          NumberIsFinite(dx) && NumberIsFinite(dy) &&
+          NumberIsFinite(dw) && NumberIsFinite(dh))
+      ) {
         return;
       }
     } else {
@@ -2251,7 +2268,10 @@ export class OffscreenCanvasRenderingContext2D {
     x2 = convertUnrestrictedDouble(x2);
     y2 = convertUnrestrictedDouble(y2);
     radius = convertUnrestrictedDouble(radius);
-    if (!allFinite(x1, y1, x2, y2, radius)) {
+    if (
+      !(NumberIsFinite(x1) && NumberIsFinite(y1) &&
+        NumberIsFinite(x2) && NumberIsFinite(y2) && NumberIsFinite(radius))
+    ) {
       return;
     }
     if (radius < 0) {
@@ -2316,7 +2336,10 @@ export class OffscreenCanvasRenderingContext2D {
     startAngle = convertUnrestrictedDouble(startAngle);
     endAngle = convertUnrestrictedDouble(endAngle);
     counterclockwise = convertBoolean(counterclockwise);
-    if (!allFinite(x, y, radius, startAngle, endAngle)) {
+    if (
+      !(NumberIsFinite(x) && NumberIsFinite(y) && NumberIsFinite(radius) &&
+        NumberIsFinite(startAngle) && NumberIsFinite(endAngle))
+    ) {
       return;
     }
     if (radius < 0) {
@@ -2357,7 +2380,12 @@ export class OffscreenCanvasRenderingContext2D {
     startAngle = convertUnrestrictedDouble(startAngle);
     endAngle = convertUnrestrictedDouble(endAngle);
     counterclockwise = convertBoolean(counterclockwise);
-    if (!allFinite(x, y, radiusX, radiusY, rotation, startAngle, endAngle)) {
+    if (
+      !(NumberIsFinite(x) && NumberIsFinite(y) &&
+        NumberIsFinite(radiusX) && NumberIsFinite(radiusY) &&
+        NumberIsFinite(rotation) && NumberIsFinite(startAngle) &&
+        NumberIsFinite(endAngle))
+    ) {
       return;
     }
     if (radiusX < 0 || radiusY < 0) {

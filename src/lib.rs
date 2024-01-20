@@ -6,6 +6,7 @@ mod gc;
 pub mod gradient;
 pub mod image_bitmap;
 mod image_data;
+mod matrix;
 pub mod path;
 pub mod pattern;
 mod raqote_ext;
@@ -114,6 +115,7 @@ deno_core::extension!(
     deno_canvas_2d,
     deps = [deno_web],
     ops = [
+        matrix::op_canvas_2d_parse_matrix,
         codec::op_canvas_2d_encode_png,
         codec::op_canvas_2d_decode_image,
         state::op_canvas_2d_state_new,

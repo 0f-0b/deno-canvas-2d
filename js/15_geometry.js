@@ -1,4 +1,5 @@
 import { primordials } from "ext:core/mod.js";
+import { op_canvas_2d_parse_matrix } from "ext:deno_canvas_2d/00_ops.js";
 import { sameValueZero } from "ext:deno_canvas_2d/01_same_value_zero.js";
 import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
 import { createSequenceFromIterable } from "ext:deno_canvas_2d/04_create_sequence_from_iterable.js";
@@ -24,6 +25,7 @@ const {
   MathMin,
   MathSin,
   MathTan,
+  NumberIsFinite,
   ObjectFreeze,
   Symbol,
   SymbolFor,
@@ -645,8 +647,10 @@ let getDOMMatrixM44;
 let setDOMMatrixM44;
 let getDOMMatrixIs2D;
 let setDOMMatrixIs2D;
+let initDOMMatrix;
 export const directConstruct = Symbol();
 const identityMatrix2DValues = ObjectFreeze([1, 0, 0, 1, 0, 0]);
+const parseMatrixBuffer = new Float64Array(16);
 
 export class DOMMatrixReadOnly {
   #brand() {}
@@ -675,27 +679,35 @@ export class DOMMatrixReadOnly {
     is2D = true,
   ) {
     if (initOrKey === undefined) {
-      values = identityMatrix2DValues;
-      is2D = true;
-    } else if (initOrKey !== directConstruct) {
-      const init = convertDOMStringOrSequenceOfUnrestrictedDouble(initOrKey);
-      if (typeof init === "string") {
-        // TODO parse css transform
-        throw new TypeError("Unimplemented");
-      }
-      switch (init.length) {
-        case 6:
-          values = init;
-          is2D = true;
-          break;
-        case 16:
-          values = init;
-          is2D = false;
-          break;
-        default:
-          throw new TypeError("Length of matrix init sequence must be 6 or 16");
-      }
+      this.#init(identityMatrix2DValues, true);
+      return;
     }
+    if (initOrKey === directConstruct) {
+      this.#init(values, is2D);
+      return;
+    }
+    const init = convertDOMStringOrSequenceOfUnrestrictedDouble(initOrKey);
+    if (typeof init === "string") {
+      if (inWorker) {
+        throw new TypeError("Cannot construct matrix from string in workers");
+      }
+      const is2D = op_canvas_2d_parse_matrix(init, parseMatrixBuffer);
+      this.#init(parseMatrixBuffer, is2D);
+      return;
+    }
+    switch (init.length) {
+      case 6:
+        this.#init(init, true);
+        break;
+      case 16:
+        this.#init(init, false);
+        break;
+      default:
+        throw new TypeError("Length of matrix init sequence must be 6 or 16");
+    }
+  }
+
+  #init(values, is2D) {
     if (is2D) {
       this.#m11 = values[0];
       this.#m12 = values[1];
@@ -1097,6 +1109,43 @@ export class DOMMatrixReadOnly {
     return array;
   }
 
+  toString() {
+    const m11 = this.#m11;
+    const m12 = this.#m12;
+    const m13 = this.#m13;
+    const m14 = this.#m14;
+    const m21 = this.#m21;
+    const m22 = this.#m22;
+    const m23 = this.#m23;
+    const m24 = this.#m24;
+    const m31 = this.#m31;
+    const m32 = this.#m32;
+    const m33 = this.#m33;
+    const m34 = this.#m34;
+    const m41 = this.#m41;
+    const m42 = this.#m42;
+    const m43 = this.#m43;
+    const m44 = this.#m44;
+    if (
+      !(NumberIsFinite(m11) && NumberIsFinite(m12) &&
+        NumberIsFinite(m13) && NumberIsFinite(m14) &&
+        NumberIsFinite(m21) && NumberIsFinite(m22) &&
+        NumberIsFinite(m23) && NumberIsFinite(m24) &&
+        NumberIsFinite(m31) && NumberIsFinite(m32) &&
+        NumberIsFinite(m33) && NumberIsFinite(m34) &&
+        NumberIsFinite(m41) && NumberIsFinite(m42) &&
+        NumberIsFinite(m43) && NumberIsFinite(m44))
+    ) {
+      throw new DOMException(
+        "Matrix contains non-finite values",
+        "InvalidStateError",
+      );
+    }
+    return this.#is2D
+      ? `matrix(${m11}, ${m12}, ${m21}, ${m22}, ${m41}, ${m42})`
+      : `matrix3d(${m11}, ${m12}, ${m13}, ${m14}, ${m21}, ${m22}, ${m23}, ${m24}, ${m31}, ${m32}, ${m33}, ${m34}, ${m41}, ${m42}, ${m43}, ${m44})`;
+  }
+
   toJSON() {
     this.#brand;
     return {
@@ -1207,6 +1256,7 @@ export class DOMMatrixReadOnly {
     setDOMMatrixM44 = (o, v) => o.#m44 = v;
     getDOMMatrixIs2D = (o) => o.#is2D;
     setDOMMatrixIs2D = (o, v) => o.#is2D = v;
+    initDOMMatrix = (o, values, is2D) => o.#init(values, is2D);
   }
 }
 
@@ -1789,6 +1839,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     return this;
   }
 
+  setMatrixValue(transformList) {
+    const prefix = "Failed to execute 'setMatrixValue' on 'DOMMatrix'";
+    requiredArguments(arguments.length, 1, prefix);
+    transformList = convertDOMString(transformList);
+    const is2D = op_canvas_2d_parse_matrix(transformList, parseMatrixBuffer);
+    initDOMMatrix(this, parseMatrixBuffer, is2D);
+    return this;
+  }
+
   static {
     configureInterface(this);
   }
@@ -2143,4 +2202,12 @@ function invertMatrix(out, m) {
       m11 * m23 * m32 - m12 * m21 * m33 + m11 * m22 * m33) / det,
   );
   setDOMMatrixIs2D(out, getDOMMatrixIs2D(m));
+}
+
+let inWorker = false;
+
+export function initWorkerDOMMatrix() {
+  inWorker = true;
+  delete DOMMatrixReadOnly.prototype.toString;
+  delete DOMMatrix.prototype.setMatrixValue;
 }
