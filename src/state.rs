@@ -18,6 +18,7 @@ use super::convert::{
     srgb_to_premultiplied_linear_srgb, unpack_argb32_to_rgba8,
 };
 use super::css::color::AbsoluteColor;
+use super::css::filter::{parse_and_compute_filter, ComputedFilter};
 use super::css::length::{parse_absolute_length, SpecifiedAbsoluteLength};
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
@@ -347,6 +348,7 @@ pub struct DrawingState {
     shadow_color: AbsoluteColor,
     shadow_offset: Vector2D<f64>,
     shadow_blur: f64,
+    filter: ComputedFilter,
 }
 
 impl Default for DrawingState {
@@ -378,6 +380,7 @@ impl Default for DrawingState {
             shadow_color: AbsoluteColor::TRANSPARENT_BLACK,
             shadow_offset: Vector2D::zero(),
             shadow_blur: 0.0,
+            filter: ComputedFilter::none(),
         }
     }
 }
@@ -809,6 +812,7 @@ impl CanvasState {
     where
         RF: Fn(&mut raqote::DrawTarget, raqote::DrawOptions),
     {
+        // TODO apply filter
         match self.current_drawing_state.compositing_and_blending_operator {
             BlendOrCompositeMode::Clear => {
                 if self.alpha {
@@ -1188,6 +1192,10 @@ impl CanvasState {
 
     pub fn set_shadow_blur(&mut self, value: f64) {
         self.current_drawing_state.shadow_blur = value;
+    }
+
+    pub fn set_filter(&mut self, value: ComputedFilter) {
+        self.current_drawing_state.filter = value;
     }
 }
 
@@ -2052,5 +2060,10 @@ pub fn op_canvas_2d_state_set_filter(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    todo!("(CanvasState @ {:p}).set_filter({value:?})", &mut *this)
+    if let Ok(value) = parse_and_compute_filter(value) {
+        this.set_filter(value);
+        true
+    } else {
+        false
+    }
 }

@@ -158,6 +158,8 @@ import {
 
 const {
   ArrayIsArray,
+  ArrayPrototypePop,
+  ArrayPrototypePush,
   Float64Array,
   MathAbs,
   MathMin,
@@ -1051,6 +1053,7 @@ export class OffscreenCanvasRenderingContext2D {
   #canvas;
   #state;
   #colorSpace;
+  #cachedDrawingStateStack = [];
   #cachedFont = "10px sans-serif";
   #cachedLetterSpacing = null;
   #cachedWordSpacing = null;
@@ -1086,11 +1089,33 @@ export class OffscreenCanvasRenderingContext2D {
   save() {
     this.#brand;
     op_canvas_2d_state_save(this.#state);
+    ArrayPrototypePush(this.#cachedDrawingStateStack, {
+      font: this.#cachedFont,
+      letterSpacing: this.#cachedLetterSpacing,
+      wordSpacing: this.#cachedWordSpacing,
+      fillStyle: this.#cachedFillStyle,
+      strokeStyle: this.#cachedStrokeStyle,
+      defaultPath: this.#cachedDefaultPath,
+      shadowColor: this.#cachedShadowColor,
+      filter: this.#cachedFilter,
+    });
   }
 
   restore() {
     this.#brand;
+    const cache = ArrayPrototypePop(this.#cachedDrawingStateStack);
+    if (!cache) {
+      return;
+    }
     op_canvas_2d_state_restore(this.#state);
+    this.#cachedFont = cache.font;
+    this.#cachedLetterSpacing = cache.letterSpacing;
+    this.#cachedWordSpacing = cache.wordSpacing;
+    this.#cachedFillStyle = cache.fillStyle;
+    this.#cachedStrokeStyle = cache.strokeStyle;
+    this.#cachedDefaultPath = cache.defaultPath;
+    this.#cachedShadowColor = cache.shadowColor;
+    this.#cachedFilter = cache.filter;
   }
 
   reset() {

@@ -65,6 +65,28 @@ impl SpecifiedAbsoluteLength {
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
+
+    pub fn parse_non_negative<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
+        let location = input.current_source_location();
+        Ok(match *input.next()? {
+            Token::Number { value, .. } if value == 0.0 => Self::zero(),
+            Token::Dimension {
+                value, ref unit, ..
+            } if value >= 0.0 => match_ignore_ascii_case! { unit,
+                "cm" => Self::Cm(value),
+                "mm" => Self::Mm(value),
+                "q" => Self::Q(value),
+                "in" => Self::In(value),
+                "pc" => Self::Pc(value),
+                "pt" => Self::Pt(value),
+                "px" => Self::Px(value),
+                _ => return Err(location.new_unexpected_token_error(Token::Ident(unit.clone()))),
+            },
+            ref t => return Err(location.new_unexpected_token_error(t.clone())),
+        })
+    }
 }
 
 impl ToCss for SpecifiedAbsoluteLength {
