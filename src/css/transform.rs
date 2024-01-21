@@ -71,6 +71,182 @@ impl ComputedTransformFunction {
             .into(),
         }
     }
+
+    pub fn parse_and_compute<'i>(
+        name: CowRcStr<'i>,
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
+        Ok(match_ignore_ascii_case! { &name,
+            "matrix" => {
+                let a = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let b = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let c = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let d = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let e = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let f = parse_number(input)? as f64;
+                Self::Matrix([a, b, c, d, e, f])
+            },
+            "matrix3d" => {
+                let m11 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m12 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m13 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m14 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m21 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m22 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m23 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m24 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m31 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m32 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m33 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m34 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m41 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m42 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m43 = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let m44 = parse_number(input)? as f64;
+                Self::Matrix3D([
+                    m11, m12, m13, m14,
+                    m21, m22, m23, m24,
+                    m31, m32, m33, m34,
+                    m41, m42, m43, m44,
+                ])
+            },
+            "translate" => {
+                let x = SpecifiedAbsoluteLength::parse(input)?.compute();
+                if input.try_parse(Parser::expect_comma).is_ok() {
+                    let y = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    Self::Translate(x, y)
+                } else {
+                    Self::Translate(x, ComputedLength::zero())
+                }
+            },
+            "translate3d" => {
+                let x = SpecifiedAbsoluteLength::parse(input)?.compute();
+                input.expect_comma()?;
+                let y = SpecifiedAbsoluteLength::parse(input)?.compute();
+                input.expect_comma()?;
+                let z = SpecifiedAbsoluteLength::parse(input)?.compute();
+                Self::Translate3D(x, y, z)
+            },
+            "translatex" => {
+                let x = SpecifiedAbsoluteLength::parse(input)?.compute();
+                Self::TranslateX(x)
+            },
+            "translatey" => {
+                let y = SpecifiedAbsoluteLength::parse(input)?.compute();
+                Self::TranslateY(y)
+            },
+            "translatez" => {
+                let z = SpecifiedAbsoluteLength::parse(input)?.compute();
+                Self::TranslateZ(z)
+            },
+            "scale" => {
+                let x = parse_number_or_percentage(input)?.unit_value() as f64;
+                if input.try_parse(Parser::expect_comma).is_ok() {
+                    let y = parse_number_or_percentage(input)?.unit_value() as f64;
+                    Self::Scale(x, y)
+                } else {
+                    Self::Scale(x, x)
+                }
+            },
+            "scale3d" => {
+                let x = parse_number_or_percentage(input)?.unit_value() as f64;
+                input.expect_comma()?;
+                let y = parse_number_or_percentage(input)?.unit_value() as f64;
+                input.expect_comma()?;
+                let z = parse_number_or_percentage(input)?.unit_value() as f64;
+                Self::Scale3D(x, y, z)
+            },
+            "scalex" => {
+                let x = parse_number_or_percentage(input)?.unit_value() as f64;
+                Self::ScaleX(x)
+            },
+            "scaley" => {
+                let y = parse_number_or_percentage(input)?.unit_value() as f64;
+                Self::ScaleY(y)
+            },
+            "scalez" => {
+                let z = parse_number_or_percentage(input)?.unit_value() as f64;
+                Self::ScaleZ(z)
+            },
+            "rotate" => {
+                let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                Self::Rotate(t)
+            },
+            "rotate3d" => {
+                let x = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let y = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let z = parse_number(input)? as f64;
+                input.expect_comma()?;
+                let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                Self::Rotate3D(x, y, z, t)
+            },
+            "rotatex" => {
+                let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                Self::RotateX(t)
+            },
+            "rotatey" => {
+                let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                Self::RotateY(t)
+            },
+            "rotatez" => {
+                let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                Self::RotateZ(t)
+            },
+            "skew" => {
+                let a = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                if input.try_parse(Parser::expect_comma).is_ok() {
+                    let b = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    Self::Skew(a, b)
+                } else {
+                    Self::Skew(a, ComputedAngle::zero())
+                }
+            },
+            "skewx" => {
+                let a = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                Self::SkewX(a)
+            },
+            "skewy" => {
+                let b = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                Self::SkewY(b)
+            },
+            "perspective" => {
+                let d = match input
+                    .try_parse(SpecifiedAbsoluteLength::parse)
+                    .map(SpecifiedAbsoluteLength::compute)
+                {
+                    Ok(d) if d.px >= 0.0 => Some(d),
+                    _ => {
+                        input.expect_ident_matching("none")?;
+                        None
+                    }
+                };
+                Self::Perspective(d)
+            },
+            _ => return Err(input.new_unexpected_token_error(Token::Ident(name))),
+        })
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -79,12 +255,10 @@ pub struct ComputedTransform {
 }
 
 impl ComputedTransform {
-    pub fn new(transform_list: Vec<ComputedTransformFunction>) -> Self {
-        Self { transform_list }
-    }
-
     pub fn none() -> Self {
-        Self::new(Vec::new())
+        Self {
+            transform_list: vec![],
+        }
     }
 
     pub fn to_matrix(&self) -> Matrix {
@@ -98,205 +272,31 @@ impl ComputedTransform {
             },
         )
     }
-}
 
-fn parse_transform_function<'i>(
-    name: CowRcStr<'i>,
-    input: &mut Parser<'i, '_>,
-) -> Result<ComputedTransformFunction, ParseError<'i, Infallible>> {
-    Ok(match_ignore_ascii_case! { &name,
-        "matrix" => {
-            let a = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let b = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let c = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let d = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let e = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let f = parse_number(input)? as f64;
-            ComputedTransformFunction::Matrix([a, b, c, d, e, f])
-        },
-        "matrix3d" => {
-            let m11 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m12 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m13 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m14 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m21 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m22 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m23 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m24 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m31 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m32 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m33 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m34 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m41 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m42 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m43 = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let m44 = parse_number(input)? as f64;
-            ComputedTransformFunction::Matrix3D([
-                m11, m12, m13, m14,
-                m21, m22, m23, m24,
-                m31, m32, m33, m34,
-                m41, m42, m43, m44,
-            ])
-        },
-        "translate" => {
-            let x = SpecifiedAbsoluteLength::parse(input)?.compute();
-            if input.try_parse(Parser::expect_comma).is_ok() {
-                let y = SpecifiedAbsoluteLength::parse(input)?.compute();
-                ComputedTransformFunction::Translate(x, y)
-            } else {
-                ComputedTransformFunction::Translate(x, ComputedLength::zero())
-            }
-        },
-        "translate3d" => {
-            let x = SpecifiedAbsoluteLength::parse(input)?.compute();
-            input.expect_comma()?;
-            let y = SpecifiedAbsoluteLength::parse(input)?.compute();
-            input.expect_comma()?;
-            let z = SpecifiedAbsoluteLength::parse(input)?.compute();
-            ComputedTransformFunction::Translate3D(x, y, z)
-        },
-        "translatex" => {
-            let x = SpecifiedAbsoluteLength::parse(input)?.compute();
-            ComputedTransformFunction::TranslateX(x)
-        },
-        "translatey" => {
-            let y = SpecifiedAbsoluteLength::parse(input)?.compute();
-            ComputedTransformFunction::TranslateY(y)
-        },
-        "translatez" => {
-            let z = SpecifiedAbsoluteLength::parse(input)?.compute();
-            ComputedTransformFunction::TranslateZ(z)
-        },
-        "scale" => {
-            let x = parse_number_or_percentage(input)?.unit_value() as f64;
-            if input.try_parse(Parser::expect_comma).is_ok() {
-                let y = parse_number_or_percentage(input)?.unit_value() as f64;
-                ComputedTransformFunction::Scale(x, y)
-            } else {
-                ComputedTransformFunction::Scale(x, x)
-            }
-        },
-        "scale3d" => {
-            let x = parse_number_or_percentage(input)?.unit_value() as f64;
-            input.expect_comma()?;
-            let y = parse_number_or_percentage(input)?.unit_value() as f64;
-            input.expect_comma()?;
-            let z = parse_number_or_percentage(input)?.unit_value() as f64;
-            ComputedTransformFunction::Scale3D(x, y, z)
-        },
-        "scalex" => {
-            let x = parse_number_or_percentage(input)?.unit_value() as f64;
-            ComputedTransformFunction::ScaleX(x)
-        },
-        "scaley" => {
-            let y = parse_number_or_percentage(input)?.unit_value() as f64;
-            ComputedTransformFunction::ScaleY(y)
-        },
-        "scalez" => {
-            let z = parse_number_or_percentage(input)?.unit_value() as f64;
-            ComputedTransformFunction::ScaleZ(z)
-        },
-        "rotate" => {
-            let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            ComputedTransformFunction::Rotate(t)
-        },
-        "rotate3d" => {
-            let x = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let y = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let z = parse_number(input)? as f64;
-            input.expect_comma()?;
-            let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            ComputedTransformFunction::Rotate3D(x, y, z, t)
-        },
-        "rotatex" => {
-            let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            ComputedTransformFunction::RotateX(t)
-        },
-        "rotatey" => {
-            let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            ComputedTransformFunction::RotateY(t)
-        },
-        "rotatez" => {
-            let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            ComputedTransformFunction::RotateZ(t)
-        },
-        "skew" => {
-            let a = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            if input.try_parse(Parser::expect_comma).is_ok() {
-                let b = SpecifiedAngle::parse_allow_zero(input)?.compute();
-                ComputedTransformFunction::Skew(a, b)
-            } else {
-                ComputedTransformFunction::Skew(a, ComputedAngle::zero())
-            }
-        },
-        "skewx" => {
-            let a = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            ComputedTransformFunction::SkewX(a)
-        },
-        "skewy" => {
-            let b = SpecifiedAngle::parse_allow_zero(input)?.compute();
-            ComputedTransformFunction::SkewY(b)
-        },
-        "perspective" => {
-            let d = match input
-                .try_parse(SpecifiedAbsoluteLength::parse)
-                .map(SpecifiedAbsoluteLength::compute)
-            {
-                Ok(d) if d.px >= 0.0 => Some(d),
-                _ => {
-                    input.expect_ident_matching("none")?;
-                    None
-                }
-            };
-            ComputedTransformFunction::Perspective(d)
-        },
-        _ => return Err(input.new_unexpected_token_error(Token::Ident(name))),
-    })
-}
-
-fn parse_transform<'i>(
-    input: &mut Parser<'i, '_>,
-) -> Result<ComputedTransform, ParseError<'i, Infallible>> {
-    input.skip_whitespace();
-    if input
-        .try_parse(|input| input.expect_ident_matching("none"))
-        .is_ok()
-    {
-        return Ok(ComputedTransform::none());
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
+        input.skip_whitespace();
+        if input
+            .try_parse(|input| input.expect_ident_matching("none"))
+            .is_ok()
+        {
+            return Ok(Self::none());
+        }
+        let transform_list = parse_one_or_more(input, |input| {
+            let function = input.expect_function()?.clone();
+            input.parse_nested_block(|input| {
+                ComputedTransformFunction::parse_and_compute(function, input)
+            })
+        })?;
+        Ok(Self { transform_list })
     }
-    parse_one_or_more(input, |input| {
-        let function = input.expect_function()?.clone();
-        input.parse_nested_block(|input| parse_transform_function(function, input))
-    })
-    .map(ComputedTransform::new)
 }
 
 pub fn parse_and_compute_transform(css: &str) -> Result<ComputedTransform, BasicParseError> {
     let mut input = ParserInput::new(css);
     let mut parser = Parser::new(&mut input);
     parser
-        .parse_entirely(parse_transform)
+        .parse_entirely(ComputedTransform::parse_and_compute)
         .map_err(ParseError::basic)
 }

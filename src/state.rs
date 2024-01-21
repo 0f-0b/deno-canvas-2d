@@ -4,6 +4,7 @@ use std::ffi::c_void;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
+use cssparser::ToCss as _;
 use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2, Angle};
@@ -17,6 +18,7 @@ use super::convert::{
     srgb_to_premultiplied_linear_srgb, unpack_argb32_to_rgba8,
 };
 use super::css::color::AbsoluteColor;
+use super::css::length::{parse_absolute_length, SpecifiedAbsoluteLength};
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
@@ -328,6 +330,8 @@ pub struct DrawingState {
     text_align: CanvasTextAlign,
     text_baseline: CanvasTextBaseline,
     direction: CanvasDirection,
+    letter_spacing: SpecifiedAbsoluteLength,
+    word_spacing: SpecifiedAbsoluteLength,
     font_kerning: CanvasFontKerning,
     font_stretch: CanvasFontStretch,
     font_variant_caps: CanvasFontVariantCaps,
@@ -357,6 +361,8 @@ impl Default for DrawingState {
             text_align: CanvasTextAlign::Start,
             text_baseline: CanvasTextBaseline::Alphabetic,
             direction: CanvasDirection::Inherit,
+            letter_spacing: SpecifiedAbsoluteLength::zero(),
+            word_spacing: SpecifiedAbsoluteLength::zero(),
             font_kerning: CanvasFontKerning::Auto,
             font_stretch: CanvasFontStretch::Normal,
             font_variant_caps: CanvasFontVariantCaps::Normal,
@@ -563,6 +569,22 @@ impl CanvasState {
 
     pub fn set_direction(&mut self, value: CanvasDirection) {
         self.current_drawing_state.direction = value;
+    }
+
+    pub fn letter_spacing(&self) -> SpecifiedAbsoluteLength {
+        self.current_drawing_state.letter_spacing
+    }
+
+    pub fn set_letter_spacing(&mut self, value: SpecifiedAbsoluteLength) {
+        self.current_drawing_state.letter_spacing = value;
+    }
+
+    pub fn word_spacing(&self) -> SpecifiedAbsoluteLength {
+        self.current_drawing_state.word_spacing
+    }
+
+    pub fn set_word_spacing(&mut self, value: SpecifiedAbsoluteLength) {
+        self.current_drawing_state.word_spacing = value;
     }
 
     pub fn font_kerning(&self) -> CanvasFontKerning {
@@ -1401,7 +1423,7 @@ pub fn op_canvas_2d_state_set_direction(state: &OpState, this: *const c_void, va
 #[string]
 pub fn op_canvas_2d_state_letter_spacing(state: &OpState, this: *const c_void) -> String {
     let this = borrow_v8::<CanvasState>(state, this);
-    todo!("(CanvasState @ {:p}).letter_spacing()", &*this)
+    this.letter_spacing().to_css_string()
 }
 
 #[op2(fast)]
@@ -1411,17 +1433,19 @@ pub fn op_canvas_2d_state_set_letter_spacing(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    todo!(
-        "(CanvasState @ {:p}).set_letter_spacing({value:?})",
-        &mut *this
-    )
+    if let Ok(value) = parse_absolute_length(value) {
+        this.set_letter_spacing(value);
+        true
+    } else {
+        false
+    }
 }
 
 #[op2]
 #[string]
 pub fn op_canvas_2d_state_word_spacing(state: &OpState, this: *const c_void) -> String {
     let this = borrow_v8::<CanvasState>(state, this);
-    todo!("(CanvasState @ {:p}).word_spacing()", &*this)
+    this.word_spacing().to_css_string()
 }
 
 #[op2(fast)]
@@ -1431,10 +1455,12 @@ pub fn op_canvas_2d_state_set_word_spacing(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    todo!(
-        "(CanvasState @ {:p}).set_word_spacing({value:?})",
-        &mut *this
-    )
+    if let Ok(value) = parse_absolute_length(value) {
+        this.set_word_spacing(value);
+        true
+    } else {
+        false
+    }
 }
 
 #[op2(fast)]

@@ -1052,8 +1052,8 @@ export class OffscreenCanvasRenderingContext2D {
   #state;
   #colorSpace;
   #cachedFont = "10px sans-serif";
-  #cachedLetterSpacing = "0px";
-  #cachedWordSpacing = "0px";
+  #cachedLetterSpacing = null;
+  #cachedWordSpacing = null;
   #cachedFillStyle = null;
   #cachedStrokeStyle = null;
   #cachedDefaultPath = null;

@@ -271,17 +271,25 @@ impl FromParsedColor for ComputedColor {
     }
 }
 
-pub fn parse_and_compute_color(css: &str) -> Result<ComputedColor, BasicParseError> {
-    struct BasicColorParser;
+impl ComputedColor {
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
+        struct BasicColorParser;
 
-    impl<'i> ColorParser<'i> for BasicColorParser {
-        type Output = ComputedColor;
-        type Error = Infallible;
+        impl<'i> ColorParser<'i> for BasicColorParser {
+            type Output = ComputedColor;
+            type Error = Infallible;
+        }
+
+        parse_color_with(&BasicColorParser, input)
     }
+}
 
+pub fn parse_and_compute_color(css: &str) -> Result<ComputedColor, BasicParseError> {
     let mut input = ParserInput::new(css);
     let mut parser = Parser::new(&mut input);
     parser
-        .parse_entirely(|parser| parse_color_with(&BasicColorParser, parser))
+        .parse_entirely(ComputedColor::parse_and_compute)
         .map_err(ParseError::basic)
 }

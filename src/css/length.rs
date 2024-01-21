@@ -1,6 +1,9 @@
 use std::convert::Infallible;
+use std::fmt;
 
-use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
+use cssparser::{
+    match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, ToCss, Token,
+};
 
 #[derive(Clone, Copy, Debug)]
 pub enum SpecifiedAbsoluteLength {
@@ -16,6 +19,18 @@ pub enum SpecifiedAbsoluteLength {
 impl SpecifiedAbsoluteLength {
     pub fn zero() -> Self {
         Self::Px(0.0)
+    }
+
+    pub fn unitless_value(self) -> f32 {
+        match self {
+            Self::Cm(v)
+            | Self::Mm(v)
+            | Self::Q(v)
+            | Self::In(v)
+            | Self::Pc(v)
+            | Self::Pt(v)
+            | Self::Px(v) => v,
+        }
     }
 
     pub fn compute(self) -> ComputedLength {
@@ -50,6 +65,34 @@ impl SpecifiedAbsoluteLength {
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
+}
+
+impl ToCss for SpecifiedAbsoluteLength {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        match self.unitless_value() {
+            v if v == f32::INFINITY => return dest.write_str("calc(infinity * 1px)"),
+            v if v == f32::NEG_INFINITY => return dest.write_str("calc(-infinity * 1px)"),
+            v if v.is_nan() => return dest.write_str("calc(NaN * 1px)"),
+            _ => {}
+        }
+        match *self {
+            Self::Cm(v) => write!(dest, "{}cm", v),
+            Self::Mm(v) => write!(dest, "{}mm", v),
+            Self::Q(v) => write!(dest, "{}q", v),
+            Self::In(v) => write!(dest, "{}in", v),
+            Self::Pc(v) => write!(dest, "{}pc", v),
+            Self::Pt(v) => write!(dest, "{}pt", v),
+            Self::Px(v) => write!(dest, "{}px", v),
+        }
+    }
+}
+
+pub fn parse_absolute_length(css: &str) -> Result<SpecifiedAbsoluteLength, BasicParseError> {
+    let mut input = ParserInput::new(css);
+    let mut parser = Parser::new(&mut input);
+    parser
+        .parse_entirely(SpecifiedAbsoluteLength::parse)
+        .map_err(ParseError::basic)
 }
 
 #[derive(Clone, Copy, Debug)]
