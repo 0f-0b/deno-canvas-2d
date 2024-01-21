@@ -1,18 +1,18 @@
 mod blur;
 mod codec;
 mod convert;
-mod css_color;
+mod css;
 mod gc;
-pub mod gradient;
-pub mod image_bitmap;
+mod gradient;
+mod image_bitmap;
 mod image_data;
 mod matrix;
-pub mod path;
-pub mod pattern;
+mod path;
+mod pattern;
 mod raqote_ext;
-pub mod state;
+mod state;
 
-use css_color::{parse_and_compute_color, AbsoluteColor, ComputedColor};
+use css::color::{parse_and_compute_color, AbsoluteColor, ComputedColor};
 use cssparser::BasicParseError;
 use deno_core::anyhow;
 use deno_core::error::range_error;

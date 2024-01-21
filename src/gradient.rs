@@ -8,12 +8,12 @@ use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::Point2D;
 use euclid::{point2, Angle};
 
-use super::css_color::AbsoluteColor;
+use super::css::color::AbsoluteColor;
 use super::gc::{borrow_v8, into_v8};
 use super::{parse_color_for_canvas, raqote_ext, to_raqote_color, CanvasColorSpace};
 
 #[derive(Clone, Copy, Debug)]
-pub(super) enum CanvasGradientStyle {
+pub enum CanvasGradientStyle {
     Linear {
         start: Point2D<f64>,
         end: Point2D<f64>,
@@ -31,7 +31,7 @@ pub(super) enum CanvasGradientStyle {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct CanvasGradientStop {
+pub struct CanvasGradientStop {
     offset: f64,
     color: AbsoluteColor,
 }
@@ -46,7 +46,7 @@ impl CanvasGradientStop {
 }
 
 #[derive(Debug)]
-pub(super) struct CanvasGradient {
+pub struct CanvasGradient {
     style: CanvasGradientStyle,
     stops: RefCell<Vec<CanvasGradientStop>>,
 }

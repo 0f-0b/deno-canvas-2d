@@ -3,7 +3,7 @@ use deno_core::anyhow;
 use super::{to_raqote_size, CanvasColorSpace};
 
 #[derive(Clone, Debug)]
-pub(super) struct ImageData {
+pub struct ImageData {
     pub width: u32,
     pub height: u32,
     pub color_space: CanvasColorSpace,
@@ -11,7 +11,7 @@ pub(super) struct ImageData {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct ImageDataView<'a> {
+pub struct ImageDataView<'a> {
     pub width: u32,
     pub height: u32,
     pub color_space: CanvasColorSpace,
@@ -19,7 +19,7 @@ pub(super) struct ImageDataView<'a> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct AlignedImageDataView<'a> {
+pub struct AlignedImageDataView<'a> {
     pub width: u32,
     pub height: u32,
     pub color_space: CanvasColorSpace,
@@ -38,7 +38,7 @@ impl<'a> AlignedImageDataView<'a> {
 }
 
 #[derive(Debug)]
-pub(super) struct AlignedImageDataViewMut<'a> {
+pub struct AlignedImageDataViewMut<'a> {
     pub width: u32,
     pub height: u32,
     pub color_space: CanvasColorSpace,

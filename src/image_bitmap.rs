@@ -17,11 +17,11 @@ use super::image_data::{ImageData, ImageDataView};
 use super::state::CanvasState;
 use super::{raqote_ext, to_raqote_point, to_raqote_size, CanvasColorSpace};
 
-pub(super) fn non_zero_u32(x: u32) -> Option<u32> {
+pub fn non_zero_u32(x: u32) -> Option<u32> {
     (x != 0).then_some(x)
 }
 
-pub(super) fn out_of_bounds(
+pub fn out_of_bounds(
     width: u32,
     height: u32,
     crop_x: i64,
@@ -35,7 +35,7 @@ pub(super) fn out_of_bounds(
         || crop_y >= height as i64
 }
 
-pub(super) fn same_size(
+pub fn same_size(
     width: u32,
     height: u32,
     crop_x: i64,
@@ -46,7 +46,7 @@ pub(super) fn same_size(
     crop_x == 0 && crop_y == 0 && crop_width == width && crop_height == height
 }
 
-pub(super) fn aspect_resize(
+pub fn aspect_resize(
     sw: u64,
     sh: u64,
     dw: Option<u32>,
@@ -69,14 +69,14 @@ pub(super) fn aspect_resize(
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum ImageOrientation {
+pub enum ImageOrientation {
     FromImage,
     FlipY,
 }
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum ResizeQuality {
+pub enum ResizeQuality {
     Pixelated,
     Low,
     Medium,
@@ -84,7 +84,7 @@ pub(super) enum ResizeQuality {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct ImageBitmap {
+pub struct ImageBitmap {
     pub width: u32,
     pub height: u32,
     pub color_space: CanvasColorSpace,

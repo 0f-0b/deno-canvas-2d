@@ -11,7 +11,7 @@ use super::gc::{borrow_v8, borrow_v8_mut, into_v8};
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasFillRule {
+pub enum CanvasFillRule {
     NonZero,
     EvenOdd,
 }
@@ -70,7 +70,7 @@ impl PathOp {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct Path {
+pub struct Path {
     ops: Vec<PathOp>,
     first_point_in_subpath: Point2D<f64>,
 }

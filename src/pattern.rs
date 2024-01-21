@@ -12,7 +12,7 @@ use super::{raqote_ext, CanvasColorSpace};
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum RepetitionBehavior {
+pub enum RepetitionBehavior {
     Repeat,
     RepeatX,
     RepeatY,
@@ -20,7 +20,7 @@ pub(super) enum RepetitionBehavior {
 }
 
 #[derive(Debug)]
-pub(super) struct CanvasPattern {
+pub struct CanvasPattern {
     image: ImageBitmap,
     repetition_behavior: RepetitionBehavior,
     transformation_matrix: Cell<Transform2D<f64>>,

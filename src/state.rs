@@ -16,7 +16,7 @@ use super::convert::{
     premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_display_p3,
     srgb_to_premultiplied_linear_srgb, unpack_argb32_to_rgba8,
 };
-use super::css_color::AbsoluteColor;
+use super::css::color::AbsoluteColor;
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
@@ -43,7 +43,7 @@ const OPAQUE_BLACK_SOLID_SOURCE: raqote::SolidSource = raqote::SolidSource {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasLineCap {
+pub enum CanvasLineCap {
     Butt,
     Round,
     Square,
@@ -61,7 +61,7 @@ impl CanvasLineCap {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasLineJoin {
+pub enum CanvasLineJoin {
     Round,
     Bevel,
     Miter,
@@ -79,7 +79,7 @@ impl CanvasLineJoin {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasTextAlign {
+pub enum CanvasTextAlign {
     Start,
     End,
     Left,
@@ -89,7 +89,7 @@ pub(super) enum CanvasTextAlign {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasTextBaseline {
+pub enum CanvasTextBaseline {
     Top,
     Hanging,
     Middle,
@@ -100,7 +100,7 @@ pub(super) enum CanvasTextBaseline {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasDirection {
+pub enum CanvasDirection {
     Ltr,
     Rtl,
     Inherit,
@@ -108,7 +108,7 @@ pub(super) enum CanvasDirection {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasFontKerning {
+pub enum CanvasFontKerning {
     Auto,
     Normal,
     None,
@@ -116,7 +116,7 @@ pub(super) enum CanvasFontKerning {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasFontStretch {
+pub enum CanvasFontStretch {
     UltraCondensed,
     ExtraCondensed,
     Condensed,
@@ -130,7 +130,7 @@ pub(super) enum CanvasFontStretch {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasFontVariantCaps {
+pub enum CanvasFontVariantCaps {
     Normal,
     SmallCaps,
     AllSmallCaps,
@@ -142,7 +142,7 @@ pub(super) enum CanvasFontVariantCaps {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum CanvasTextRendering {
+pub enum CanvasTextRendering {
     Auto,
     OptimizeSpeed,
     OptimizeLegibility,
@@ -151,7 +151,7 @@ pub(super) enum CanvasTextRendering {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum BlendOrCompositeMode {
+pub enum BlendOrCompositeMode {
     Normal,
     Multiply,
     Screen,
@@ -283,14 +283,14 @@ impl BlendOrCompositeMode {
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-pub(super) enum ImageSmoothingQuality {
+pub enum ImageSmoothingQuality {
     Low,
     Medium,
     High,
 }
 
 #[derive(Clone, Debug)]
-pub(super) enum FillOrStrokeStyle {
+pub enum FillOrStrokeStyle {
     Color(AbsoluteColor),
     Gradient(Rc<CanvasGradient>),
     Pattern(Rc<CanvasPattern>),
@@ -318,7 +318,7 @@ impl FillOrStrokeStyle {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct DrawingState {
+pub struct DrawingState {
     line_width: f64,
     line_cap: CanvasLineCap,
     line_join: CanvasLineJoin,
@@ -405,7 +405,7 @@ impl DrawingState {
     }
 }
 
-pub(super) struct CanvasState {
+pub struct CanvasState {
     draw_target: raqote::DrawTarget,
     alpha: bool,
     color_space: CanvasColorSpace,

@@ -5,7 +5,7 @@ use palette::convert::{FromColorUnclamped as _, IntoColorUnclamped as _};
 use palette::stimulus::IntoStimulus as _;
 use palette::{LinSrgb, Srgb};
 
-use super::css_color::{DisplayP3, LinDisplayP3};
+use super::css::color::{DisplayP3, LinDisplayP3};
 use super::premultiply;
 
 pub type Rgba = (u8, u8, u8, u8);
