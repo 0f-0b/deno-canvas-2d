@@ -1054,7 +1054,7 @@ export class OffscreenCanvasRenderingContext2D {
   #state;
   #colorSpace;
   #cachedDrawingStateStack = [];
-  #cachedFont = "10px sans-serif";
+  #cachedFont = null;
   #cachedLetterSpacing = null;
   #cachedWordSpacing = null;
   #cachedFillStyle = null;

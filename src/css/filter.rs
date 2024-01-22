@@ -6,7 +6,7 @@ use cssparser::{match_ignore_ascii_case, BasicParseError, ParseError, Parser, Pa
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::color::ComputedColor;
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_non_negative_number_or_percentage, parse_one_or_more, parse_string};
+use super::{parse_number_or_percentage_with_range, parse_one_or_more, parse_string};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Shadow {
@@ -48,23 +48,27 @@ impl ComputedFilterValue {
                 input.parse_nested_block(|input| {
                     Ok(match_ignore_ascii_case! { &name,
                         "blur" => {
-                            let v = match input
-                                .try_parse(SpecifiedAbsoluteLength::parse_non_negative)
-                            {
+                            let v = match input.try_parse(|input| {
+                                SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY)
+                            }) {
                                 Ok(v) => v.compute(),
                                 Err(_) => ComputedLength::zero(),
                             };
                             Self::FilterFunction(ComputedFilterFunction::Blur(v))
                         },
                         "brightness" => {
-                            let v = match input.try_parse(parse_non_negative_number_or_percentage) {
+                            let v = match input.try_parse(|input| {
+                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
+                            }) {
                                 Ok(v) => v.unit_value(),
                                 Err(_) => 1.0,
                             };
                             Self::FilterFunction(ComputedFilterFunction::Brightness(v))
                         },
                         "contrast" => {
-                            let v = match input.try_parse(parse_non_negative_number_or_percentage) {
+                            let v = match input.try_parse(|input| {
+                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
+                            }) {
                                 Ok(v) => v.unit_value(),
                                 Err(_) => 1.0,
                             };
@@ -74,9 +78,9 @@ impl ComputedFilterValue {
                             let color = input.try_parse(ComputedColor::parse_and_compute).ok();
                             let offset_x = SpecifiedAbsoluteLength::parse(input)?.compute();
                             let offset_y = SpecifiedAbsoluteLength::parse(input)?.compute();
-                            let blur = match input
-                                .try_parse(SpecifiedAbsoluteLength::parse_non_negative)
-                            {
+                            let blur = match input.try_parse(|input| {
+                                SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY)
+                            }) {
                                 Ok(v) => v.compute(),
                                 Err(_) => ComputedLength::zero(),
                             };
@@ -91,7 +95,9 @@ impl ComputedFilterValue {
                             }))
                         },
                         "grayscale" => {
-                            let v = match input.try_parse(parse_non_negative_number_or_percentage) {
+                            let v = match input.try_parse(|input| {
+                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
+                            }) {
                                 Ok(v) => v.unit_value(),
                                 Err(_) => 1.0,
                             };
@@ -105,35 +111,43 @@ impl ComputedFilterValue {
                             Self::FilterFunction(ComputedFilterFunction::HueRotate(v))
                         },
                         "invert" => {
-                            let v = match input.try_parse(parse_non_negative_number_or_percentage) {
+                            let v = match input.try_parse(|input| {
+                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
+                            }) {
                                 Ok(v) => v.unit_value(),
                                 Err(_) => 1.0,
                             };
                             Self::FilterFunction(ComputedFilterFunction::Invert(v))
                         },
                         "opacity" => {
-                            let v = match input.try_parse(parse_non_negative_number_or_percentage) {
+                            let v = match input.try_parse(|input| {
+                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
+                            }) {
                                 Ok(v) => v.unit_value(),
                                 Err(_) => 1.0,
                             };
                             Self::FilterFunction(ComputedFilterFunction::Opacity(v))
                         },
                         "sepia" => {
-                            let v = match input.try_parse(parse_non_negative_number_or_percentage) {
+                            let v = match input.try_parse(|input| {
+                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
+                            }) {
                                 Ok(v) => v.unit_value(),
                                 Err(_) => 1.0,
                             };
                             Self::FilterFunction(ComputedFilterFunction::Sepia(v))
                         },
                         "saturate" => {
-                            let v = match input.try_parse(parse_non_negative_number_or_percentage) {
+                            let v = match input.try_parse(|input| {
+                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
+                            }) {
                                 Ok(v) => v.unit_value(),
                                 Err(_) => 1.0,
                             };
                             Self::FilterFunction(ComputedFilterFunction::Saturate(v))
                         },
                         "url" | "src" => Self::Url(parse_string(input)?),
-                        _ => return Err(input.new_unexpected_token_error(Token::Ident(name))),
+                        _ => return Err(location.new_unexpected_token_error(Token::Ident(name))),
                     })
                 })?
             }

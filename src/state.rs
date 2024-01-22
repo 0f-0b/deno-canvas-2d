@@ -19,6 +19,11 @@ use super::convert::{
 };
 use super::css::color::AbsoluteColor;
 use super::css::filter::{parse_and_compute_filter, ComputedFilter};
+use super::css::font::{
+    parse_font, SpecifiedAbsoluteFontSize, SpecifiedFamilyName, SpecifiedFont, SpecifiedFontFamily,
+    SpecifiedFontSize, SpecifiedFontStretchCss3, SpecifiedFontStyle, SpecifiedFontVariantCss2,
+    SpecifiedFontWeight, SpecifiedGenericFamily, SpecifiedLineHeight,
+};
 use super::css::length::{parse_absolute_length, SpecifiedAbsoluteLength};
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
@@ -328,6 +333,7 @@ pub struct DrawingState {
     miter_limit: f64,
     dash_list: Box<[f64]>,
     line_dash_offset: f64,
+    font: SpecifiedFont,
     text_align: CanvasTextAlign,
     text_baseline: CanvasTextBaseline,
     direction: CanvasDirection,
@@ -360,6 +366,21 @@ impl Default for DrawingState {
             miter_limit: 10.0,
             dash_list: Box::new([]),
             line_dash_offset: 0.0,
+            font: SpecifiedFont {
+                font_style: SpecifiedFontStyle::Normal,
+                font_variant: SpecifiedFontVariantCss2::Normal,
+                font_weight: SpecifiedFontWeight::normal(),
+                font_stretch: SpecifiedFontStretchCss3::Normal,
+                font_size: SpecifiedFontSize::Absolute(SpecifiedAbsoluteFontSize::Length(
+                    SpecifiedAbsoluteLength::Px(10.0),
+                )),
+                line_height: SpecifiedLineHeight::Normal,
+                font_family: SpecifiedFontFamily {
+                    family_list: Box::new([SpecifiedFamilyName::Generic(
+                        SpecifiedGenericFamily::SansSerif,
+                    )]),
+                },
+            },
             text_align: CanvasTextAlign::Start,
             text_baseline: CanvasTextBaseline::Alphabetic,
             direction: CanvasDirection::Inherit,
@@ -548,6 +569,14 @@ impl CanvasState {
 
     pub fn set_line_dash_offset(&mut self, value: f64) {
         self.current_drawing_state.line_dash_offset = value;
+    }
+
+    pub fn font(&self) -> &SpecifiedFont {
+        &self.current_drawing_state.font
+    }
+
+    pub fn set_font(&mut self, value: SpecifiedFont) {
+        self.current_drawing_state.font = value;
     }
 
     pub fn text_align(&self) -> CanvasTextAlign {
@@ -1375,7 +1404,7 @@ pub fn op_canvas_2d_state_set_line_dash_offset(state: &OpState, this: *const c_v
 #[string]
 pub fn op_canvas_2d_state_font(state: &OpState, this: *const c_void) -> String {
     let this = borrow_v8::<CanvasState>(state, this);
-    todo!("(CanvasState @ {:p}).font()", &*this)
+    this.font().to_css_string()
 }
 
 #[op2(fast)]
@@ -1385,7 +1414,16 @@ pub fn op_canvas_2d_state_set_font(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    todo!("(CanvasState @ {:p}).set_font({value:?})", &mut *this)
+    if let Ok(mut value) = parse_font(value) {
+        value.font_size = SpecifiedFontSize::Absolute(SpecifiedAbsoluteFontSize::Length(
+            SpecifiedAbsoluteLength::Px(value.font_size.compute().px as f32),
+        ));
+        value.line_height = SpecifiedLineHeight::Normal;
+        this.set_font(value);
+        true
+    } else {
+        false
+    }
 }
 
 #[op2(fast)]

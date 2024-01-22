@@ -1,9 +1,8 @@
 use std::convert::Infallible;
-use std::fmt;
 
-use cssparser::{
-    match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, ToCss, Token,
-};
+use cssparser::{match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, Token};
+
+use super::impl_to_css_for_dimension;
 
 #[derive(Clone, Copy, Debug)]
 pub enum SpecifiedAbsoluteLength {
@@ -46,66 +45,65 @@ impl SpecifiedAbsoluteLength {
         ComputedLength { px }
     }
 
+    fn from_dimension(value: f32, unit: &str) -> Option<Self> {
+        Some(match_ignore_ascii_case! { unit,
+            "cm" => Self::Cm(value),
+            "mm" => Self::Mm(value),
+            "q" => Self::Q(value),
+            "in" => Self::In(value),
+            "pc" => Self::Pc(value),
+            "pt" => Self::Pt(value),
+            "px" => Self::Px(value),
+            _ => return None,
+        })
+    }
+
     pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
             Token::Number { value, .. } if value == 0.0 => Self::zero(),
             Token::Dimension {
                 value, ref unit, ..
-            } => match_ignore_ascii_case! { unit,
-                "cm" => Self::Cm(value),
-                "mm" => Self::Mm(value),
-                "q" => Self::Q(value),
-                "in" => Self::In(value),
-                "pc" => Self::Pc(value),
-                "pt" => Self::Pt(value),
-                "px" => Self::Px(value),
-                _ => return Err(location.new_unexpected_token_error(Token::Ident(unit.clone()))),
-            },
+            } => Self::from_dimension(value, unit)
+                .ok_or_else(|| location.new_unexpected_token_error(Token::Ident(unit.clone())))?,
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
 
-    pub fn parse_non_negative<'i>(
+    pub fn parse_with_range<'i>(
         input: &mut Parser<'i, '_>,
+        min_px: f64,
+        max_px: f64,
     ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
-            Token::Number { value, .. } if value == 0.0 => Self::zero(),
-            Token::Dimension {
+            ref t @ Token::Dimension {
                 value, ref unit, ..
-            } if value >= 0.0 => match_ignore_ascii_case! { unit,
-                "cm" => Self::Cm(value),
-                "mm" => Self::Mm(value),
-                "q" => Self::Q(value),
-                "in" => Self::In(value),
-                "pc" => Self::Pc(value),
-                "pt" => Self::Pt(value),
-                "px" => Self::Px(value),
-                _ => return Err(location.new_unexpected_token_error(Token::Ident(unit.clone()))),
-            },
+            } => {
+                let result = Self::from_dimension(value, unit).ok_or_else(|| {
+                    location.new_unexpected_token_error(Token::Ident(unit.clone()))
+                })?;
+                let ComputedLength { px } = result.compute();
+                if !(min_px..=max_px).contains(&px) {
+                    return Err(location.new_unexpected_token_error(t.clone()));
+                }
+                result
+            }
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
 }
 
-impl ToCss for SpecifiedAbsoluteLength {
-    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        match self.unitless_value() {
-            v if v == f32::INFINITY => return dest.write_str("calc(infinity * 1px)"),
-            v if v == f32::NEG_INFINITY => return dest.write_str("calc(-infinity * 1px)"),
-            v if v.is_nan() => return dest.write_str("calc(NaN * 1px)"),
-            _ => {}
-        }
-        match *self {
-            Self::Cm(v) => write!(dest, "{}cm", v),
-            Self::Mm(v) => write!(dest, "{}mm", v),
-            Self::Q(v) => write!(dest, "{}q", v),
-            Self::In(v) => write!(dest, "{}in", v),
-            Self::Pc(v) => write!(dest, "{}pc", v),
-            Self::Pt(v) => write!(dest, "{}pt", v),
-            Self::Px(v) => write!(dest, "{}px", v),
-        }
+impl_to_css_for_dimension! {
+    SpecifiedAbsoluteLength {
+        Canonical => "px";
+        Cm => "cm",
+        Mm => "mm",
+        Q => "q",
+        In => "in",
+        Pc => "pc",
+        Pt => "pt",
+        Px => "px",
     }
 }
 

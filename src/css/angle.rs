@@ -2,6 +2,8 @@ use std::convert::Infallible;
 
 use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 
+use super::impl_to_css_for_dimension;
+
 #[derive(Clone, Copy, Debug)]
 pub enum SpecifiedAngle {
     Deg(f32),
@@ -15,6 +17,12 @@ impl SpecifiedAngle {
         Self::Deg(0.0)
     }
 
+    pub fn unitless_value(self) -> f32 {
+        match self {
+            Self::Deg(v) | Self::Grad(v) | Self::Rad(v) | Self::Turn(v) => v,
+        }
+    }
+
     pub fn compute(self) -> ComputedAngle {
         let deg = match self {
             Self::Deg(v) => v as f64,
@@ -25,6 +33,39 @@ impl SpecifiedAngle {
         ComputedAngle { deg }
     }
 
+    fn from_dimension(value: f32, unit: &str) -> Option<Self> {
+        Some(match_ignore_ascii_case! { unit,
+            "deg" => Self::Deg(value),
+            "grad" => Self::Grad(value),
+            "rad" => Self::Rad(value),
+            "turn" => Self::Turn(value),
+            _ => return None,
+        })
+    }
+
+    pub fn parse_with_range<'i>(
+        input: &mut Parser<'i, '_>,
+        min_deg: f64,
+        max_deg: f64,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
+        let location = input.current_source_location();
+        Ok(match *input.next()? {
+            ref t @ Token::Dimension {
+                value, ref unit, ..
+            } => {
+                let result = Self::from_dimension(value, unit).ok_or_else(|| {
+                    location.new_unexpected_token_error(Token::Ident(unit.clone()))
+                })?;
+                let ComputedAngle { deg } = result.compute();
+                if !(min_deg..=max_deg).contains(&deg) {
+                    return Err(location.new_unexpected_token_error(t.clone()));
+                }
+                result
+            }
+            ref t => return Err(location.new_unexpected_token_error(t.clone())),
+        })
+    }
+
     pub fn parse_allow_zero<'i>(
         input: &mut Parser<'i, '_>,
     ) -> Result<Self, ParseError<'i, Infallible>> {
@@ -33,15 +74,20 @@ impl SpecifiedAngle {
             Token::Number { value, .. } if value == 0.0 => Self::zero(),
             Token::Dimension {
                 value, ref unit, ..
-            } => match_ignore_ascii_case! { unit,
-                "deg" => Self::Deg(value),
-                "grad" => Self::Grad(value),
-                "rad" => Self::Rad(value),
-                "turn" => Self::Turn(value),
-                _ => return Err(location.new_unexpected_token_error(Token::Ident(unit.clone()))),
-            },
+            } => Self::from_dimension(value, unit)
+                .ok_or_else(|| location.new_unexpected_token_error(Token::Ident(unit.clone())))?,
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
+    }
+}
+
+impl_to_css_for_dimension! {
+    SpecifiedAngle {
+        Canonical => "deg";
+        Deg => "deg",
+        Grad => "grad",
+        Rad => "rad",
+        Turn => "turn",
     }
 }
 

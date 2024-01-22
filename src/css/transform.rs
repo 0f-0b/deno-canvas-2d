@@ -73,6 +73,7 @@ impl ComputedTransformFunction {
     pub fn parse_and_compute<'i>(
         input: &mut Parser<'i, '_>,
     ) -> Result<Self, ParseError<'i, Infallible>> {
+        let location = input.current_source_location();
         let name = input.expect_function()?.clone();
         input.parse_nested_block(|input| {
             Ok(match_ignore_ascii_case! { &name,
@@ -231,7 +232,9 @@ impl ComputedTransformFunction {
                     Self::SkewY(b)
                 },
                 "perspective" => {
-                    let d = match input.try_parse(SpecifiedAbsoluteLength::parse_non_negative) {
+                    let d = match input.try_parse(|input| {
+                        SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY)
+                    }) {
                         Ok(d) => Some(d.compute()),
                         Err(_) => {
                             input.expect_ident_matching("none")?;
@@ -240,7 +243,7 @@ impl ComputedTransformFunction {
                     };
                     Self::Perspective(d)
                 },
-                _ => return Err(input.new_unexpected_token_error(Token::Ident(name))),
+                _ => return Err(location.new_unexpected_token_error(Token::Ident(name))),
             })
         })
     }
