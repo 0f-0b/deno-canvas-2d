@@ -1,5 +1,6 @@
 import { primordials } from "ext:core/mod.js";
 import {
+  ImageData,
   ImageDataPrototypeGetColorSpace,
   ImageDataPrototypeGetData,
   ImageDataPrototypeGetHeight,
@@ -148,7 +149,6 @@ import {
 } from "ext:deno_canvas_2d/16_canvas.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import { ImageData } from "ext:deno_web/16_image_data.js";
 import {
   configureInterface,
   illegalConstructor,
