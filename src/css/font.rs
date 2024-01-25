@@ -7,28 +7,33 @@ use cssparser::{
     ToCss, Token,
 };
 
-use super::angle::SpecifiedAngle;
+use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_number_with_range, parse_string, CssNumber, CssPercentage, CssValue};
+use super::{parse_string, CssNumber, CssValue};
 
 #[derive(Clone, Copy, Debug)]
-pub enum SpecifiedFontStyle {
+pub enum ComputedFontStyle {
     Normal,
     Italic,
-    Oblique(SpecifiedAngle),
+    Oblique(ComputedAngle),
 }
 
-impl SpecifiedFontStyle {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl ComputedFontStyle {
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         let ident = input.expect_ident()?;
         Ok(match_ignore_ascii_case! { ident,
             "normal" => Self::Normal,
             "italic" => Self::Italic,
             "oblique" => {
-                let angle = input
+                let angle = match input
                     .try_parse(|input| SpecifiedAngle::parse_with_range(input, -90.0, 90.0))
-                    .unwrap_or(SpecifiedAngle::Deg(14.0));
+                {
+                    Ok(v) => v.compute(),
+                    Err(_) => ComputedAngle { deg: 14.0 },
+                };
                 Self::Oblique(angle)
             },
             _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
@@ -36,14 +41,14 @@ impl SpecifiedFontStyle {
     }
 }
 
-impl ToCss for SpecifiedFontStyle {
+impl ToCss for ComputedFontStyle {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         match *self {
             Self::Normal => dest.write_str("normal"),
             Self::Italic => dest.write_str("italic"),
             Self::Oblique(angle) => {
                 dest.write_str("oblique")?;
-                if !matches!(angle, SpecifiedAngle::Deg(deg) if deg == 14.0) {
+                if !matches!(angle, ComputedAngle { deg } if deg == 14.0) {
                     write!(dest, " {}", CssValue(&angle))?;
                 }
                 Ok(())
@@ -53,13 +58,15 @@ impl ToCss for SpecifiedFontStyle {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum SpecifiedFontVariantCss2 {
+pub enum ComputedFontVariantCss2 {
     Normal,
     SmallCaps,
 }
 
-impl SpecifiedFontVariantCss2 {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl ComputedFontVariantCss2 {
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         let ident = input.expect_ident()?;
         Ok(match_ignore_ascii_case! { ident,
@@ -70,7 +77,7 @@ impl SpecifiedFontVariantCss2 {
     }
 }
 
-impl ToCss for SpecifiedFontVariantCss2 {
+impl ToCss for ComputedFontVariantCss2 {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         match *self {
             Self::Normal => dest.write_str("normal"),
@@ -80,75 +87,35 @@ impl ToCss for SpecifiedFontVariantCss2 {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum SpecifiedAbsoluteFontWeight {
-    Number(f32),
-    Normal,
-    Bold,
-}
+pub struct ComputedFontWeight(pub f32);
 
-impl SpecifiedAbsoluteFontWeight {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
-        if let Ok(v) = input.try_parse(|input| parse_number_with_range(input, 1.0, 1000.0)) {
-            return Ok(Self::Number(v));
-        }
+impl ComputedFontWeight {
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
-        let ident = input.expect_ident()?;
-        Ok(match_ignore_ascii_case! { ident,
-            "normal" => Self::Normal,
-            "bold" => Self::Bold,
-            _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
+        Ok(match *input.next()? {
+            Token::Ident(ref ident) => match_ignore_ascii_case! { ident,
+                "normal" => Self(400.0),
+                "bold" => Self(700.0),
+                "bolder" => Self(700.0),
+                "lighter" => Self(100.0),
+                _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
+            },
+            Token::Number { value, .. } if (1.0..=1000.0).contains(&value) => Self(value),
+            ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
 }
 
-impl ToCss for SpecifiedAbsoluteFontWeight {
+impl ToCss for ComputedFontWeight {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        match *self {
-            Self::Number(v) => write!(dest, "{}", CssNumber(v)),
-            Self::Normal => dest.write_str("normal"),
-            Self::Bold => dest.write_str("bold"),
-        }
+        CssNumber(self.0).to_css(dest)
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum SpecifiedFontWeight {
-    Absolute(SpecifiedAbsoluteFontWeight),
-    Bolder,
-    Lighter,
-}
-
-impl SpecifiedFontWeight {
-    pub fn normal() -> Self {
-        Self::Absolute(SpecifiedAbsoluteFontWeight::Normal)
-    }
-
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
-        if let Ok(v) = input.try_parse(SpecifiedAbsoluteFontWeight::parse) {
-            return Ok(Self::Absolute(v));
-        }
-        let location = input.current_source_location();
-        let ident = input.expect_ident()?;
-        Ok(match_ignore_ascii_case! { ident,
-            "bolder" => Self::Bolder,
-            "lighter" => Self::Lighter,
-            _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
-        })
-    }
-}
-
-impl ToCss for SpecifiedFontWeight {
-    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        match *self {
-            Self::Absolute(v) => v.to_css(dest),
-            Self::Bolder => dest.write_str("bolder"),
-            Self::Lighter => dest.write_str("lighter"),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum SpecifiedFontStretchCss3 {
+pub enum ComputedFontStretchCss3 {
     Normal,
     UltraCondensed,
     ExtraCondensed,
@@ -160,8 +127,10 @@ pub enum SpecifiedFontStretchCss3 {
     UltraExpanded,
 }
 
-impl SpecifiedFontStretchCss3 {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl ComputedFontStretchCss3 {
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         let ident = input.expect_ident()?;
         Ok(match_ignore_ascii_case! { ident,
@@ -179,7 +148,7 @@ impl SpecifiedFontStretchCss3 {
     }
 }
 
-impl ToCss for SpecifiedFontStretchCss3 {
+impl ToCss for ComputedFontStretchCss3 {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         match *self {
             Self::Normal => dest.write_str("normal"),
@@ -196,139 +165,63 @@ impl ToCss for SpecifiedFontStretchCss3 {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum SpecifiedAbsoluteFontSize {
-    Length(SpecifiedAbsoluteLength),
-    Percentage(f32),
-    XxSmall,
-    XSmall,
-    Small,
-    Medium,
-    Large,
-    XLarge,
-    XxLarge,
-    XxxLarge,
-}
+pub struct ComputedFontSize(pub ComputedLength);
 
-impl SpecifiedAbsoluteFontSize {
-    pub fn compute(self) -> ComputedLength {
-        match self {
-            Self::Length(v) => v.compute(),
-            Self::Percentage(v) => ComputedLength {
-                px: v as f64 * 10.0,
-            },
-            Self::XxSmall => ComputedLength { px: 9.6 },
-            Self::XSmall => ComputedLength { px: 12.0 },
-            Self::Small => ComputedLength { px: 128.0 / 9.0 },
-            Self::Medium => ComputedLength { px: 16.0 },
-            Self::Large => ComputedLength { px: 19.2 },
-            Self::XLarge => ComputedLength { px: 24.0 },
-            Self::XxLarge => ComputedLength { px: 32.0 },
-            Self::XxxLarge => ComputedLength { px: 48.0 },
-        }
-    }
-
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl ComputedFontSize {
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
         if let Ok(v) = input
-            .try_parse(|input| SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY))
+            .try_parse(|input| SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY))
         {
-            return Ok(Self::Length(v));
+            return Ok(Self(v.compute()));
         }
         let location = input.current_source_location();
         Ok(match *input.next()? {
             Token::Ident(ref ident) => match_ignore_ascii_case! { ident,
-                "xx-small" => Self::XxSmall,
-                "x-small" => Self::XSmall,
-                "small" => Self::Small,
-                "medium" => Self::Medium,
-                "large" => Self::Large,
-                "x-large" => Self::XLarge,
-                "xx-large" => Self::XxLarge,
-                "xxx-large" => Self::XxxLarge,
+                "xx-small" => Self(ComputedLength { px: 9.6 }),
+                "x-small" => Self(ComputedLength { px: 12.0 }),
+                "small" => Self(ComputedLength { px: 128.0 / 9.0 }),
+                "medium" => Self(ComputedLength { px: 16.0 }),
+                "large" => Self(ComputedLength { px: 19.2 }),
+                "x-large" => Self(ComputedLength { px: 24.0 }),
+                "xx-large" => Self(ComputedLength { px: 32.0 }),
+                "xxx-large" => Self(ComputedLength { px: 48.0 }),
+                "larger" => Self(ComputedLength { px: 12.0 }),
+                "smaller" => Self(ComputedLength { px: 25.0 / 3.0 }),
+                "math" => Self(ComputedLength { px: 10.0 }),
                 _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
             },
-            Token::Percentage { unit_value, .. } if unit_value >= 0.0 => {
-                Self::Percentage(unit_value)
-            }
+            Token::Percentage { unit_value, .. } if unit_value >= 0.0 => Self(ComputedLength {
+                px: unit_value * 10.0,
+            }),
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
 }
 
-impl ToCss for SpecifiedAbsoluteFontSize {
+impl ToCss for ComputedFontSize {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        match *self {
-            Self::Length(v) => v.to_css(dest),
-            Self::Percentage(v) => write!(dest, "{}", CssPercentage(v)),
-            Self::XxSmall => dest.write_str("xx-small"),
-            Self::XSmall => dest.write_str("x-small"),
-            Self::Small => dest.write_str("small"),
-            Self::Medium => dest.write_str("medium"),
-            Self::Large => dest.write_str("large"),
-            Self::XLarge => dest.write_str("x-large"),
-            Self::XxLarge => dest.write_str("xx-large"),
-            Self::XxxLarge => dest.write_str("xxx-large"),
-        }
+        self.0.to_css(dest)
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum SpecifiedFontSize {
-    Absolute(SpecifiedAbsoluteFontSize),
-    Larger,
-    Smaller,
-    Math,
-}
-
-impl SpecifiedFontSize {
-    pub fn compute(self) -> ComputedLength {
-        match self {
-            Self::Absolute(v) => v.compute(),
-            Self::Larger => ComputedLength { px: 12.0 },
-            Self::Smaller => ComputedLength { px: 25.0 / 3.0 },
-            Self::Math => ComputedLength { px: 10.0 },
-        }
-    }
-
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
-        if let Ok(v) = input.try_parse(SpecifiedAbsoluteFontSize::parse) {
-            return Ok(Self::Absolute(v));
-        }
-        let location = input.current_source_location();
-        let ident = input.expect_ident()?;
-        Ok(match_ignore_ascii_case! { ident,
-            "larger" => Self::Larger,
-            "smaller" => Self::Smaller,
-            "math" => Self::Math,
-            _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
-        })
-    }
-}
-
-impl ToCss for SpecifiedFontSize {
-    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        match *self {
-            Self::Absolute(v) => v.to_css(dest),
-            Self::Larger => todo!(),
-            Self::Smaller => todo!(),
-            Self::Math => todo!(),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum SpecifiedLineHeight {
+pub enum ComputedLineHeight {
     Normal,
-    Length(SpecifiedAbsoluteLength),
+    Length(ComputedLength),
     Number(f32),
-    Percentage(f32),
 }
 
-impl SpecifiedLineHeight {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl ComputedLineHeight {
+    pub fn parse_and_compute<'i>(
+        input: &mut Parser<'i, '_>,
+        font_size: ComputedFontSize,
+    ) -> Result<Self, ParseError<'i, Infallible>> {
         if let Ok(v) = input
-            .try_parse(|input| SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY))
+            .try_parse(|input| SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY))
         {
-            return Ok(Self::Length(v));
+            return Ok(Self::Length(v.compute()));
         }
         let location = input.current_source_location();
         Ok(match *input.next()? {
@@ -338,26 +231,27 @@ impl SpecifiedLineHeight {
             },
             Token::Number { value, .. } if value >= 0.0 => Self::Number(value),
             Token::Percentage { unit_value, .. } if unit_value >= 0.0 => {
-                Self::Percentage(unit_value)
+                Self::Length(ComputedLength {
+                    px: unit_value * font_size.0.px,
+                })
             }
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
         })
     }
 }
 
-impl ToCss for SpecifiedLineHeight {
+impl ToCss for ComputedLineHeight {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         match *self {
             Self::Normal => dest.write_str("normal"),
             Self::Length(v) => v.to_css(dest),
-            Self::Number(v) => write!(dest, "{}", CssNumber(v)),
-            Self::Percentage(v) => write!(dest, "{}", CssPercentage(v)),
+            Self::Number(v) => CssNumber(v).to_css(dest),
         }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub enum SpecifiedGenericFamily {
+pub enum ComputedGenericFamily {
     Serif,
     SansSerif,
     Cursive,
@@ -374,7 +268,7 @@ pub enum SpecifiedGenericFamily {
     UiRounded,
 }
 
-impl SpecifiedGenericFamily {
+impl ComputedGenericFamily {
     pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
@@ -415,7 +309,7 @@ impl SpecifiedGenericFamily {
     }
 }
 
-impl ToCss for SpecifiedGenericFamily {
+impl ToCss for ComputedGenericFamily {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         match *self {
             Self::Serif => dest.write_str("serif"),
@@ -437,17 +331,17 @@ impl ToCss for SpecifiedGenericFamily {
 }
 
 #[derive(Clone, Debug)]
-pub enum SpecifiedFamilyName {
+pub enum ComputedFamilyName {
     Specific(Rc<str>),
-    Generic(SpecifiedGenericFamily),
+    Generic(ComputedGenericFamily),
 }
 
-impl SpecifiedFamilyName {
+impl ComputedFamilyName {
     pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
         if let Ok(name) = input.try_parse(parse_string) {
             return Ok(Self::Specific(name));
         }
-        if let Ok(v) = input.try_parse(SpecifiedGenericFamily::parse) {
+        if let Ok(v) = input.try_parse(ComputedGenericFamily::parse) {
             return Ok(Self::Generic(v));
         }
         let mut name = input.expect_ident()?.as_ref().to_owned();
@@ -467,7 +361,7 @@ impl SpecifiedFamilyName {
     }
 }
 
-impl ToCss for SpecifiedFamilyName {
+impl ToCss for ComputedFamilyName {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         match *self {
             Self::Specific(ref name) => serialize_string(name, dest),
@@ -477,20 +371,20 @@ impl ToCss for SpecifiedFamilyName {
 }
 
 #[derive(Clone, Debug)]
-pub struct SpecifiedFontFamily {
-    pub family_list: Box<[SpecifiedFamilyName]>,
+pub struct ComputedFontFamily {
+    pub family_list: Box<[ComputedFamilyName]>,
 }
 
-impl SpecifiedFontFamily {
+impl ComputedFontFamily {
     pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
         let family_list = input
-            .parse_comma_separated(SpecifiedFamilyName::parse)?
+            .parse_comma_separated(ComputedFamilyName::parse)?
             .into_boxed_slice();
         Ok(Self { family_list })
     }
 }
 
-impl ToCss for SpecifiedFontFamily {
+impl ToCss for ComputedFontFamily {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         let mut iter = self.family_list.iter();
         iter.next().unwrap().to_css(dest)?;
@@ -502,17 +396,17 @@ impl ToCss for SpecifiedFontFamily {
 }
 
 #[derive(Clone, Debug)]
-pub struct SpecifiedFont {
-    pub font_style: SpecifiedFontStyle,
-    pub font_variant: SpecifiedFontVariantCss2,
-    pub font_weight: SpecifiedFontWeight,
-    pub font_stretch: SpecifiedFontStretchCss3,
-    pub font_size: SpecifiedFontSize,
-    pub line_height: SpecifiedLineHeight,
-    pub font_family: SpecifiedFontFamily,
+pub struct ComputedFont {
+    pub font_style: ComputedFontStyle,
+    pub font_variant: ComputedFontVariantCss2,
+    pub font_weight: ComputedFontWeight,
+    pub font_stretch: ComputedFontStretchCss3,
+    pub font_size: ComputedFontSize,
+    pub line_height: ComputedLineHeight,
+    pub font_family: ComputedFontFamily,
 }
 
-impl SpecifiedFont {
+impl ComputedFont {
     pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
         let mut max_attr = 4;
         let mut font_style = None;
@@ -528,28 +422,28 @@ impl SpecifiedFont {
                 continue;
             }
             if font_style.is_none() {
-                if let Ok(v) = input.try_parse(SpecifiedFontStyle::parse) {
+                if let Ok(v) = input.try_parse(ComputedFontStyle::parse_and_compute) {
                     font_style = Some(v);
                     max_attr -= 1;
                     continue;
                 }
             }
             if font_variant.is_none() {
-                if let Ok(v) = input.try_parse(SpecifiedFontVariantCss2::parse) {
+                if let Ok(v) = input.try_parse(ComputedFontVariantCss2::parse_and_compute) {
                     font_variant = Some(v);
                     max_attr -= 1;
                     continue;
                 }
             }
             if font_weight.is_none() {
-                if let Ok(v) = input.try_parse(SpecifiedFontWeight::parse) {
+                if let Ok(v) = input.try_parse(ComputedFontWeight::parse_and_compute) {
                     font_weight = Some(v);
                     max_attr -= 1;
                     continue;
                 }
             }
             if font_stretch.is_none() {
-                if let Ok(v) = input.try_parse(SpecifiedFontStretchCss3::parse) {
+                if let Ok(v) = input.try_parse(ComputedFontStretchCss3::parse_and_compute) {
                     font_stretch = Some(v);
                     max_attr -= 1;
                     continue;
@@ -557,17 +451,17 @@ impl SpecifiedFont {
             }
             break;
         }
-        let font_style = font_style.unwrap_or(SpecifiedFontStyle::Normal);
-        let font_variant = font_variant.unwrap_or(SpecifiedFontVariantCss2::Normal);
-        let font_weight = font_weight.unwrap_or(SpecifiedFontWeight::normal());
-        let font_stretch = font_stretch.unwrap_or(SpecifiedFontStretchCss3::Normal);
-        let font_size = SpecifiedFontSize::parse(input)?;
+        let font_style = font_style.unwrap_or(ComputedFontStyle::Normal);
+        let font_variant = font_variant.unwrap_or(ComputedFontVariantCss2::Normal);
+        let font_weight = font_weight.unwrap_or(ComputedFontWeight(400.0));
+        let font_stretch = font_stretch.unwrap_or(ComputedFontStretchCss3::Normal);
+        let font_size = ComputedFontSize::parse_and_compute(input)?;
         let line_height = if input.try_parse(|input| input.expect_delim('/')).is_ok() {
-            SpecifiedLineHeight::parse(input)?
+            ComputedLineHeight::parse_and_compute(input, font_size)?
         } else {
-            SpecifiedLineHeight::Normal
+            ComputedLineHeight::Normal
         };
-        let font_family = SpecifiedFontFamily::parse(input)?;
+        let font_family = ComputedFontFamily::parse(input)?;
         Ok(Self {
             font_style,
             font_variant,
@@ -580,25 +474,22 @@ impl SpecifiedFont {
     }
 }
 
-impl ToCss for SpecifiedFont {
+impl ToCss for ComputedFont {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        if !matches!(self.font_style, SpecifiedFontStyle::Normal) {
+        if !matches!(self.font_style, ComputedFontStyle::Normal) {
             write!(dest, "{} ", CssValue(&self.font_style))?;
         }
-        if !matches!(self.font_variant, SpecifiedFontVariantCss2::Normal) {
+        if !matches!(self.font_variant, ComputedFontVariantCss2::Normal) {
             write!(dest, "{} ", CssValue(&self.font_variant))?;
         }
-        if !matches!(
-            self.font_weight,
-            SpecifiedFontWeight::Absolute(SpecifiedAbsoluteFontWeight::Normal)
-        ) {
+        if !matches!(self.font_weight, ComputedFontWeight(v) if v == 400.0) {
             write!(dest, "{} ", CssValue(&self.font_weight))?;
         }
-        if !matches!(self.font_stretch, SpecifiedFontStretchCss3::Normal) {
+        if !matches!(self.font_stretch, ComputedFontStretchCss3::Normal) {
             write!(dest, "{} ", CssValue(&self.font_stretch))?;
         }
         write!(dest, "{} ", CssValue(&self.font_size))?;
-        if !matches!(self.line_height, SpecifiedLineHeight::Normal) {
+        if !matches!(self.line_height, ComputedLineHeight::Normal) {
             write!(dest, "/ {} ", CssValue(&self.line_height))?;
         }
         self.font_family.to_css(dest)?;
@@ -606,10 +497,10 @@ impl ToCss for SpecifiedFont {
     }
 }
 
-pub fn parse_font(css: &str) -> Result<SpecifiedFont, BasicParseError> {
+pub fn parse_and_compute_font(css: &str) -> Result<ComputedFont, BasicParseError> {
     let mut input = ParserInput::new(css);
     let mut parser = Parser::new(&mut input);
     parser
-        .parse_entirely(SpecifiedFont::parse)
+        .parse_entirely(ComputedFont::parse)
         .map_err(ParseError::basic)
 }

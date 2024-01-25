@@ -10,20 +10,20 @@ use super::{parse_number, parse_number_or_percentage, parse_one_or_more};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ComputedTransformFunction {
-    Matrix([f64; 6]),
-    Matrix3D([f64; 16]),
+    Matrix([f32; 6]),
+    Matrix3D([f32; 16]),
     Translate(ComputedLength, ComputedLength),
     Translate3D(ComputedLength, ComputedLength, ComputedLength),
     TranslateX(ComputedLength),
     TranslateY(ComputedLength),
     TranslateZ(ComputedLength),
-    Scale(f64, f64),
-    Scale3D(f64, f64, f64),
-    ScaleX(f64),
-    ScaleY(f64),
-    ScaleZ(f64),
+    Scale(f32, f32),
+    Scale3D(f32, f32, f32),
+    ScaleX(f32),
+    ScaleY(f32),
+    ScaleZ(f32),
     Rotate(ComputedAngle),
-    Rotate3D(f64, f64, f64, ComputedAngle),
+    Rotate3D(f32, f32, f32, ComputedAngle),
     RotateX(ComputedAngle),
     RotateY(ComputedAngle),
     RotateZ(ComputedAngle),
@@ -36,8 +36,8 @@ pub enum ComputedTransformFunction {
 impl ComputedTransformFunction {
     fn to_matrix(self) -> Matrix {
         match self {
-            Self::Matrix(m) => Transform2D::from_array(m).into(),
-            Self::Matrix3D(m) => Transform3D::from_array(m).into(),
+            Self::Matrix(m) => Transform2D::from_array(m).cast().into(),
+            Self::Matrix3D(m) => Transform3D::from_array(m).cast().into(),
             Self::Translate(x, y) => Transform2D::translation(x.px, y.px).into(),
             Self::Translate3D(x, y, z) => Transform3D::translation(x.px, y.px, z.px).into(),
             Self::TranslateX(x) => Transform2D::translation(x.px, 0.0).into(),
@@ -78,51 +78,51 @@ impl ComputedTransformFunction {
         input.parse_nested_block(|input| {
             Ok(match_ignore_ascii_case! { &name,
                 "matrix" => {
-                    let a = parse_number(input)? as f64;
+                    let a = parse_number(input)?;
                     input.expect_comma()?;
-                    let b = parse_number(input)? as f64;
+                    let b = parse_number(input)?;
                     input.expect_comma()?;
-                    let c = parse_number(input)? as f64;
+                    let c = parse_number(input)?;
                     input.expect_comma()?;
-                    let d = parse_number(input)? as f64;
+                    let d = parse_number(input)?;
                     input.expect_comma()?;
-                    let e = parse_number(input)? as f64;
+                    let e = parse_number(input)?;
                     input.expect_comma()?;
-                    let f = parse_number(input)? as f64;
+                    let f = parse_number(input)?;
                     Self::Matrix([a, b, c, d, e, f])
                 },
                 "matrix3d" => {
-                    let m11 = parse_number(input)? as f64;
+                    let m11 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m12 = parse_number(input)? as f64;
+                    let m12 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m13 = parse_number(input)? as f64;
+                    let m13 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m14 = parse_number(input)? as f64;
+                    let m14 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m21 = parse_number(input)? as f64;
+                    let m21 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m22 = parse_number(input)? as f64;
+                    let m22 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m23 = parse_number(input)? as f64;
+                    let m23 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m24 = parse_number(input)? as f64;
+                    let m24 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m31 = parse_number(input)? as f64;
+                    let m31 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m32 = parse_number(input)? as f64;
+                    let m32 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m33 = parse_number(input)? as f64;
+                    let m33 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m34 = parse_number(input)? as f64;
+                    let m34 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m41 = parse_number(input)? as f64;
+                    let m41 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m42 = parse_number(input)? as f64;
+                    let m42 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m43 = parse_number(input)? as f64;
+                    let m43 = parse_number(input)?;
                     input.expect_comma()?;
-                    let m44 = parse_number(input)? as f64;
+                    let m44 = parse_number(input)?;
                     Self::Matrix3D([
                         m11, m12, m13, m14,
                         m21, m22, m23, m24,
@@ -160,32 +160,32 @@ impl ComputedTransformFunction {
                     Self::TranslateZ(z)
                 },
                 "scale" => {
-                    let x = parse_number_or_percentage(input)?.unit_value() as f64;
+                    let x = parse_number_or_percentage(input)?.unit_value();
                     if input.try_parse(Parser::expect_comma).is_ok() {
-                        let y = parse_number_or_percentage(input)?.unit_value() as f64;
+                        let y = parse_number_or_percentage(input)?.unit_value();
                         Self::Scale(x, y)
                     } else {
                         Self::Scale(x, x)
                     }
                 },
                 "scale3d" => {
-                    let x = parse_number_or_percentage(input)?.unit_value() as f64;
+                    let x = parse_number_or_percentage(input)?.unit_value();
                     input.expect_comma()?;
-                    let y = parse_number_or_percentage(input)?.unit_value() as f64;
+                    let y = parse_number_or_percentage(input)?.unit_value();
                     input.expect_comma()?;
-                    let z = parse_number_or_percentage(input)?.unit_value() as f64;
+                    let z = parse_number_or_percentage(input)?.unit_value();
                     Self::Scale3D(x, y, z)
                 },
                 "scalex" => {
-                    let x = parse_number_or_percentage(input)?.unit_value() as f64;
+                    let x = parse_number_or_percentage(input)?.unit_value();
                     Self::ScaleX(x)
                 },
                 "scaley" => {
-                    let y = parse_number_or_percentage(input)?.unit_value() as f64;
+                    let y = parse_number_or_percentage(input)?.unit_value();
                     Self::ScaleY(y)
                 },
                 "scalez" => {
-                    let z = parse_number_or_percentage(input)?.unit_value() as f64;
+                    let z = parse_number_or_percentage(input)?.unit_value();
                     Self::ScaleZ(z)
                 },
                 "rotate" => {
@@ -193,11 +193,11 @@ impl ComputedTransformFunction {
                     Self::Rotate(t)
                 },
                 "rotate3d" => {
-                    let x = parse_number(input)? as f64;
+                    let x = parse_number(input)?;
                     input.expect_comma()?;
-                    let y = parse_number(input)? as f64;
+                    let y = parse_number(input)?;
                     input.expect_comma()?;
-                    let z = parse_number(input)? as f64;
+                    let z = parse_number(input)?;
                     input.expect_comma()?;
                     let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
                     Self::Rotate3D(x, y, z, t)
@@ -233,7 +233,7 @@ impl ComputedTransformFunction {
                 },
                 "perspective" => {
                     let d = match input.try_parse(|input| {
-                        SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY)
+                        SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY)
                     }) {
                         Ok(d) => Some(d.compute()),
                         Err(_) => {

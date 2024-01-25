@@ -6,19 +6,19 @@ use super::css::transform::{parse_and_compute_transform, ComputedTransform};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Matrix {
-    _2D(Transform2D<f64>),
-    _3D(Transform3D<f64>),
+    _2D(Transform2D<f32>),
+    _3D(Transform3D<f32>),
 }
 
-impl From<Transform2D<f64>> for Matrix {
-    fn from(value: Transform2D<f64>) -> Self {
-        Self::_2D(value)
+impl From<Transform2D<f32>> for Matrix {
+    fn from(value: Transform2D<f32>) -> Self {
+        Self::_2D(value.cast())
     }
 }
 
-impl From<Transform3D<f64>> for Matrix {
-    fn from(value: Transform3D<f64>) -> Self {
-        Self::_3D(value)
+impl From<Transform3D<f32>> for Matrix {
+    fn from(value: Transform3D<f32>) -> Self {
+        Self::_3D(value.cast())
     }
 }
 
@@ -44,11 +44,11 @@ pub fn op_canvas_2d_parse_matrix(
     };
     Ok(match transform.to_matrix() {
         Matrix::_2D(m) => {
-            out[..6].copy_from_slice(&m.to_array());
+            out[..6].copy_from_slice(&m.cast().to_array());
             true
         }
         Matrix::_3D(m) => {
-            out[..16].copy_from_slice(&m.to_array());
+            out[..16].copy_from_slice(&m.cast().to_array());
             false
         }
     })

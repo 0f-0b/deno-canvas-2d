@@ -34,18 +34,6 @@ fn parse_number<'i>(input: &mut Parser<'i, '_>) -> Result<f32, ParseError<'i, In
     Ok(input.expect_number()?)
 }
 
-fn parse_number_with_range<'i>(
-    input: &mut Parser<'i, '_>,
-    min: f32,
-    max: f32,
-) -> Result<f32, ParseError<'i, Infallible>> {
-    let location = input.current_source_location();
-    Ok(match *input.next()? {
-        Token::Number { value, .. } if (min..=max).contains(&value) => value,
-        ref t => return Err(location.new_unexpected_token_error(t.clone())),
-    })
-}
-
 fn parse_number_or_percentage<'i>(
     input: &mut Parser<'i, '_>,
 ) -> Result<NumberOrPercentage, ParseError<'i, Infallible>> {
@@ -139,8 +127,8 @@ macro_rules! impl_to_css_for_percentage {
 impl_to_css_for_percentage!(f32);
 impl_to_css_for_percentage!(f64);
 
-macro_rules! impl_to_css_for_dimension {
-    ($t:ty { Canonical => $canonical_unit:literal; $($variant:ident => $unit:literal),* $(,)? }) => {
+macro_rules! impl_to_css_for_specified_dimension {
+    ($t:ty { $($variant:ident => $unit:literal,)* _ => $canonical_unit:literal $(,)? }) => {
         impl cssparser::ToCss for $t {
             fn to_css<W: std::fmt::Write>(&self, dest: &mut W) -> std::fmt::Result {
                 match self.unitless_value() {
@@ -150,7 +138,7 @@ macro_rules! impl_to_css_for_dimension {
                     v if v == f32::NEG_INFINITY => {
                         dest.write_str(concat!("calc(-infinity * 1", $canonical_unit, ")"))
                     }
-                    v if v.is_nan() => {
+                    v if f32::is_nan(v) => {
                         dest.write_str(concat!("calc(NaN * 1", $canonical_unit, ")"))
                     }
                     _ => match *self {
@@ -162,4 +150,25 @@ macro_rules! impl_to_css_for_dimension {
     };
 }
 
-use impl_to_css_for_dimension;
+use impl_to_css_for_specified_dimension;
+
+macro_rules! impl_to_css_for_computed_dimension {
+    ($t:ty { $field:ident => $unit:literal }) => {
+        impl cssparser::ToCss for $t {
+            fn to_css<W: std::fmt::Write>(&self, dest: &mut W) -> std::fmt::Result {
+                match self.$field {
+                    v if v == f32::INFINITY => {
+                        dest.write_str(concat!("calc(infinity * 1", $unit, ")"))
+                    }
+                    v if v == f32::NEG_INFINITY => {
+                        dest.write_str(concat!("calc(-infinity * 1", $unit, ")"))
+                    }
+                    v if f32::is_nan(v) => dest.write_str(concat!("calc(NaN * 1", $unit, ")")),
+                    v => write!(dest, concat!("{}", $unit), v),
+                }
+            }
+        }
+    };
+}
+
+use impl_to_css_for_computed_dimension;

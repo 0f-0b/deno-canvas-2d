@@ -20,11 +20,11 @@ use super::convert::{
 use super::css::color::AbsoluteColor;
 use super::css::filter::{parse_and_compute_filter, ComputedFilter};
 use super::css::font::{
-    parse_font, SpecifiedAbsoluteFontSize, SpecifiedFamilyName, SpecifiedFont, SpecifiedFontFamily,
-    SpecifiedFontSize, SpecifiedFontStretchCss3, SpecifiedFontStyle, SpecifiedFontVariantCss2,
-    SpecifiedFontWeight, SpecifiedGenericFamily, SpecifiedLineHeight,
+    parse_and_compute_font, ComputedFamilyName, ComputedFont, ComputedFontFamily, ComputedFontSize,
+    ComputedFontStretchCss3, ComputedFontStyle, ComputedFontVariantCss2, ComputedFontWeight,
+    ComputedGenericFamily, ComputedLineHeight,
 };
-use super::css::length::{parse_absolute_length, SpecifiedAbsoluteLength};
+use super::css::length::{parse_absolute_length, ComputedLength, SpecifiedAbsoluteLength};
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
@@ -333,7 +333,7 @@ pub struct DrawingState {
     miter_limit: f64,
     dash_list: Box<[f64]>,
     line_dash_offset: f64,
-    font: SpecifiedFont,
+    font: ComputedFont,
     text_align: CanvasTextAlign,
     text_baseline: CanvasTextBaseline,
     direction: CanvasDirection,
@@ -366,18 +366,16 @@ impl Default for DrawingState {
             miter_limit: 10.0,
             dash_list: Box::new([]),
             line_dash_offset: 0.0,
-            font: SpecifiedFont {
-                font_style: SpecifiedFontStyle::Normal,
-                font_variant: SpecifiedFontVariantCss2::Normal,
-                font_weight: SpecifiedFontWeight::normal(),
-                font_stretch: SpecifiedFontStretchCss3::Normal,
-                font_size: SpecifiedFontSize::Absolute(SpecifiedAbsoluteFontSize::Length(
-                    SpecifiedAbsoluteLength::Px(10.0),
-                )),
-                line_height: SpecifiedLineHeight::Normal,
-                font_family: SpecifiedFontFamily {
-                    family_list: Box::new([SpecifiedFamilyName::Generic(
-                        SpecifiedGenericFamily::SansSerif,
+            font: ComputedFont {
+                font_style: ComputedFontStyle::Normal,
+                font_variant: ComputedFontVariantCss2::Normal,
+                font_weight: ComputedFontWeight(400.0),
+                font_stretch: ComputedFontStretchCss3::Normal,
+                font_size: ComputedFontSize(ComputedLength { px: 10.0 }),
+                line_height: ComputedLineHeight::Normal,
+                font_family: ComputedFontFamily {
+                    family_list: Box::new([ComputedFamilyName::Generic(
+                        ComputedGenericFamily::SansSerif,
                     )]),
                 },
             },
@@ -571,11 +569,11 @@ impl CanvasState {
         self.current_drawing_state.line_dash_offset = value;
     }
 
-    pub fn font(&self) -> &SpecifiedFont {
+    pub fn font(&self) -> &ComputedFont {
         &self.current_drawing_state.font
     }
 
-    pub fn set_font(&mut self, value: SpecifiedFont) {
+    pub fn set_font(&mut self, value: ComputedFont) {
         self.current_drawing_state.font = value;
     }
 
@@ -1414,11 +1412,8 @@ pub fn op_canvas_2d_state_set_font(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(mut value) = parse_font(value) {
-        value.font_size = SpecifiedFontSize::Absolute(SpecifiedAbsoluteFontSize::Length(
-            SpecifiedAbsoluteLength::Px(value.font_size.compute().px as f32),
-        ));
-        value.line_height = SpecifiedLineHeight::Normal;
+    if let Ok(mut value) = parse_and_compute_font(value) {
+        value.line_height = ComputedLineHeight::Normal;
         this.set_font(value);
         true
     } else {

@@ -49,7 +49,7 @@ impl ComputedFilterValue {
                     Ok(match_ignore_ascii_case! { &name,
                         "blur" => {
                             let v = match input.try_parse(|input| {
-                                SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY)
+                                SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY)
                             }) {
                                 Ok(v) => v.compute(),
                                 Err(_) => ComputedLength::zero(),
@@ -79,7 +79,7 @@ impl ComputedFilterValue {
                             let offset_x = SpecifiedAbsoluteLength::parse(input)?.compute();
                             let offset_y = SpecifiedAbsoluteLength::parse(input)?.compute();
                             let blur = match input.try_parse(|input| {
-                                SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f64::INFINITY)
+                                SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY)
                             }) {
                                 Ok(v) => v.compute(),
                                 Err(_) => ComputedLength::zero(),

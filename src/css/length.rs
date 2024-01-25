@@ -2,7 +2,7 @@ use std::convert::Infallible;
 
 use cssparser::{match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, Token};
 
-use super::impl_to_css_for_dimension;
+use super::{impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension};
 
 #[derive(Clone, Copy, Debug)]
 pub enum SpecifiedAbsoluteLength {
@@ -34,13 +34,13 @@ impl SpecifiedAbsoluteLength {
 
     pub fn compute(self) -> ComputedLength {
         let px = match self {
-            Self::Cm(v) => v as f64 * (4800.0 / 127.0),
-            Self::Mm(v) => v as f64 * (480.0 / 127.0),
-            Self::Q(v) => v as f64 * (120.0 / 127.0),
-            Self::In(v) => v as f64 * 96.0,
-            Self::Pc(v) => v as f64 * 16.0,
-            Self::Pt(v) => v as f64 * (4.0 / 3.0),
-            Self::Px(v) => v as f64,
+            Self::Cm(v) => v * (4800.0 / 127.0),
+            Self::Mm(v) => v * (480.0 / 127.0),
+            Self::Q(v) => v * (120.0 / 127.0),
+            Self::In(v) => v * 96.0,
+            Self::Pc(v) => v * 16.0,
+            Self::Pt(v) => v * (4.0 / 3.0),
+            Self::Px(v) => v,
         };
         ComputedLength { px }
     }
@@ -72,8 +72,8 @@ impl SpecifiedAbsoluteLength {
 
     pub fn parse_with_range<'i>(
         input: &mut Parser<'i, '_>,
-        min_px: f64,
-        max_px: f64,
+        min_px: f32,
+        max_px: f32,
     ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
@@ -94,18 +94,16 @@ impl SpecifiedAbsoluteLength {
     }
 }
 
-impl_to_css_for_dimension! {
-    SpecifiedAbsoluteLength {
-        Canonical => "px";
-        Cm => "cm",
-        Mm => "mm",
-        Q => "q",
-        In => "in",
-        Pc => "pc",
-        Pt => "pt",
-        Px => "px",
-    }
-}
+impl_to_css_for_specified_dimension!(SpecifiedAbsoluteLength {
+    Cm => "cm",
+    Mm => "mm",
+    Q => "q",
+    In => "in",
+    Pc => "pc",
+    Pt => "pt",
+    Px => "px",
+    _ => "px",
+});
 
 pub fn parse_absolute_length(css: &str) -> Result<SpecifiedAbsoluteLength, BasicParseError> {
     let mut input = ParserInput::new(css);
@@ -117,7 +115,7 @@ pub fn parse_absolute_length(css: &str) -> Result<SpecifiedAbsoluteLength, Basic
 
 #[derive(Clone, Copy, Debug)]
 pub struct ComputedLength {
-    pub px: f64,
+    pub px: f32,
 }
 
 impl ComputedLength {
@@ -125,3 +123,5 @@ impl ComputedLength {
         Self { px: 0.0 }
     }
 }
+
+impl_to_css_for_computed_dimension!(ComputedLength { px => "px" });

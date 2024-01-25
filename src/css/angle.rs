@@ -2,7 +2,7 @@ use std::convert::Infallible;
 
 use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 
-use super::impl_to_css_for_dimension;
+use super::{impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension};
 
 #[derive(Clone, Copy, Debug)]
 pub enum SpecifiedAngle {
@@ -25,10 +25,10 @@ impl SpecifiedAngle {
 
     pub fn compute(self) -> ComputedAngle {
         let deg = match self {
-            Self::Deg(v) => v as f64,
-            Self::Grad(v) => v as f64 * 0.9,
-            Self::Rad(v) => (v as f64).to_degrees(),
-            Self::Turn(v) => v as f64 * 360.0,
+            Self::Deg(v) => v,
+            Self::Grad(v) => v * 0.9,
+            Self::Rad(v) => v.to_degrees(),
+            Self::Turn(v) => v * 360.0,
         };
         ComputedAngle { deg }
     }
@@ -45,8 +45,8 @@ impl SpecifiedAngle {
 
     pub fn parse_with_range<'i>(
         input: &mut Parser<'i, '_>,
-        min_deg: f64,
-        max_deg: f64,
+        min_deg: f32,
+        max_deg: f32,
     ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
@@ -81,19 +81,17 @@ impl SpecifiedAngle {
     }
 }
 
-impl_to_css_for_dimension! {
-    SpecifiedAngle {
-        Canonical => "deg";
-        Deg => "deg",
-        Grad => "grad",
-        Rad => "rad",
-        Turn => "turn",
-    }
-}
+impl_to_css_for_specified_dimension!(SpecifiedAngle {
+    Deg => "deg",
+    Grad => "grad",
+    Rad => "rad",
+    Turn => "turn",
+    _ => "deg",
+});
 
 #[derive(Clone, Copy, Debug)]
 pub struct ComputedAngle {
-    pub deg: f64,
+    pub deg: f32,
 }
 
 impl ComputedAngle {
@@ -101,11 +99,13 @@ impl ComputedAngle {
         Self { deg: 0.0 }
     }
 
-    pub fn radians(self) -> f64 {
+    pub fn radians(self) -> f32 {
         self.deg.to_radians()
     }
 
-    pub fn to_euclid(self) -> euclid::Angle<f64> {
+    pub fn to_euclid(self) -> euclid::Angle<f32> {
         euclid::Angle::degrees(self.deg)
     }
 }
+
+impl_to_css_for_computed_dimension!(ComputedAngle { deg => "deg" });
