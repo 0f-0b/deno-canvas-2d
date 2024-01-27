@@ -348,36 +348,22 @@ export class TextMetrics {
   #alphabeticBaseline;
   #ideographicBaseline;
 
-  constructor(
-    key = undefined,
-    width,
-    actualBoundingBoxLeft,
-    actualBoundingBoxRight,
-    fontBoundingBoxAscent,
-    fontBoundingBoxDescent,
-    actualBoundingBoxAscent,
-    actualBoundingBoxDescent,
-    emHeightAscent,
-    emHeightDescent,
-    hangingBaseline,
-    alphabeticBaseline,
-    ideographicBaseline,
-  ) {
+  constructor(key = undefined, values) {
     if (key !== illegalConstructor) {
       illegalConstructor();
     }
-    this.#width = width;
-    this.#actualBoundingBoxLeft = actualBoundingBoxLeft;
-    this.#actualBoundingBoxRight = actualBoundingBoxRight;
-    this.#fontBoundingBoxAscent = fontBoundingBoxAscent;
-    this.#fontBoundingBoxDescent = fontBoundingBoxDescent;
-    this.#actualBoundingBoxAscent = actualBoundingBoxAscent;
-    this.#actualBoundingBoxDescent = actualBoundingBoxDescent;
-    this.#emHeightAscent = emHeightAscent;
-    this.#emHeightDescent = emHeightDescent;
-    this.#hangingBaseline = hangingBaseline;
-    this.#alphabeticBaseline = alphabeticBaseline;
-    this.#ideographicBaseline = ideographicBaseline;
+    this.#width = values[0];
+    this.#actualBoundingBoxLeft = values[1];
+    this.#actualBoundingBoxRight = values[2];
+    this.#fontBoundingBoxAscent = values[3];
+    this.#fontBoundingBoxDescent = values[4];
+    this.#actualBoundingBoxAscent = values[5];
+    this.#actualBoundingBoxDescent = values[6];
+    this.#emHeightAscent = values[7];
+    this.#emHeightDescent = values[8];
+    this.#hangingBaseline = values[9];
+    this.#alphabeticBaseline = values[10];
+    this.#ideographicBaseline = values[11];
   }
 
   get width() {
@@ -1685,21 +1671,7 @@ export class OffscreenCanvasRenderingContext2D {
     requiredArguments(arguments.length, 1, prefix);
     text = convertDOMString(text);
     op_canvas_2d_state_measure_text(this.#state, text, measureTextBuffer);
-    return new TextMetrics(
-      illegalConstructor,
-      measureTextBuffer[0],
-      measureTextBuffer[1],
-      measureTextBuffer[2],
-      measureTextBuffer[3],
-      measureTextBuffer[4],
-      measureTextBuffer[5],
-      measureTextBuffer[6],
-      measureTextBuffer[7],
-      measureTextBuffer[8],
-      measureTextBuffer[9],
-      measureTextBuffer[10],
-      measureTextBuffer[11],
-    );
+    return new TextMetrics(illegalConstructor, measureTextBuffer);
   }
 
   drawImage(image, sx, sy, sw = undefined, sh, dx, dy, dw, dh) {

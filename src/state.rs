@@ -31,6 +31,7 @@ use super::image_bitmap::ImageBitmap;
 use super::image_data::{AlignedImageDataView, AlignedImageDataViewMut};
 use super::path::{CanvasFillRule, Path};
 use super::pattern::CanvasPattern;
+use super::text::{prepare_text, TextMetrics};
 use super::{
     parse_color_for_canvas, premultiply, raqote_ext, serialize_color_for_canvas, to_raqote_color,
     to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace,
@@ -333,16 +334,16 @@ pub struct DrawingState {
     miter_limit: f64,
     dash_list: Box<[f64]>,
     line_dash_offset: f64,
-    font: ComputedFont,
-    text_align: CanvasTextAlign,
-    text_baseline: CanvasTextBaseline,
-    direction: CanvasDirection,
-    letter_spacing: SpecifiedAbsoluteLength,
-    word_spacing: SpecifiedAbsoluteLength,
-    font_kerning: CanvasFontKerning,
-    font_stretch: CanvasFontStretch,
-    font_variant_caps: CanvasFontVariantCaps,
-    text_rendering: CanvasTextRendering,
+    pub font: ComputedFont,
+    pub text_align: CanvasTextAlign,
+    pub text_baseline: CanvasTextBaseline,
+    pub direction: CanvasDirection,
+    pub letter_spacing: SpecifiedAbsoluteLength,
+    pub word_spacing: SpecifiedAbsoluteLength,
+    pub font_kerning: CanvasFontKerning,
+    pub font_stretch: CanvasFontStretch,
+    pub font_variant_caps: CanvasFontVariantCaps,
+    pub text_rendering: CanvasTextRendering,
     transformation_matrix: Transform2D<f64>,
     fill_style: FillOrStrokeStyle,
     stroke_style: FillOrStrokeStyle,
@@ -678,9 +679,9 @@ impl CanvasState {
         self.update_transform();
     }
 
-    pub fn transform(&mut self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
-        self.current_drawing_state.transformation_matrix = Transform2D::new(a, b, c, d, e, f)
-            .then(&self.current_drawing_state.transformation_matrix);
+    pub fn transform(&mut self, mat: Transform2D<f64>) {
+        self.current_drawing_state.transformation_matrix =
+            mat.then(&self.current_drawing_state.transformation_matrix);
         self.update_transform();
     }
 
@@ -688,8 +689,8 @@ impl CanvasState {
         self.current_drawing_state.transformation_matrix
     }
 
-    pub fn set_transform(&mut self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
-        self.current_drawing_state.transformation_matrix = Transform2D::new(a, b, c, d, e, f);
+    pub fn set_transform(&mut self, mat: Transform2D<f64>) {
+        self.current_drawing_state.transformation_matrix = mat;
         self.update_transform();
     }
 
@@ -967,6 +968,51 @@ impl CanvasState {
                 }
             }
         });
+    }
+
+    pub fn fill_text(&mut self, text: &str, x: f64, y: f64, max_width: f64) {
+        let color_space = self.color_space;
+        self.paint(move |this| {
+            let (path, _) = prepare_text(&this.current_drawing_state, text, max_width);
+            let path = path.transform(&Transform2D::new(1.0, 0.0, 0.0, -1.0, x, y));
+            let path = path.to_raqote(CanvasFillRule::NonZero);
+            let source = this
+                .current_drawing_state
+                .get_raqote_fill_source(color_space);
+            move |draw_target, draw_options| {
+                if let Some(ref source) = source {
+                    draw_target.fill(&path, &source.borrow(), &draw_options);
+                }
+            }
+        });
+    }
+
+    pub fn stroke_text(&mut self, text: &str, x: f64, y: f64, max_width: f64) {
+        let color_space = self.color_space;
+        self.paint(move |this| {
+            let (path, _) = prepare_text(&this.current_drawing_state, text, max_width);
+            let path = path.transform(&Transform2D::new(1.0, 0.0, 0.0, -1.0, x, y));
+            let path = this.draw_target.trace_path(
+                &raqote::Path {
+                    ops: path.to_raqote_ops(),
+                    winding: raqote::Winding::NonZero,
+                },
+                &this.current_drawing_state.get_raqote_stroke_style(),
+            );
+            let source = this
+                .current_drawing_state
+                .get_raqote_stroke_source(color_space);
+            move |draw_target, draw_options| {
+                if let Some(ref source) = source {
+                    draw_target.fill(&path, &source.borrow(), &draw_options);
+                }
+            }
+        });
+    }
+
+    pub fn measure_text(&self, text: &str) -> TextMetrics {
+        let (_, text_metrics) = prepare_text(&self.current_drawing_state, text, f64::INFINITY);
+        text_metrics
     }
 
     pub fn fill(&mut self, path: &Path, fill_rule: CanvasFillRule) {
@@ -1594,7 +1640,7 @@ pub fn op_canvas_2d_state_transform(
 ) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if [a, b, c, d, e, f].into_iter().all(f64::is_finite) {
-        this.transform(a, b, c, d, e, f);
+        this.transform(Transform2D::new(a, b, c, d, e, f));
     }
 }
 
@@ -1622,7 +1668,7 @@ pub fn op_canvas_2d_state_set_transform(
 ) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if [a, b, c, d, e, f].into_iter().all(f64::is_finite) {
-        this.set_transform(a, b, c, d, e, f);
+        this.set_transform(Transform2D::new(a, b, c, d, e, f));
     }
 }
 
@@ -1784,10 +1830,7 @@ pub fn op_canvas_2d_state_fill_text(
 ) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if [x, y].into_iter().all(f64::is_finite) {
-        todo!(
-            "(CanvasState @ {:p}).fill_text(text = {text:?}, x = {x:?}, y = {y:?}, max_width = {max_width:?})",
-            &mut *this
-        )
+        this.fill_text(text, x, y, max_width);
     }
 }
 
@@ -1802,10 +1845,7 @@ pub fn op_canvas_2d_state_stroke_text(
 ) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if [x, y].into_iter().all(f64::is_finite) {
-        todo!(
-            "(CanvasState @ {:p}).stroke_text(text = {text:?}, x = {x:?}, y = {y:?}, max_width = {max_width:?})",
-            &mut *this
-        )
+        this.stroke_text(text, x, y, max_width);
     }
 }
 
@@ -1816,11 +1856,21 @@ pub fn op_canvas_2d_state_measure_text(
     #[string] text: &str,
     #[buffer] out: &mut [f64],
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    todo!(
-        "(CanvasState @ {:p}).measure_text(text = {text:?}, out = {out:p})",
-        &mut *this
-    )
+    let this = borrow_v8::<CanvasState>(state, this);
+    let out = &mut out[..12];
+    let result = this.measure_text(text);
+    out[0] = result.width as f64;
+    out[1] = result.actual_bounding_box_left as f64;
+    out[2] = result.actual_bounding_box_right as f64;
+    out[3] = result.font_bounding_box_ascent as f64;
+    out[4] = result.font_bounding_box_descent as f64;
+    out[5] = result.actual_bounding_box_ascent as f64;
+    out[6] = result.actual_bounding_box_descent as f64;
+    out[7] = result.em_height_ascent as f64;
+    out[8] = result.em_height_descent as f64;
+    out[9] = result.hanging_baseline as f64;
+    out[10] = result.alphabetic_baseline as f64;
+    out[11] = result.ideographic_baseline as f64;
 }
 
 #[op2(fast)]

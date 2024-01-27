@@ -6,8 +6,9 @@ edition = "2021"
 [dependencies]
 cssparser = "0.33.0"
 cssparser-color = "0.1.0"
-deno_core = "0.249.0"
+deno_core = "0.255.0"
 euclid = "0.22.9"
+harfbuzz_rs = { git = "https://github.com/harfbuzz/harfbuzz_rs.git", rev = "b3c92bf1692426f665fe536cd29ee1c38f6f4ecd" }
 image = { version = "0.24.8", default-features = false, features = [
   "bmp",
   "gif",
@@ -19,3 +20,4 @@ palette = "0.7.3"
 png = "0.17.11"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "dea2df32a58b51539e93ba74140cf702292d5d02", default-features = false }
 strum_macros = "0.25.3"
+unicode-bidi = "0.3.15"

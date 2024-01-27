@@ -35,9 +35,8 @@ impl CanvasPattern {
         }
     }
 
-    pub fn set_transform(&self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
-        self.transformation_matrix
-            .set(Transform2D::new(a, b, c, d, e, f));
+    pub fn set_transform(&self, mat: Transform2D<f64>) {
+        self.transformation_matrix.set(mat);
     }
 
     pub fn to_raqote(
@@ -102,6 +101,6 @@ pub fn op_canvas_2d_pattern_set_transform(
 ) {
     let this = borrow_v8::<Rc<CanvasPattern>>(state, this);
     if [a, b, c, d, e, f].into_iter().all(f64::is_finite) {
-        this.set_transform(a, b, c, d, e, f);
+        this.set_transform(Transform2D::new(a, b, c, d, e, f));
     }
 }

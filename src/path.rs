@@ -46,8 +46,7 @@ enum PathOp {
 }
 
 impl PathOp {
-    fn transform(self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) -> Self {
-        let mat = Transform2D::new(a, b, c, d, e, f);
+    fn transform(self, mat: &Transform2D<f64>) -> Self {
         match self {
             Self::MoveTo { p } => Self::MoveTo {
                 p: mat.transform_point(p),
@@ -87,13 +86,15 @@ impl Path {
         self.ops.clear();
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn extend(&mut self, path: Path, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
-        self.ops.extend(
-            path.ops
-                .into_iter()
-                .map(move |op| op.transform(a, b, c, d, e, f)),
-        );
+    pub fn transform(self, mat: &Transform2D<f64>) -> Self {
+        Self {
+            ops: self.ops.into_iter().map(|op| op.transform(mat)).collect(),
+            first_point_in_subpath: mat.transform_point(self.first_point_in_subpath),
+        }
+    }
+
+    pub fn extend(&mut self, path: Path) {
+        self.ops.extend(path.ops);
     }
 
     fn do_move_to(&mut self, p: Point2D<f64>) {
@@ -360,7 +361,7 @@ pub fn op_canvas_2d_path_extend(
     let path = borrow_v8::<Path>(state, path).clone();
     let mut this = borrow_v8_mut::<Path>(state, this);
     if [a, b, c, d, e, f].into_iter().all(f64::is_finite) {
-        this.extend(path, a, b, c, d, e, f)
+        this.extend(path.transform(&Transform2D::new(a, b, c, d, e, f)))
     }
 }
 

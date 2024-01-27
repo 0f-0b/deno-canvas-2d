@@ -4,6 +4,7 @@ mod convert;
 mod css;
 mod gc;
 mod gradient;
+mod harfbuzz_ext;
 mod image_bitmap;
 mod image_data;
 mod matrix;
@@ -11,6 +12,7 @@ mod path;
 mod pattern;
 mod raqote_ext;
 mod state;
+mod text;
 
 use css::color::{parse_and_compute_color, AbsoluteColor, ComputedColor};
 use cssparser::BasicParseError;
