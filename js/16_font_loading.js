@@ -740,12 +740,13 @@ export class FontFaceSet extends EventTarget {
   }
 }
 
-export const fonts = new FontFaceSet(illegalConstructor);
+let fonts;
 export const getFonts = ({
   "get fonts"() {
     if (this !== null && this !== undefined && this !== globalThis) {
       throw new TypeError("Illegal invocation");
     }
+    fonts ??= new FontFaceSet(illegalConstructor);
     return fonts;
   },
 })["get fonts"];

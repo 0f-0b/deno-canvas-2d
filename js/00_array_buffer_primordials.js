@@ -5,7 +5,9 @@ const {
   ObjectGetOwnPropertyDescriptors,
   uncurryThis,
 } = primordials;
-const proto = ObjectGetOwnPropertyDescriptors(ArrayBufferPrototype);
-export const ArrayBufferPrototypeGetResizable = uncurryThis(
-  proto.resizable.get,
-);
+export let ArrayBufferPrototypeGetResizable;
+
+export function initArrayBufferPrimordials() {
+  const proto = ObjectGetOwnPropertyDescriptors(ArrayBufferPrototype);
+  ArrayBufferPrototypeGetResizable = uncurryThis(proto.resizable.get);
+}

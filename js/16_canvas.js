@@ -635,6 +635,7 @@ async function checkUsabilityAndCropWithFormatting(
     imageOrientationToRepr[imageOrientation],
   );
 }
+
 export const makeCreateImageBitmap = (prefix) =>
   async function createImageBitmap(image, sx = undefined, sy, sw, sh, options) {
     if (this !== null && this !== undefined && this !== globalThis) {
