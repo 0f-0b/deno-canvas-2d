@@ -7,8 +7,13 @@ import {
   EventTargetPrototypeAddEventListener,
   EventTargetPrototypeRemoveEventListener,
 } from "ext:deno_canvas_2d/00_event_target_primordials.js";
+import { convertBoolean } from "ext:deno_canvas_2d/05_convert_boolean.js";
 
-const { FunctionPrototypeCall } = primordials;
+const {
+  FunctionPrototypeCall,
+  ObjectSetPrototypeOf,
+  SymbolToStringTag,
+} = primordials;
 
 export class EventHandler {
   target;
@@ -60,3 +65,14 @@ export class EventHandler {
     }
   }
 }
+
+export const readEventInitMembers = (value) => {
+  const result = { __proto__: null };
+  const { bubbles = false } = value;
+  result.bubbles = convertBoolean(bubbles);
+  const { cancelable = false } = value;
+  result.cancelable = convertBoolean(cancelable);
+  const { composed = false } = value;
+  result.composed = convertBoolean(composed);
+  return result;
+};

@@ -1,8 +1,8 @@
 use std::convert::Infallible;
 
-use cssparser::{match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, Token};
+use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 
-use super::{impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension};
+use super::{impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension, FromCss};
 
 #[derive(Clone, Copy, Debug)]
 pub enum SpecifiedAbsoluteLength {
@@ -58,19 +58,7 @@ impl SpecifiedAbsoluteLength {
         })
     }
 
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
-        let location = input.current_source_location();
-        Ok(match *input.next()? {
-            Token::Number { value, .. } if value == 0.0 => Self::zero(),
-            Token::Dimension {
-                value, ref unit, ..
-            } => Self::from_dimension(value, unit)
-                .ok_or_else(|| location.new_unexpected_token_error(Token::Ident(unit.clone())))?,
-            ref t => return Err(location.new_unexpected_token_error(t.clone())),
-        })
-    }
-
-    pub fn parse_with_range<'i>(
+    pub fn from_css_with_range<'i>(
         input: &mut Parser<'i, '_>,
         min_px: f32,
         max_px: f32,
@@ -94,6 +82,22 @@ impl SpecifiedAbsoluteLength {
     }
 }
 
+impl FromCss for SpecifiedAbsoluteLength {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        let location = input.current_source_location();
+        Ok(match *input.next()? {
+            Token::Number { value, .. } if value == 0.0 => Self::zero(),
+            Token::Dimension {
+                value, ref unit, ..
+            } => Self::from_dimension(value, unit)
+                .ok_or_else(|| location.new_unexpected_token_error(Token::Ident(unit.clone())))?,
+            ref t => return Err(location.new_unexpected_token_error(t.clone())),
+        })
+    }
+}
+
 impl_to_css_for_specified_dimension!(SpecifiedAbsoluteLength {
     Cm => "cm",
     Mm => "mm",
@@ -104,14 +108,6 @@ impl_to_css_for_specified_dimension!(SpecifiedAbsoluteLength {
     Px => "px",
     _ => "px",
 });
-
-pub fn parse_absolute_length(css: &str) -> Result<SpecifiedAbsoluteLength, BasicParseError> {
-    let mut input = ParserInput::new(css);
-    let mut parser = Parser::new(&mut input);
-    parser
-        .parse_entirely(SpecifiedAbsoluteLength::parse)
-        .map_err(ParseError::basic)
-}
 
 #[derive(Clone, Copy, Debug)]
 pub struct ComputedLength {

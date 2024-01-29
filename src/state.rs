@@ -1,4 +1,5 @@
 use std::array;
+use std::cell::RefCell;
 use std::convert::Infallible;
 use std::ffi::c_void;
 use std::fmt::{self, Debug};
@@ -18,20 +19,21 @@ use super::convert::{
     srgb_to_premultiplied_linear_srgb, unpack_argb32_to_rgba8,
 };
 use super::css::color::AbsoluteColor;
-use super::css::filter::{parse_and_compute_filter, ComputedFilter};
+use super::css::filter::ComputedFilter;
 use super::css::font::{
-    parse_and_compute_font, ComputedFamilyName, ComputedFont, ComputedFontFamily, ComputedFontSize,
+    ComputedFamilyName, ComputedFont, ComputedFontFamily, ComputedFontSize,
     ComputedFontStretchCss3, ComputedFontStyle, ComputedFontVariantCss2, ComputedFontWeight,
     ComputedGenericFamily, ComputedLineHeight,
 };
-use super::css::length::{parse_absolute_length, ComputedLength, SpecifiedAbsoluteLength};
+use super::css::length::{ComputedLength, SpecifiedAbsoluteLength};
+use super::css::FromCss as _;
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
 use super::image_data::{AlignedImageDataView, AlignedImageDataViewMut};
 use super::path::{CanvasFillRule, Path};
 use super::pattern::CanvasPattern;
-use super::text::{prepare_text, TextMetrics};
+use super::text::{prepare_text, FontFaceSet, TextMetrics};
 use super::{
     parse_color_for_canvas, premultiply, raqote_ext, serialize_color_for_canvas, to_raqote_color,
     to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace,
@@ -375,7 +377,7 @@ impl Default for DrawingState {
                 font_size: ComputedFontSize(ComputedLength { px: 10.0 }),
                 line_height: ComputedLineHeight::Normal,
                 font_family: ComputedFontFamily {
-                    family_list: Box::new([ComputedFamilyName::Generic(
+                    family_list: Rc::new([ComputedFamilyName::Generic(
                         ComputedGenericFamily::SansSerif,
                     )]),
                 },
@@ -970,10 +972,11 @@ impl CanvasState {
         });
     }
 
-    pub fn fill_text(&mut self, text: &str, x: f64, y: f64, max_width: f64) {
+    pub fn fill_text(&mut self, fonts: &FontFaceSet, text: &str, x: f64, y: f64, max_width: f64) {
         let color_space = self.color_space;
         self.paint(move |this| {
-            let (path, _) = prepare_text(&this.current_drawing_state, text, max_width);
+            let (path, _) =
+                prepare_text(fonts, &this.current_drawing_state, text, max_width as f32);
             let path = path.transform(&Transform2D::new(1.0, 0.0, 0.0, -1.0, x, y));
             let path = path.to_raqote(CanvasFillRule::NonZero);
             let source = this
@@ -987,10 +990,11 @@ impl CanvasState {
         });
     }
 
-    pub fn stroke_text(&mut self, text: &str, x: f64, y: f64, max_width: f64) {
+    pub fn stroke_text(&mut self, fonts: &FontFaceSet, text: &str, x: f64, y: f64, max_width: f64) {
         let color_space = self.color_space;
         self.paint(move |this| {
-            let (path, _) = prepare_text(&this.current_drawing_state, text, max_width);
+            let (path, _) =
+                prepare_text(fonts, &this.current_drawing_state, text, max_width as f32);
             let path = path.transform(&Transform2D::new(1.0, 0.0, 0.0, -1.0, x, y));
             let path = this.draw_target.trace_path(
                 &raqote::Path {
@@ -1010,8 +1014,9 @@ impl CanvasState {
         });
     }
 
-    pub fn measure_text(&self, text: &str) -> TextMetrics {
-        let (_, text_metrics) = prepare_text(&self.current_drawing_state, text, f64::INFINITY);
+    pub fn measure_text(&self, fonts: &FontFaceSet, text: &str) -> TextMetrics {
+        let (_, text_metrics) =
+            prepare_text(fonts, &self.current_drawing_state, text, f32::INFINITY);
         text_metrics
     }
 
@@ -1458,7 +1463,7 @@ pub fn op_canvas_2d_state_set_font(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(mut value) = parse_and_compute_font(value) {
+    if let Ok(mut value) = ComputedFont::from_css_string(value) {
         value.line_height = ComputedLineHeight::Normal;
         this.set_font(value);
         true
@@ -1520,7 +1525,7 @@ pub fn op_canvas_2d_state_set_letter_spacing(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(value) = parse_absolute_length(value) {
+    if let Ok(value) = SpecifiedAbsoluteLength::from_css_string(value) {
         this.set_letter_spacing(value);
         true
     } else {
@@ -1542,7 +1547,7 @@ pub fn op_canvas_2d_state_set_word_spacing(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(value) = parse_absolute_length(value) {
+    if let Ok(value) = SpecifiedAbsoluteLength::from_css_string(value) {
         this.set_word_spacing(value);
         true
     } else {
@@ -1830,7 +1835,8 @@ pub fn op_canvas_2d_state_fill_text(
 ) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if [x, y].into_iter().all(f64::is_finite) {
-        this.fill_text(text, x, y, max_width);
+        let fonts = state.borrow::<Rc<RefCell<FontFaceSet>>>().borrow();
+        this.fill_text(&fonts, text, x, y, max_width);
     }
 }
 
@@ -1845,7 +1851,8 @@ pub fn op_canvas_2d_state_stroke_text(
 ) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
     if [x, y].into_iter().all(f64::is_finite) {
-        this.stroke_text(text, x, y, max_width);
+        let fonts = state.borrow::<Rc<RefCell<FontFaceSet>>>().borrow();
+        this.stroke_text(&fonts, text, x, y, max_width);
     }
 }
 
@@ -1858,7 +1865,8 @@ pub fn op_canvas_2d_state_measure_text(
 ) {
     let this = borrow_v8::<CanvasState>(state, this);
     let out = &mut out[..12];
-    let result = this.measure_text(text);
+    let fonts = state.borrow::<Rc<RefCell<FontFaceSet>>>().borrow();
+    let result = this.measure_text(&fonts, text);
     out[0] = result.width as f64;
     out[1] = result.actual_bounding_box_left as f64;
     out[2] = result.actual_bounding_box_right as f64;
@@ -2143,7 +2151,7 @@ pub fn op_canvas_2d_state_set_filter(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(value) = parse_and_compute_filter(value) {
+    if let Ok(value) = ComputedFilter::from_css_string(value) {
         this.set_filter(value);
         true
     } else {

@@ -2,7 +2,7 @@ use std::convert::Infallible;
 use std::fmt::{self, Display};
 use std::rc::Rc;
 
-use cssparser::{ParseError, Parser, ToCss, Token};
+use cssparser::{BasicParseError, ParseError, Parser, ParserInput, ToCss, Token, UnicodeRange};
 use cssparser_color::NumberOrPercentage;
 
 pub mod angle;
@@ -11,6 +11,23 @@ pub mod filter;
 pub mod font;
 pub mod length;
 pub mod transform;
+
+pub trait FromCss: Sized {
+    type Err;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>>;
+
+    fn from_css_string(css: &str) -> Result<Self, BasicParseError>
+    where
+        Self: FromCss<Err = Infallible>,
+    {
+        let mut input = ParserInput::new(css);
+        let mut parser = Parser::new(&mut input);
+        parser
+            .parse_entirely(Self::from_css)
+            .map_err(ParseError::basic)
+    }
+}
 
 fn parse_one_or_more<'i, T, E>(
     input: &mut Parser<'i, '_>,
@@ -60,6 +77,12 @@ fn parse_number_or_percentage_with_range<'i>(
         }
         ref t => return Err(location.new_unexpected_token_error(t.clone())),
     })
+}
+
+fn parse_unicode_range<'i>(
+    input: &mut Parser<'i, '_>,
+) -> Result<UnicodeRange, ParseError<'i, Infallible>> {
+    Ok(UnicodeRange::parse(input)?)
 }
 
 #[derive(Clone, Copy)]

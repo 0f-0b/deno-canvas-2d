@@ -43,7 +43,7 @@ impl SpecifiedAngle {
         })
     }
 
-    pub fn parse_with_range<'i>(
+    pub fn from_css_with_range<'i>(
         input: &mut Parser<'i, '_>,
         min_deg: f32,
         max_deg: f32,
@@ -66,7 +66,7 @@ impl SpecifiedAngle {
         })
     }
 
-    pub fn parse_allow_zero<'i>(
+    pub fn from_css_allow_zero<'i>(
         input: &mut Parser<'i, '_>,
     ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();

@@ -1,12 +1,12 @@
 use std::convert::Infallible;
 
-use cssparser::{match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, Token};
+use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 use euclid::default::{Transform2D, Transform3D, Vector3D};
 
 use super::super::matrix::Matrix;
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_number, parse_number_or_percentage, parse_one_or_more};
+use super::{parse_number, parse_number_or_percentage, parse_one_or_more, FromCss};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ComputedTransformFunction {
@@ -69,10 +69,12 @@ impl ComputedTransformFunction {
             .into(),
         }
     }
+}
 
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedTransformFunction {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let location = input.current_source_location();
         let name = input.expect_function()?.clone();
         input.parse_nested_block(|input| {
@@ -131,32 +133,32 @@ impl ComputedTransformFunction {
                     ])
                 },
                 "translate" => {
-                    let x = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    let x = SpecifiedAbsoluteLength::from_css(input)?.compute();
                     if input.try_parse(Parser::expect_comma).is_ok() {
-                        let y = SpecifiedAbsoluteLength::parse(input)?.compute();
+                        let y = SpecifiedAbsoluteLength::from_css(input)?.compute();
                         Self::Translate(x, y)
                     } else {
                         Self::Translate(x, ComputedLength::zero())
                     }
                 },
                 "translate3d" => {
-                    let x = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    let x = SpecifiedAbsoluteLength::from_css(input)?.compute();
                     input.expect_comma()?;
-                    let y = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    let y = SpecifiedAbsoluteLength::from_css(input)?.compute();
                     input.expect_comma()?;
-                    let z = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    let z = SpecifiedAbsoluteLength::from_css(input)?.compute();
                     Self::Translate3D(x, y, z)
                 },
                 "translatex" => {
-                    let x = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    let x = SpecifiedAbsoluteLength::from_css(input)?.compute();
                     Self::TranslateX(x)
                 },
                 "translatey" => {
-                    let y = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    let y = SpecifiedAbsoluteLength::from_css(input)?.compute();
                     Self::TranslateY(y)
                 },
                 "translatez" => {
-                    let z = SpecifiedAbsoluteLength::parse(input)?.compute();
+                    let z = SpecifiedAbsoluteLength::from_css(input)?.compute();
                     Self::TranslateZ(z)
                 },
                 "scale" => {
@@ -189,7 +191,7 @@ impl ComputedTransformFunction {
                     Self::ScaleZ(z)
                 },
                 "rotate" => {
-                    let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let t = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     Self::Rotate(t)
                 },
                 "rotate3d" => {
@@ -199,41 +201,41 @@ impl ComputedTransformFunction {
                     input.expect_comma()?;
                     let z = parse_number(input)?;
                     input.expect_comma()?;
-                    let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let t = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     Self::Rotate3D(x, y, z, t)
                 },
                 "rotatex" => {
-                    let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let t = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     Self::RotateX(t)
                 },
                 "rotatey" => {
-                    let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let t = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     Self::RotateY(t)
                 },
                 "rotatez" => {
-                    let t = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let t = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     Self::RotateZ(t)
                 },
                 "skew" => {
-                    let a = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let a = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     if input.try_parse(Parser::expect_comma).is_ok() {
-                        let b = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                        let b = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                         Self::Skew(a, b)
                     } else {
                         Self::Skew(a, ComputedAngle::zero())
                     }
                 },
                 "skewx" => {
-                    let a = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let a = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     Self::SkewX(a)
                 },
                 "skewy" => {
-                    let b = SpecifiedAngle::parse_allow_zero(input)?.compute();
+                    let b = SpecifiedAngle::from_css_allow_zero(input)?.compute();
                     Self::SkewY(b)
                 },
                 "perspective" => {
                     let d = match input.try_parse(|input| {
-                        SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY)
+                        SpecifiedAbsoluteLength::from_css_with_range(input, 0.0, f32::INFINITY)
                     }) {
                         Ok(d) => Some(d.compute()),
                         Err(_) => {
@@ -272,10 +274,12 @@ impl ComputedTransform {
             },
         )
     }
+}
 
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedTransform {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         input.skip_whitespace();
         if input
             .try_parse(|input| input.expect_ident_matching("none"))
@@ -284,16 +288,7 @@ impl ComputedTransform {
             return Ok(Self::none());
         }
         let transform_list =
-            parse_one_or_more(input, ComputedTransformFunction::parse_and_compute)?
-                .into_boxed_slice();
+            parse_one_or_more(input, ComputedTransformFunction::from_css)?.into_boxed_slice();
         Ok(Self { transform_list })
     }
-}
-
-pub fn parse_and_compute_transform(css: &str) -> Result<ComputedTransform, BasicParseError> {
-    let mut input = ParserInput::new(css);
-    let mut parser = Parser::new(&mut input);
-    parser
-        .parse_entirely(ComputedTransform::parse_and_compute)
-        .map_err(ParseError::basic)
 }

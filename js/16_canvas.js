@@ -22,6 +22,7 @@ import {
   op_canvas_2d_image_bitmap_resize,
   op_canvas_2d_image_bitmap_width,
 } from "ext:deno_canvas_2d/00_ops.js";
+import { IdentityConstructor } from "ext:deno_canvas_2d/01_identity_constructor.js";
 import { makeSafePromise } from "ext:deno_canvas_2d/01_promise.js";
 import { isBlob } from "ext:deno_canvas_2d/02_is_blob.js";
 import { isImageData } from "ext:deno_canvas_2d/02_is_image_data.js";
@@ -51,6 +52,7 @@ const {
   ObjectFreeze,
   ObjectGetPrototypeOf,
   Promise,
+  ReflectConstruct,
   RangeError,
   SafeArrayIterator,
   SafeMap,
@@ -134,10 +136,6 @@ registerCanvasContextMode("none", {
     return { data, width, height, colorSpace };
   },
 });
-export let objectIsOffscreenCanvas;
-let getOffscreenCanvasContext;
-let getOffscreenCanvasWidth;
-let getOffscreenCanvasHeight;
 
 function getOffscreenCanvasContextMode(ctx) {
   // deno-lint-ignore prefer-primordials
@@ -149,24 +147,46 @@ function getOffscreenCanvasContextMode(ctx) {
   throw new TypeError("Unreachable");
 }
 
-export class OffscreenCanvas extends EventTarget {
+export const OffscreenCanvasInternals = class OffscreenCanvas
+  extends IdentityConstructor {
   #brand() {}
 
   #context;
   #oncontextlost = new EventHandler(this, "contextlost");
   #oncontextrestored = new EventHandler(this, "contextrestored");
 
-  constructor(width, height) {
-    const prefix = "Failed to construct 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 2, prefix);
-    width = convertEnforceRangeUnsignedLongLong(width);
-    height = convertEnforceRangeUnsignedLongLong(height);
-    super();
-    this.#context = new DummyCanvasContext(width, height);
+  constructor(o, context) {
+    super(o);
+    this.#context = context;
   }
 
-  get #width() {
-    const ctx = this.#context;
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+
+  static getContext(o) {
+    return o.#context;
+  }
+
+  static setContext(o, value) {
+    o.#context = value;
+  }
+
+  static getOnContextLost(o) {
+    return o.#oncontextlost;
+  }
+
+  static getOnContextRestored(o) {
+    return o.#oncontextrestored;
+  }
+
+  static getWidth(o) {
+    const ctx = o.#context;
     if (!ctx) {
       return 0;
     }
@@ -174,8 +194,8 @@ export class OffscreenCanvas extends EventTarget {
     return mode.getWidth(ctx);
   }
 
-  set #width(value) {
-    const ctx = this.#context;
+  static setWidth(o, value) {
+    const ctx = o.#context;
     if (!ctx) {
       throw new DOMException("Canvas is detached", "InvalidStateError");
     }
@@ -183,8 +203,8 @@ export class OffscreenCanvas extends EventTarget {
     mode.setWidth(value);
   }
 
-  get #height() {
-    const ctx = this.#context;
+  static getHeight(o) {
+    const ctx = o.#context;
     if (!ctx) {
       return 0;
     }
@@ -192,8 +212,8 @@ export class OffscreenCanvas extends EventTarget {
     return mode.getHeight(ctx);
   }
 
-  set #height(value) {
-    const ctx = this.#context;
+  static setHeight(o, value) {
+    const ctx = o.#context;
     if (!ctx) {
       throw new DOMException("Canvas is detached", "InvalidStateError");
     }
@@ -201,82 +221,13 @@ export class OffscreenCanvas extends EventTarget {
     mode.setHeight(value);
   }
 
-  get width() {
-    return this.#width;
-  }
-
-  set width(value) {
-    this.#brand;
-    const prefix = "Failed to set 'width' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertEnforceRangeUnsignedLongLong(value);
-    this.#width = value;
-  }
-
-  get height() {
-    return this.#height;
-  }
-
-  set height(value) {
-    this.#brand;
-    const prefix = "Failed to set 'height' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertEnforceRangeUnsignedLongLong(value);
-    this.#height = value;
-  }
-
-  getContext(contextId, options = null) {
-    this.#brand;
-    const prefix = "Failed to execute 'getContext' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
-    contextId = convertDOMString(contextId);
-    const requestedMode = contextModes.get(contextId);
-    if (!requestedMode || contextId === "none") {
-      throw new TypeError(`Invalid rendering context ID '${contextId}'`);
-    }
-    if (!(typeof options === "object" || typeof options === "function")) {
-      options = null;
-    }
-    const ctx = this.#context;
+  static encode(o, type) {
+    const ctx = o.#context;
     if (!ctx) {
       throw new DOMException("Canvas is detached", "InvalidStateError");
     }
-    if (objectIsDummyCanvasContext(ctx)) {
-      const { width, height } = ctx;
-      return this.#context = requestedMode
-        .newInstance(this, width, height, options);
-    }
-    return requestedMode.hasInstance(ctx) ? ctx : null;
-  }
-
-  transferToImageBitmap() {
-    this.#brand;
-    const ctx = this.#context;
-    if (!ctx) {
-      throw new DOMException("Canvas is detached", "InvalidStateError");
-    }
-    const mode = getOffscreenCanvasContextMode(ctx);
-    return mode.transferToImageBitmap(ctx);
-  }
-
-  async convertToBlob(options = undefined) {
-    this.#brand;
-    options = convertImageEncodeOptions(options);
-    try {
-      const { data, type } = this.#encode(options.type);
-      return new Blob(new SafeArrayIterator([data]), { __proto__: null, type });
-    } finally {
-      await makeSafePromise(new Promise(defer));
-    }
-  }
-
-  #encode(type) {
-    const ctx = this.#context;
-    if (!ctx) {
-      throw new DOMException("Canvas is detached", "InvalidStateError");
-    }
-    const width = this.#width;
-    const height = this.#height;
+    const width = OffscreenCanvasInternals.getWidth(o);
+    const height = OffscreenCanvasInternals.getHeight(o);
     if (width === 0 || height === 0) {
       throw new DOMException("Canvas has no pixels", "IndexSizeError");
     }
@@ -297,31 +248,7 @@ export class OffscreenCanvas extends EventTarget {
     }
   }
 
-  get oncontextlost() {
-    return this.#oncontextlost.value;
-  }
-
-  set oncontextlost(value) {
-    this.#brand;
-    const prefix = "Failed to set 'oncontextlost' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertEventHandler(value);
-    this.#oncontextlost.update(value);
-  }
-
-  get oncontextrestored() {
-    return this.#oncontextrestored.value;
-  }
-
-  set oncontextrestored(value) {
-    this.#brand;
-    const prefix = "Failed to set 'oncontextrestored' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertEventHandler(value);
-    this.#oncontextrestored.update(value);
-  }
-
-  #inspect(inspect, options) {
+  static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
         object: this,
@@ -331,22 +258,123 @@ export class OffscreenCanvas extends EventTarget {
       options,
     );
   }
+};
+
+export class OffscreenCanvas extends EventTarget {
+  constructor(width, height) {
+    const prefix = "Failed to construct 'OffscreenCanvas'";
+    requiredArguments(arguments.length, 2, prefix);
+    width = convertEnforceRangeUnsignedLongLong(width);
+    height = convertEnforceRangeUnsignedLongLong(height);
+    return new OffscreenCanvasInternals(
+      ReflectConstruct(EventTarget, [], new.target),
+      new DummyCanvasContext(width, height),
+    );
+  }
+
+  get width() {
+    return OffscreenCanvasInternals.getWidth(this);
+  }
+
+  set width(value) {
+    OffscreenCanvasInternals.checkInstance(this);
+    const prefix = "Failed to set 'width' on 'OffscreenCanvas'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertEnforceRangeUnsignedLongLong(value);
+    OffscreenCanvasInternals.setWidth(this, value);
+  }
+
+  get height() {
+    return OffscreenCanvasInternals.getHeight(this);
+  }
+
+  set height(value) {
+    OffscreenCanvasInternals.checkInstance(this);
+    const prefix = "Failed to set 'height' on 'OffscreenCanvas'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertEnforceRangeUnsignedLongLong(value);
+    OffscreenCanvasInternals.setHeight(this, value);
+  }
+
+  getContext(contextId, options = null) {
+    OffscreenCanvasInternals.checkInstance(this);
+    const prefix = "Failed to execute 'getContext' on 'OffscreenCanvas'";
+    requiredArguments(arguments.length, 1, prefix);
+    contextId = convertDOMString(contextId);
+    const requestedMode = contextModes.get(contextId);
+    if (!requestedMode || contextId === "none") {
+      throw new TypeError(`Invalid rendering context ID '${contextId}'`);
+    }
+    if (!(typeof options === "object" || typeof options === "function")) {
+      options = null;
+    }
+    const ctx = OffscreenCanvasInternals.getContext(this);
+    if (!ctx) {
+      throw new DOMException("Canvas is detached", "InvalidStateError");
+    }
+    if (objectIsDummyCanvasContext(ctx)) {
+      const { width, height } = ctx;
+      const result = requestedMode.newInstance(this, width, height, options);
+      OffscreenCanvasInternals.setContext(this, result);
+      return result;
+    }
+    return requestedMode.hasInstance(ctx) ? ctx : null;
+  }
+
+  transferToImageBitmap() {
+    OffscreenCanvasInternals.checkInstance(this);
+    const ctx = OffscreenCanvasInternals.getContext(this);
+    if (!ctx) {
+      throw new DOMException("Canvas is detached", "InvalidStateError");
+    }
+    const mode = getOffscreenCanvasContextMode(ctx);
+    return mode.transferToImageBitmap(ctx);
+  }
+
+  async convertToBlob(options = undefined) {
+    OffscreenCanvasInternals.checkInstance(this);
+    options = convertImageEncodeOptions(options);
+    try {
+      const { data, type } = OffscreenCanvasInternals
+        .encode(this, options.type);
+      return new Blob(new SafeArrayIterator([data]), { __proto__: null, type });
+    } finally {
+      await makeSafePromise(new Promise(defer));
+    }
+  }
+
+  get oncontextlost() {
+    return OffscreenCanvasInternals.getOnContextLost(this).value;
+  }
+
+  set oncontextlost(value) {
+    OffscreenCanvasInternals.checkInstance(this);
+    const prefix = "Failed to set 'oncontextlost' on 'OffscreenCanvas'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertEventHandler(value);
+    OffscreenCanvasInternals.getOnContextLost(this).update(value);
+  }
+
+  get oncontextrestored() {
+    return OffscreenCanvasInternals.getOnContextRestored(this).value;
+  }
+
+  set oncontextrestored(value) {
+    OffscreenCanvasInternals.checkInstance(this);
+    const prefix = "Failed to set 'oncontextrestored' on 'OffscreenCanvas'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertEventHandler(value);
+    OffscreenCanvasInternals.getOnContextRestored(this).update(value);
+  }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return OffscreenCanvasInternals.hasInstance(this)
+      ? OffscreenCanvasInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsOffscreenCanvas = (o) => #brand in o;
-    getOffscreenCanvasContext = (o) => o.#context;
-    getOffscreenCanvasWidth = (o) => o.#width;
-    getOffscreenCanvasHeight = (o) => o.#height;
   }
 }
 
@@ -441,12 +469,12 @@ export function checkUsabilityAndClone(image) {
     }
     return op_canvas_2d_image_bitmap_clone(raw);
   }
-  const ctx = getOffscreenCanvasContext(image);
+  const ctx = OffscreenCanvasInternals.getContext(image);
   if (!ctx) {
     throw new DOMException("Canvas is detached", "InvalidStateError");
   }
-  const width = getOffscreenCanvasWidth(image);
-  const height = getOffscreenCanvasHeight(image);
+  const width = OffscreenCanvasInternals.getWidth(image);
+  const height = OffscreenCanvasInternals.getHeight(image);
   if (width === 0 || height === 0) {
     throw new DOMException("Canvas has no pixels", "InvalidStateError");
   }
@@ -457,7 +485,8 @@ export function checkUsabilityAndClone(image) {
 const convertImageBitmapSource = (value) => {
   if (
     (type(value) === "Object" &&
-      (objectIsImageBitmap(value) || objectIsOffscreenCanvas(value))) ||
+      (objectIsImageBitmap(value) ||
+        OffscreenCanvasInternals.hasInstance(value))) ||
     isBlob(value) || isImageData(value)
   ) {
     return value;
@@ -529,13 +558,13 @@ async function checkUsabilityAndCropWithFormatting(
   resizeQuality,
   imageOrientation,
 ) {
-  if (objectIsOffscreenCanvas(image)) {
-    const ctx = getOffscreenCanvasContext(image);
+  if (OffscreenCanvasInternals.hasInstance(image)) {
+    const ctx = OffscreenCanvasInternals.getContext(image);
     if (!ctx) {
       throw new DOMException("Canvas is detached", "InvalidStateError");
     }
-    const width = getOffscreenCanvasWidth(image);
-    const height = getOffscreenCanvasHeight(image);
+    const width = OffscreenCanvasInternals.getWidth(image);
+    const height = OffscreenCanvasInternals.getHeight(image);
     if (width === 0 || height === 0) {
       throw new DOMException("Canvas has no pixels", "InvalidStateError");
     }

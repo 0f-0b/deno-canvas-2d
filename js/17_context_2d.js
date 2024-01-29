@@ -144,7 +144,7 @@ import {
   colorSpaceToRepr,
   ImageBitmap,
   objectIsImageBitmap,
-  objectIsOffscreenCanvas,
+  OffscreenCanvasInternals,
   registerCanvasContextMode,
 } from "ext:deno_canvas_2d/16_canvas.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
@@ -179,7 +179,7 @@ const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertCanvasImageSource = (value) => {
   if (
     type(value) === "Object" &&
-    (objectIsImageBitmap(value) || objectIsOffscreenCanvas(value))
+    (objectIsImageBitmap(value) || OffscreenCanvasInternals.hasInstance(value))
   ) {
     return value;
   }

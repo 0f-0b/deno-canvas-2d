@@ -3,7 +3,7 @@ pub mod encoding;
 use std::convert::Infallible;
 
 use cssparser::color::PredefinedColorSpace;
-use cssparser::{BasicParseError, ParseError, Parser, ParserInput};
+use cssparser::{ParseError, Parser};
 use cssparser_color::{parse_color_with, ColorParser, FromParsedColor};
 use palette::chromatic_adaptation::AdaptFrom as _;
 use palette::encoding::Linear;
@@ -12,6 +12,8 @@ use palette::white_point::{D50, D65};
 use palette::{
     Clamp, FromColor as _, Hsl, Hwb, IntoColor, Lab, Lch, LinSrgb, Oklab, Oklch, Srgb, Xyz,
 };
+
+use super::FromCss;
 
 pub type DisplayP3<T = f32> = Rgb<encoding::DisplayP3, T>;
 pub type A98Rgb<T = f32> = Rgb<encoding::A98Rgb, T>;
@@ -271,10 +273,10 @@ impl FromParsedColor for ComputedColor {
     }
 }
 
-impl ComputedColor {
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedColor {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         struct BasicColorParser;
 
         impl<'i> ColorParser<'i> for BasicColorParser {
@@ -284,12 +286,4 @@ impl ComputedColor {
 
         parse_color_with(&BasicColorParser, input)
     }
-}
-
-pub fn parse_and_compute_color(css: &str) -> Result<ComputedColor, BasicParseError> {
-    let mut input = ParserInput::new(css);
-    let mut parser = Parser::new(&mut input);
-    parser
-        .parse_entirely(ComputedColor::parse_and_compute)
-        .map_err(ParseError::basic)
 }

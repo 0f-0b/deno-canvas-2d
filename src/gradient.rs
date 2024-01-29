@@ -210,7 +210,7 @@ pub fn op_canvas_2d_gradient_add_color_stop(
                 "Invalid CSS color value '{color}': {} at {}:{}",
                 err.kind,
                 err.location.line + 1,
-                err.location.column
+                err.location.column,
             ),
         )
     })?;

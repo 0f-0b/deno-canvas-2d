@@ -3,13 +3,12 @@ use std::fmt;
 use std::rc::Rc;
 
 use cssparser::{
-    match_ignore_ascii_case, serialize_string, BasicParseError, ParseError, Parser, ParserInput,
-    ToCss, Token,
+    match_ignore_ascii_case, serialize_string, ParseError, Parser, ToCss, Token, UnicodeRange,
 };
 
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_string, CssNumber, CssValue};
+use super::{parse_string, parse_unicode_range, CssNumber, CssValue, FromCss};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ComputedFontStyle {
@@ -18,10 +17,10 @@ pub enum ComputedFontStyle {
     Oblique(ComputedAngle),
 }
 
-impl ComputedFontStyle {
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedFontStyle {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let location = input.current_source_location();
         let ident = input.expect_ident()?;
         Ok(match_ignore_ascii_case! { ident,
@@ -29,7 +28,7 @@ impl ComputedFontStyle {
             "italic" => Self::Italic,
             "oblique" => {
                 let angle = match input
-                    .try_parse(|input| SpecifiedAngle::parse_with_range(input, -90.0, 90.0))
+                    .try_parse(|input| SpecifiedAngle::from_css_with_range(input, -90.0, 90.0))
                 {
                     Ok(v) => v.compute(),
                     Err(_) => ComputedAngle { deg: 14.0 },
@@ -63,10 +62,10 @@ pub enum ComputedFontVariantCss2 {
     SmallCaps,
 }
 
-impl ComputedFontVariantCss2 {
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedFontVariantCss2 {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let location = input.current_source_location();
         let ident = input.expect_ident()?;
         Ok(match_ignore_ascii_case! { ident,
@@ -89,10 +88,10 @@ impl ToCss for ComputedFontVariantCss2 {
 #[derive(Clone, Copy, Debug)]
 pub struct ComputedFontWeight(pub f32);
 
-impl ComputedFontWeight {
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedFontWeight {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
             Token::Ident(ref ident) => match_ignore_ascii_case! { ident,
@@ -127,10 +126,10 @@ pub enum ComputedFontStretchCss3 {
     UltraExpanded,
 }
 
-impl ComputedFontStretchCss3 {
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedFontStretchCss3 {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let location = input.current_source_location();
         let ident = input.expect_ident()?;
         Ok(match_ignore_ascii_case! { ident,
@@ -167,13 +166,13 @@ impl ToCss for ComputedFontStretchCss3 {
 #[derive(Clone, Copy, Debug)]
 pub struct ComputedFontSize(pub ComputedLength);
 
-impl ComputedFontSize {
-    pub fn parse_and_compute<'i>(
-        input: &mut Parser<'i, '_>,
-    ) -> Result<Self, ParseError<'i, Infallible>> {
-        if let Ok(v) = input
-            .try_parse(|input| SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY))
-        {
+impl FromCss for ComputedFontSize {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        if let Ok(v) = input.try_parse(|input| {
+            SpecifiedAbsoluteLength::from_css_with_range(input, 0.0, f32::INFINITY)
+        }) {
             return Ok(Self(v.compute()));
         }
         let location = input.current_source_location();
@@ -214,13 +213,13 @@ pub enum ComputedLineHeight {
 }
 
 impl ComputedLineHeight {
-    pub fn parse_and_compute<'i>(
+    pub fn from_css<'i>(
         input: &mut Parser<'i, '_>,
         font_size: ComputedFontSize,
     ) -> Result<Self, ParseError<'i, Infallible>> {
-        if let Ok(v) = input
-            .try_parse(|input| SpecifiedAbsoluteLength::parse_with_range(input, 0.0, f32::INFINITY))
-        {
+        if let Ok(v) = input.try_parse(|input| {
+            SpecifiedAbsoluteLength::from_css_with_range(input, 0.0, f32::INFINITY)
+        }) {
             return Ok(Self::Length(v.compute()));
         }
         let location = input.current_source_location();
@@ -250,6 +249,39 @@ impl ToCss for ComputedLineHeight {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ComputedSpecificFamily(pub Rc<str>);
+
+impl FromCss for ComputedSpecificFamily {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        if let Ok(name) = input.try_parse(parse_string) {
+            return Ok(Self(name));
+        }
+        let mut name = input.expect_ident()?.as_ref().to_owned();
+        match_ignore_ascii_case! { &name,
+            "initial" | "inherit" | "unset" | "revert" | "default" => {
+                let ident = input.expect_ident()?;
+                name.push(' ');
+                name.push_str(ident);
+            },
+            _ => {},
+        }
+        while let Ok(ref ident) = input.try_parse(Parser::expect_ident_cloned) {
+            name.push(' ');
+            name.push_str(ident);
+        }
+        Ok(Self(name.into()))
+    }
+}
+
+impl ToCss for ComputedSpecificFamily {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        serialize_string(&self.0, dest)
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum ComputedGenericFamily {
     Serif,
@@ -268,8 +300,10 @@ pub enum ComputedGenericFamily {
     UiRounded,
 }
 
-impl ComputedGenericFamily {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedGenericFamily {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
             Token::Ident(ref ident) => match_ignore_ascii_case! { ident,
@@ -332,39 +366,25 @@ impl ToCss for ComputedGenericFamily {
 
 #[derive(Clone, Debug)]
 pub enum ComputedFamilyName {
-    Specific(Rc<str>),
+    Specific(ComputedSpecificFamily),
     Generic(ComputedGenericFamily),
 }
 
-impl ComputedFamilyName {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
-        if let Ok(name) = input.try_parse(parse_string) {
-            return Ok(Self::Specific(name));
-        }
-        if let Ok(v) = input.try_parse(ComputedGenericFamily::parse) {
+impl FromCss for ComputedFamilyName {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        if let Ok(v) = input.try_parse(ComputedGenericFamily::from_css) {
             return Ok(Self::Generic(v));
         }
-        let mut name = input.expect_ident()?.as_ref().to_owned();
-        match_ignore_ascii_case! { &name,
-            "initial" | "inherit" | "unset" | "revert" | "default" => {
-                let ident = input.expect_ident()?;
-                name.push(' ');
-                name.push_str(ident);
-            },
-            _ => {},
-        }
-        while let Ok(ref ident) = input.try_parse(Parser::expect_ident_cloned) {
-            name.push(' ');
-            name.push_str(ident);
-        }
-        Ok(Self::Specific(name.into()))
+        Ok(Self::Specific(ComputedSpecificFamily::from_css(input)?))
     }
 }
 
 impl ToCss for ComputedFamilyName {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         match *self {
-            Self::Specific(ref name) => serialize_string(name, dest),
+            Self::Specific(ref v) => v.to_css(dest),
             Self::Generic(v) => v.to_css(dest),
         }
     }
@@ -372,14 +392,16 @@ impl ToCss for ComputedFamilyName {
 
 #[derive(Clone, Debug)]
 pub struct ComputedFontFamily {
-    pub family_list: Box<[ComputedFamilyName]>,
+    pub family_list: Rc<[ComputedFamilyName]>,
 }
 
-impl ComputedFontFamily {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedFontFamily {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let family_list = input
-            .parse_comma_separated(ComputedFamilyName::parse)?
-            .into_boxed_slice();
+            .parse_comma_separated(ComputedFamilyName::from_css)?
+            .into();
         Ok(Self { family_list })
     }
 }
@@ -406,8 +428,10 @@ pub struct ComputedFont {
     pub font_family: ComputedFontFamily,
 }
 
-impl ComputedFont {
-    pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Infallible>> {
+impl FromCss for ComputedFont {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         let mut max_attr = 4;
         let mut font_style = None;
         let mut font_variant = None;
@@ -422,28 +446,28 @@ impl ComputedFont {
                 continue;
             }
             if font_style.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontStyle::parse_and_compute) {
+                if let Ok(v) = input.try_parse(ComputedFontStyle::from_css) {
                     font_style = Some(v);
                     max_attr -= 1;
                     continue;
                 }
             }
             if font_variant.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontVariantCss2::parse_and_compute) {
+                if let Ok(v) = input.try_parse(ComputedFontVariantCss2::from_css) {
                     font_variant = Some(v);
                     max_attr -= 1;
                     continue;
                 }
             }
             if font_weight.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontWeight::parse_and_compute) {
+                if let Ok(v) = input.try_parse(ComputedFontWeight::from_css) {
                     font_weight = Some(v);
                     max_attr -= 1;
                     continue;
                 }
             }
             if font_stretch.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontStretchCss3::parse_and_compute) {
+                if let Ok(v) = input.try_parse(ComputedFontStretchCss3::from_css) {
                     font_stretch = Some(v);
                     max_attr -= 1;
                     continue;
@@ -455,13 +479,13 @@ impl ComputedFont {
         let font_variant = font_variant.unwrap_or(ComputedFontVariantCss2::Normal);
         let font_weight = font_weight.unwrap_or(ComputedFontWeight(400.0));
         let font_stretch = font_stretch.unwrap_or(ComputedFontStretchCss3::Normal);
-        let font_size = ComputedFontSize::parse_and_compute(input)?;
+        let font_size = ComputedFontSize::from_css(input)?;
         let line_height = if input.try_parse(|input| input.expect_delim('/')).is_ok() {
-            ComputedLineHeight::parse_and_compute(input, font_size)?
+            ComputedLineHeight::from_css(input, font_size)?
         } else {
             ComputedLineHeight::Normal
         };
-        let font_family = ComputedFontFamily::parse(input)?;
+        let font_family = ComputedFontFamily::from_css(input)?;
         Ok(Self {
             font_style,
             font_variant,
@@ -497,10 +521,35 @@ impl ToCss for ComputedFont {
     }
 }
 
-pub fn parse_and_compute_font(css: &str) -> Result<ComputedFont, BasicParseError> {
-    let mut input = ParserInput::new(css);
-    let mut parser = Parser::new(&mut input);
-    parser
-        .parse_entirely(ComputedFont::parse)
-        .map_err(ParseError::basic)
+#[derive(Clone, Debug)]
+pub struct ComputedUnicodeRange {
+    pub range_list: Rc<[UnicodeRange]>,
+}
+
+impl ComputedUnicodeRange {
+    pub fn contains(&self, c: u32) -> bool {
+        self.range_list
+            .iter()
+            .any(|range| (range.start..=range.end).contains(&c))
+    }
+}
+
+impl FromCss for ComputedUnicodeRange {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        let range_list = input.parse_comma_separated(parse_unicode_range)?.into();
+        Ok(Self { range_list })
+    }
+}
+
+impl ToCss for ComputedUnicodeRange {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        let mut iter = self.range_list.iter();
+        iter.next().unwrap().to_css(dest)?;
+        for name in iter {
+            write!(dest, ", {}", CssValue(name))?;
+        }
+        Ok(())
+    }
 }

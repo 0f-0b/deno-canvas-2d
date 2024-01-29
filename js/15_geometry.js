@@ -1,5 +1,6 @@
 import { primordials } from "ext:core/mod.js";
 import { op_canvas_2d_parse_matrix } from "ext:deno_canvas_2d/00_ops.js";
+import { IdentityConstructor } from "ext:deno_canvas_2d/01_identity_constructor.js";
 import { sameValueZero } from "ext:deno_canvas_2d/01_same_value_zero.js";
 import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
 import { createSequenceFromIterable } from "ext:deno_canvas_2d/04_create_sequence_from_iterable.js";
@@ -27,6 +28,7 @@ const {
   MathTan,
   NumberIsFinite,
   ObjectFreeze,
+  ReflectConstruct,
   Symbol,
   SymbolFor,
   SymbolIterator,
@@ -133,8 +135,25 @@ export class DOMPointReadOnly {
   }
 }
 
-export class DOMPoint extends DOMPointReadOnly {
+export const DOMPointInternals = class DOMPoint extends IdentityConstructor {
   #brand() {}
+
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+};
+
+export class DOMPoint extends DOMPointReadOnly {
+  constructor() {
+    return new DOMPointInternals(
+      ReflectConstruct(DOMPointReadOnly, arguments, new.target),
+    );
+  }
 
   static fromPoint(other = undefined) {
     other = convertDOMPointInit(other);
@@ -142,12 +161,12 @@ export class DOMPoint extends DOMPointReadOnly {
   }
 
   get x() {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     return getDOMPointX(this);
   }
 
   set x(value) {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     const prefix = "Failed to set 'x' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -155,12 +174,12 @@ export class DOMPoint extends DOMPointReadOnly {
   }
 
   get y() {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     return getDOMPointY(this);
   }
 
   set y(value) {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     const prefix = "Failed to set 'y' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -168,12 +187,12 @@ export class DOMPoint extends DOMPointReadOnly {
   }
 
   get z() {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     return getDOMPointZ(this);
   }
 
   set z(value) {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     const prefix = "Failed to set 'z' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -181,12 +200,12 @@ export class DOMPoint extends DOMPointReadOnly {
   }
 
   get w() {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     return getDOMPointW(this);
   }
 
   set w(value) {
-    this.#brand;
+    DOMPointInternals.checkInstance(this);
     const prefix = "Failed to set 'w' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -378,8 +397,25 @@ export class DOMRectReadOnly {
   }
 }
 
-export class DOMRect extends DOMRectReadOnly {
+export const DOMRectInternals = class DOMRect extends IdentityConstructor {
   #brand() {}
+
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+};
+
+export class DOMRect extends DOMRectReadOnly {
+  constructor() {
+    return new DOMRectInternals(
+      ReflectConstruct(DOMRectReadOnly, arguments, new.target),
+    );
+  }
 
   static fromRect(other = undefined) {
     other = convertDOMRectInit(other);
@@ -387,12 +423,12 @@ export class DOMRect extends DOMRectReadOnly {
   }
 
   get x() {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     return getDOMRectX(this);
   }
 
   set x(value) {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     const prefix = "Failed to set 'x' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -400,12 +436,12 @@ export class DOMRect extends DOMRectReadOnly {
   }
 
   get y() {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     return getDOMRectY(this);
   }
 
   set y(value) {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     const prefix = "Failed to set 'y' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -413,12 +449,12 @@ export class DOMRect extends DOMRectReadOnly {
   }
 
   get width() {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     return getDOMRectWidth(this);
   }
 
   set width(value) {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     const prefix = "Failed to set 'width' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -426,12 +462,12 @@ export class DOMRect extends DOMRectReadOnly {
   }
 
   get height() {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     return getDOMRectHeight(this);
   }
 
   set height(value) {
-    this.#brand;
+    DOMRectInternals.checkInstance(this);
     const prefix = "Failed to set 'height' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1341,8 +1377,25 @@ const flipYTransform = new DOMMatrixReadOnly(
   true,
 );
 
-export class DOMMatrix extends DOMMatrixReadOnly {
+export const DOMMatrixInternals = class DOMMatrix extends IdentityConstructor {
   #brand() {}
+
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+};
+
+export class DOMMatrix extends DOMMatrixReadOnly {
+  constructor() {
+    return new DOMMatrixInternals(
+      ReflectConstruct(DOMMatrixReadOnly, arguments, new.target),
+    );
+  }
 
   static fromMatrix(other = undefined) {
     other = convertDOMMatrixInit(other);
@@ -1378,12 +1431,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get a() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM11(this);
   }
 
   set a(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'a' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1391,12 +1444,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get b() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM12(this);
   }
 
   set b(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'b' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1404,12 +1457,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get c() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM21(this);
   }
 
   set c(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'c' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1417,12 +1470,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get d() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM22(this);
   }
 
   set d(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'd' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1430,12 +1483,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get e() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM41(this);
   }
 
   set e(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'e' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1443,12 +1496,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get f() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM42(this);
   }
 
   set f(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'f' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1456,12 +1509,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m11() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM11(this);
   }
 
   set m11(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm11' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1469,12 +1522,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m12() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM12(this);
   }
 
   set m12(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm12' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1482,12 +1535,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m13() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM13(this);
   }
 
   set m13(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm13' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1498,12 +1551,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m14() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM14(this);
   }
 
   set m14(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm14' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1514,12 +1567,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m21() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM21(this);
   }
 
   set m21(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm21' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1527,12 +1580,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m22() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM22(this);
   }
 
   set m22(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm22' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1540,12 +1593,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m23() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM23(this);
   }
 
   set m23(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm23' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1556,12 +1609,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m24() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM24(this);
   }
 
   set m24(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm24' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1572,12 +1625,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m31() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM31(this);
   }
 
   set m31(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm31' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1588,12 +1641,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m32() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM32(this);
   }
 
   set m32(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm32' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1604,12 +1657,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m33() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM33(this);
   }
 
   set m33(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm33' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1620,12 +1673,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m34() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM34(this);
   }
 
   set m34(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm34' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1636,12 +1689,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m41() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM41(this);
   }
 
   set m41(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm41' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1649,12 +1702,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m42() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM42(this);
   }
 
   set m42(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm42' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1662,12 +1715,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m43() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM43(this);
   }
 
   set m43(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm43' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1678,12 +1731,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   get m44() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     return getDOMMatrixM44(this);
   }
 
   set m44(value) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to set 'm44' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
@@ -1694,7 +1747,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   multiplySelf(other = undefined) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     other = convertDOMMatrixInit(other);
     const otherObject = createDOMMatrixReadOnlyFromDictionary(other);
     multiplyMatrices(this, this, otherObject);
@@ -1702,7 +1755,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   preMultiplySelf(other = undefined) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     other = convertDOMMatrixInit(other);
     const otherObject = createDOMMatrixReadOnlyFromDictionary(other);
     multiplyMatrices(this, otherObject, this);
@@ -1710,7 +1763,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   translateSelf(tx = 0, ty = 0, tz = 0) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     tx = convertUnrestrictedDouble(tx);
     ty = convertUnrestrictedDouble(ty);
     tz = convertUnrestrictedDouble(tz);
@@ -1726,7 +1779,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     originY = 0,
     originZ = 0,
   ) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     scaleX = convertUnrestrictedDouble(scaleX);
     if (scaleY !== undefined) {
       scaleY = convertUnrestrictedDouble(scaleY);
@@ -1750,7 +1803,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   scale3dSelf(scale = 1, originX = 0, originY = 0, originZ = 0) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     scale = convertUnrestrictedDouble(scale);
     originX = convertUnrestrictedDouble(originX);
     originY = convertUnrestrictedDouble(originY);
@@ -1766,7 +1819,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   rotateSelf(rotX = 0, rotY, rotZ) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     rotX = convertUnrestrictedDouble(rotX);
     if (rotY !== undefined) {
       rotY = convertUnrestrictedDouble(rotY);
@@ -1792,7 +1845,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   rotateFromVectorSelf(x = 0, y = 0) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
     multiplyMatrices(
@@ -1804,7 +1857,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   rotateAxisAngleSelf(x = 0, y = 0, z = 0, angle = 0) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
     z = convertUnrestrictedDouble(z);
@@ -1820,21 +1873,21 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   skewXSelf(sx = 0) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     sx = convertUnrestrictedDouble(sx);
     multiplyMatrices(this, this, skewXTransform(radians(sx)));
     return this;
   }
 
   skewYSelf(sy = 0) {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     sy = convertUnrestrictedDouble(sy);
     multiplyMatrices(this, this, skewYTransform(radians(sy)));
     return this;
   }
 
   invertSelf() {
-    this.#brand;
+    DOMMatrixInternals.checkInstance(this);
     invertMatrix(this, this);
     return this;
   }

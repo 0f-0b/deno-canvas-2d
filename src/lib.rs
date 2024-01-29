@@ -14,7 +14,8 @@ mod raqote_ext;
 mod state;
 mod text;
 
-use css::color::{parse_and_compute_color, AbsoluteColor, ComputedColor};
+use css::color::{AbsoluteColor, ComputedColor};
+use css::FromCss as _;
 use cssparser::BasicParseError;
 use deno_core::anyhow;
 use deno_core::error::range_error;
@@ -89,7 +90,7 @@ fn to_raqote_solid_source(
 }
 
 fn parse_color_for_canvas(css: &str) -> Result<AbsoluteColor, BasicParseError> {
-    parse_and_compute_color(css).map(|computed| match computed {
+    ComputedColor::from_css_string(css).map(|computed| match computed {
         ComputedColor::Absolute(c) => c,
         ComputedColor::CurrentColor => AbsoluteColor::OPAQUE_BLACK,
     })
@@ -238,6 +239,16 @@ deno_core::extension!(
         image_bitmap::op_canvas_2d_image_bitmap_crop,
         image_bitmap::op_canvas_2d_image_bitmap_resize,
         image_bitmap::op_canvas_2d_image_bitmap_close,
+        text::op_canvas_2d_font_face_new,
+        text::op_canvas_2d_font_face_errored,
+        text::op_canvas_2d_font_face_family,
+        text::op_canvas_2d_font_face_set_family,
+        text::op_canvas_2d_font_face_unicode_range,
+        text::op_canvas_2d_font_face_set_unicode_range,
+        text::op_canvas_2d_font_face_load_binary_data,
+        text::op_canvas_2d_font_face_set_new,
+        text::op_canvas_2d_font_face_set_add,
+        text::op_canvas_2d_font_source,
     ],
     esm = [
         dir "js",
@@ -248,19 +259,26 @@ deno_core::extension!(
         "00_image_data_primordials.js",
         "00_ops.js",
         "01_default_to.js",
+        "01_identity_constructor.js",
         "01_promise.js",
         "01_require_object.js",
         "01_same_value_zero.js",
         "01_try_get_array_buffer_resizable.js",
         "01_try_get_blob_size.js",
+        "01_try_get_data_view_buffer.js",
         "01_try_get_image_data_data.js",
+        "02_is_array_buffer.js",
         "02_is_blob.js",
+        "02_is_data_view.js",
         "02_is_image_data.js",
+        "02_is_typed_array.js",
         "02_require_fixed_array_buffer.js",
         "04_create_dictionary_converter.js",
         "04_create_enum_converter.js",
         "04_create_sequence_from_iterable.js",
+        "05_convert_array_buffer.js",
         "05_convert_boolean.js",
+        "05_convert_data_view.js",
         "05_convert_dom_string.js",
         "05_convert_double.js",
         "05_convert_enforce_range_long.js",
@@ -272,14 +290,17 @@ deno_core::extension!(
         "05_convert_image_data.js",
         "05_convert_legacy_null_to_empty_string_dom_string.js",
         "05_convert_long.js",
+        "05_convert_typed_array.js",
         "05_convert_unrestricted_double.js",
         "15_event.js",
         "15_geometry.js",
         "16_canvas.js",
+        "16_font_loading.js",
         "17_context_2d.js",
     ],
     state = |state| {
         gc::init(state);
+        text::init(state);
     },
 );
 
