@@ -1,19 +1,15 @@
-import { primordials } from "ext:core/mod.js";
 import {
   EventPrototypeGetCurrentTarget,
   EventPrototypePreventDefault,
-} from "ext:deno_canvas_2d/00_event_primordials.js";
+} from "ext:canvas_2d/00_event_primordials.js";
 import {
   EventTargetPrototypeAddEventListener,
   EventTargetPrototypeRemoveEventListener,
-} from "ext:deno_canvas_2d/00_event_target_primordials.js";
-import { convertBoolean } from "ext:deno_canvas_2d/05_convert_boolean.js";
+} from "ext:canvas_2d/00_event_target_primordials.js";
+import { convertBoolean } from "ext:canvas_2d/05_convert_boolean.js";
+import { primordials } from "ext:core/mod.js";
 
-const {
-  FunctionPrototypeCall,
-  ObjectSetPrototypeOf,
-  SymbolToStringTag,
-} = primordials;
+const { FunctionPrototypeCall } = primordials;
 
 export class EventHandler {
   target;

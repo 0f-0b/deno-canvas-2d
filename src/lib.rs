@@ -115,7 +115,7 @@ fn premultiply(c: u8, a: u8) -> u8 {
 }
 
 deno_core::extension!(
-    deno_canvas_2d,
+    canvas_2d,
     deps = [deno_web],
     ops = [
         matrix::op_canvas_2d_parse_matrix,

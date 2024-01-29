@@ -1,5 +1,5 @@
 [package]
-name = "deno_canvas_2d"
+name = "canvas_2d"
 version = "0.1.0"
 edition = "2021"
 

@@ -1,4 +1,4 @@
-import { ArrayBufferPrototypeGetResizable } from "ext:deno_canvas_2d/00_array_buffer_primordials.js";
+import { ArrayBufferPrototypeGetResizable } from "ext:canvas_2d/00_array_buffer_primordials.js";
 
 export function tryGetArrayBufferResizable(o) {
   try {

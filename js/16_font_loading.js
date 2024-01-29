@@ -1,4 +1,3 @@
-import { primordials } from "ext:core/mod.js";
 import {
   op_canvas_2d_font_face_errored,
   op_canvas_2d_font_face_family,
@@ -10,23 +9,21 @@ import {
   op_canvas_2d_font_face_set_unicode_range,
   op_canvas_2d_font_face_unicode_range,
   op_canvas_2d_font_source,
-} from "ext:deno_canvas_2d/00_ops.js";
-import { IdentityConstructor } from "ext:deno_canvas_2d/01_identity_constructor.js";
-import { requireObject } from "ext:deno_canvas_2d/01_require_object.js";
-import { isArrayBuffer } from "ext:deno_canvas_2d/02_is_array_buffer.js";
-import { isDataView } from "ext:deno_canvas_2d/02_is_data_view.js";
-import { isTypedArray } from "ext:deno_canvas_2d/02_is_typed_array.js";
-import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
-import { createSequenceFromIterable } from "ext:deno_canvas_2d/04_create_sequence_from_iterable.js";
-import { convertArrayBuffer } from "ext:deno_canvas_2d/05_convert_array_buffer.js";
-import { convertDataView } from "ext:deno_canvas_2d/05_convert_data_view.js";
-import { convertDOMString } from "ext:deno_canvas_2d/05_convert_dom_string.js";
-import { convertEventHandler } from "ext:deno_canvas_2d/05_convert_event_handler.js";
-import { convertTypedArray } from "ext:deno_canvas_2d/05_convert_typed_array.js";
-import {
-  EventHandler,
-  readEventInitMembers,
-} from "ext:deno_canvas_2d/15_event.js";
+} from "ext:canvas_2d/00_ops.js";
+import { IdentityConstructor } from "ext:canvas_2d/01_identity_constructor.js";
+import { requireObject } from "ext:canvas_2d/01_require_object.js";
+import { isArrayBuffer } from "ext:canvas_2d/02_is_array_buffer.js";
+import { isDataView } from "ext:canvas_2d/02_is_data_view.js";
+import { isTypedArray } from "ext:canvas_2d/02_is_typed_array.js";
+import { createDictionaryConverter } from "ext:canvas_2d/04_create_dictionary_converter.js";
+import { createSequenceFromIterable } from "ext:canvas_2d/04_create_sequence_from_iterable.js";
+import { convertArrayBuffer } from "ext:canvas_2d/05_convert_array_buffer.js";
+import { convertDataView } from "ext:canvas_2d/05_convert_data_view.js";
+import { convertDOMString } from "ext:canvas_2d/05_convert_dom_string.js";
+import { convertEventHandler } from "ext:canvas_2d/05_convert_event_handler.js";
+import { convertTypedArray } from "ext:canvas_2d/05_convert_typed_array.js";
+import { EventHandler, readEventInitMembers } from "ext:canvas_2d/15_event.js";
+import { primordials } from "ext:core/mod.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import {
   dispatch,

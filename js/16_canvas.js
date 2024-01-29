@@ -1,14 +1,13 @@
-import { primordials } from "ext:core/mod.js";
 import {
   BlobPrototypeArrayBuffer,
   BlobPrototypeGetType,
-} from "ext:deno_canvas_2d/00_blob_primordials.js";
+} from "ext:canvas_2d/00_blob_primordials.js";
 import {
   ImageDataPrototypeGetColorSpace,
   ImageDataPrototypeGetData,
   ImageDataPrototypeGetHeight,
   ImageDataPrototypeGetWidth,
-} from "ext:deno_canvas_2d/00_image_data_primordials.js";
+} from "ext:canvas_2d/00_image_data_primordials.js";
 import {
   op_canvas_2d_decode_image,
   op_canvas_2d_encode_png,
@@ -21,20 +20,21 @@ import {
   op_canvas_2d_image_bitmap_height,
   op_canvas_2d_image_bitmap_resize,
   op_canvas_2d_image_bitmap_width,
-} from "ext:deno_canvas_2d/00_ops.js";
-import { IdentityConstructor } from "ext:deno_canvas_2d/01_identity_constructor.js";
-import { makeSafePromise } from "ext:deno_canvas_2d/01_promise.js";
-import { isBlob } from "ext:deno_canvas_2d/02_is_blob.js";
-import { isImageData } from "ext:deno_canvas_2d/02_is_image_data.js";
-import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
-import { createEnumConverter } from "ext:deno_canvas_2d/04_create_enum_converter.js";
-import { convertDOMString } from "ext:deno_canvas_2d/05_convert_dom_string.js";
-import { convertEnforceRangeUnsignedLong } from "ext:deno_canvas_2d/05_convert_enforce_range_unsigned_long.js";
-import { convertEnforceRangeUnsignedLongLong } from "ext:deno_canvas_2d/05_convert_enforce_range_unsigned_long_long.js";
-import { convertEventHandler } from "ext:deno_canvas_2d/05_convert_event_handler.js";
-import { convertLong } from "ext:deno_canvas_2d/05_convert_long.js";
-import { convertUnrestrictedDouble } from "ext:deno_canvas_2d/05_convert_unrestricted_double.js";
-import { EventHandler } from "ext:deno_canvas_2d/15_event.js";
+} from "ext:canvas_2d/00_ops.js";
+import { IdentityConstructor } from "ext:canvas_2d/01_identity_constructor.js";
+import { makeSafePromise } from "ext:canvas_2d/01_promise.js";
+import { isBlob } from "ext:canvas_2d/02_is_blob.js";
+import { isImageData } from "ext:canvas_2d/02_is_image_data.js";
+import { createDictionaryConverter } from "ext:canvas_2d/04_create_dictionary_converter.js";
+import { createEnumConverter } from "ext:canvas_2d/04_create_enum_converter.js";
+import { convertDOMString } from "ext:canvas_2d/05_convert_dom_string.js";
+import { convertEnforceRangeUnsignedLong } from "ext:canvas_2d/05_convert_enforce_range_unsigned_long.js";
+import { convertEnforceRangeUnsignedLongLong } from "ext:canvas_2d/05_convert_enforce_range_unsigned_long_long.js";
+import { convertEventHandler } from "ext:canvas_2d/05_convert_event_handler.js";
+import { convertLong } from "ext:canvas_2d/05_convert_long.js";
+import { convertUnrestrictedDouble } from "ext:canvas_2d/05_convert_unrestricted_double.js";
+import { EventHandler } from "ext:canvas_2d/15_event.js";
+import { primordials } from "ext:core/mod.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import { EventTarget } from "ext:deno_web/02_event.js";

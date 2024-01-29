@@ -1,11 +1,10 @@
-import { primordials } from "ext:core/mod.js";
 import {
   ImageData,
   ImageDataPrototypeGetColorSpace,
   ImageDataPrototypeGetData,
   ImageDataPrototypeGetHeight,
   ImageDataPrototypeGetWidth,
-} from "ext:deno_canvas_2d/00_image_data_primordials.js";
+} from "ext:canvas_2d/00_image_data_primordials.js";
 import {
   op_canvas_2d_gradient_add_color_stop,
   op_canvas_2d_gradient_new_conic,
@@ -118,26 +117,26 @@ import {
   op_canvas_2d_state_translate,
   op_canvas_2d_state_width,
   op_canvas_2d_state_word_spacing,
-} from "ext:deno_canvas_2d/00_ops.js";
-import { defaultTo } from "ext:deno_canvas_2d/01_default_to.js";
-import { requireObject } from "ext:deno_canvas_2d/01_require_object.js";
-import { createDictionaryConverter } from "ext:deno_canvas_2d/04_create_dictionary_converter.js";
-import { createEnumConverter } from "ext:deno_canvas_2d/04_create_enum_converter.js";
-import { createSequenceFromIterable } from "ext:deno_canvas_2d/04_create_sequence_from_iterable.js";
-import { convertBoolean } from "ext:deno_canvas_2d/05_convert_boolean.js";
-import { convertDOMString } from "ext:deno_canvas_2d/05_convert_dom_string.js";
-import { convertDouble } from "ext:deno_canvas_2d/05_convert_double.js";
-import { convertEnforceRangeLong } from "ext:deno_canvas_2d/05_convert_enforce_range_long.js";
-import { convertImageData } from "ext:deno_canvas_2d/05_convert_image_data.js";
-import { convertLegacyNullToEmptyStringDOMString } from "ext:deno_canvas_2d/05_convert_legacy_null_to_empty_string_dom_string.js";
-import { convertUnrestrictedDouble } from "ext:deno_canvas_2d/05_convert_unrestricted_double.js";
+} from "ext:canvas_2d/00_ops.js";
+import { defaultTo } from "ext:canvas_2d/01_default_to.js";
+import { requireObject } from "ext:canvas_2d/01_require_object.js";
+import { createDictionaryConverter } from "ext:canvas_2d/04_create_dictionary_converter.js";
+import { createEnumConverter } from "ext:canvas_2d/04_create_enum_converter.js";
+import { createSequenceFromIterable } from "ext:canvas_2d/04_create_sequence_from_iterable.js";
+import { convertBoolean } from "ext:canvas_2d/05_convert_boolean.js";
+import { convertDOMString } from "ext:canvas_2d/05_convert_dom_string.js";
+import { convertDouble } from "ext:canvas_2d/05_convert_double.js";
+import { convertEnforceRangeLong } from "ext:canvas_2d/05_convert_enforce_range_long.js";
+import { convertImageData } from "ext:canvas_2d/05_convert_image_data.js";
+import { convertLegacyNullToEmptyStringDOMString } from "ext:canvas_2d/05_convert_legacy_null_to_empty_string_dom_string.js";
+import { convertUnrestrictedDouble } from "ext:canvas_2d/05_convert_unrestricted_double.js";
 import {
   convertDOMMatrix2DInit,
   convertDOMPointInit,
   directConstruct,
   DOMMatrix,
   validateAndFixup2D,
-} from "ext:deno_canvas_2d/15_geometry.js";
+} from "ext:canvas_2d/15_geometry.js";
 import {
   alignUint8ClampedArrayToUint32,
   checkUsabilityAndClone,
@@ -146,7 +145,8 @@ import {
   objectIsImageBitmap,
   OffscreenCanvasInternals,
   registerCanvasContextMode,
-} from "ext:deno_canvas_2d/16_canvas.js";
+} from "ext:canvas_2d/16_canvas.js";
+import { primordials } from "ext:core/mod.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import {
