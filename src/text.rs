@@ -8,7 +8,7 @@ use std::process;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use cssparser::{ToCss as _, UnicodeRange};
+use cssparser::ToCss as _;
 use deno_core::error::{custom_error, type_error};
 use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D};
@@ -21,7 +21,7 @@ use super::css::font::{
     ComputedFamilyName, ComputedFontFamily, ComputedFontStyle, ComputedFontVariantCss2,
     ComputedSpecificFamily, ComputedUnicodeRange,
 };
-use super::css::FromCss as _;
+use super::css::{FromCss as _, UnicodeRangeSet};
 use super::gc::{borrow_v8, into_v8};
 use super::harfbuzz_ext::FontExt as _;
 use super::path::Path;
@@ -51,7 +51,61 @@ pub enum FontFaceState {
 pub struct FontFaceData {
     family: ComputedSpecificFamily,
     unicode_range: ComputedUnicodeRange,
+    unicode_range_set: UnicodeRangeSet,
     state: FontFaceState,
+}
+
+impl FontFaceData {
+    pub fn builder() -> FontFaceDataBuilder {
+        FontFaceDataBuilder {
+            family: None,
+            unicode_range: None,
+            state: FontFaceState::Unloaded,
+        }
+    }
+}
+
+pub struct FontFaceDataBuilder {
+    family: Option<ComputedSpecificFamily>,
+    unicode_range: Option<ComputedUnicodeRange>,
+    state: FontFaceState,
+}
+
+impl FontFaceDataBuilder {
+    pub fn with_family(self, value: ComputedSpecificFamily) -> Self {
+        Self {
+            family: Some(value),
+            ..self
+        }
+    }
+
+    pub fn with_unicode_range(self, value: ComputedUnicodeRange) -> Self {
+        Self {
+            unicode_range: Some(value),
+            ..self
+        }
+    }
+
+    pub fn errored(self) -> Self {
+        Self {
+            state: FontFaceState::Errored,
+            ..self
+        }
+    }
+
+    pub fn build(self) -> FontFaceData {
+        let family = self
+            .family
+            .unwrap_or_else(|| ComputedSpecificFamily("".into()));
+        let unicode_range = self.unicode_range.unwrap_or_default();
+        let unicode_range_set = unicode_range.to_range_set();
+        FontFaceData {
+            family,
+            unicode_range,
+            unicode_range_set,
+            state: self.state,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -85,6 +139,7 @@ impl FontFace {
 
     pub fn set_unicode_range(&self, value: ComputedUnicodeRange) {
         let mut data = self.data.borrow_mut();
+        data.unicode_range_set = value.to_range_set();
         data.unicode_range = value;
     }
 
@@ -128,7 +183,7 @@ impl FontFaceSet {
             for (&id, data_rc) in self.entries.iter().rev() {
                 let data = data_rc.borrow();
                 if unicase::eq(family_name, &data.family.0)
-                    && data.unicode_range.contains(' ' as u32)
+                    && data.unicode_range_set.contains(' ' as u32)
                 {
                     return Some(FontFace {
                         id,
@@ -158,7 +213,7 @@ impl FontFaceSet {
                         Some(ref prev) => is_better_match(&data, &prev.data.borrow()),
                         None => true,
                     }
-                    && data.unicode_range.contains(c as u32)
+                    && data.unicode_range_set.contains(c as u32)
                     && match data.state {
                         FontFaceState::Loaded(ref font) => font.get_nominal_glyph(c).is_some(),
                         _ => false,
@@ -641,22 +696,21 @@ pub fn op_canvas_2d_font_face_new<'a>(
         // TODO implement font loading from url
         return Err(type_error("Cannot load font from URL"));
     }
-    let family = parse_family_or_throw(&family)?;
-    // TODO parse `style`
-    // TODO parse `weight`
-    // TODO parse `stretch`
-    let unicode_range = parse_unicode_range_or_throw(&unicode_range)?;
-    // TODO parse `feature_settings`
-    // TODO parse `variation_settings`
-    // TODO parse `display`
-    // TODO parse `ascent_override`
-    // TODO parse `descent_override`
-    // TODO parse `line_gap_override`
-    let result = FontFace::new(FontFaceData {
-        family,
-        unicode_range,
-        state: FontFaceState::Unloaded,
-    });
+    let result = FontFace::new(
+        FontFaceData::builder()
+            .with_family(parse_family_or_throw(&family)?)
+            // TODO parse `style`
+            // TODO parse `weight`
+            // TODO parse `stretch`
+            .with_unicode_range(parse_unicode_range_or_throw(&unicode_range)?)
+            // TODO parse `feature_settings`
+            // TODO parse `variation_settings`
+            // TODO parse `display`
+            // TODO parse `ascent_override`
+            // TODO parse `descent_override`
+            // TODO parse `line_gap_override`
+            .build(),
+    );
     Ok(into_v8(state, scope, result))
 }
 
@@ -665,16 +719,7 @@ pub fn op_canvas_2d_font_face_errored<'a>(
     scope: &mut v8::HandleScope<'a>,
     state: &OpState,
 ) -> v8::Local<'a, v8::External> {
-    let result = FontFace::new(FontFaceData {
-        family: ComputedSpecificFamily("".into()),
-        unicode_range: ComputedUnicodeRange {
-            range_list: Rc::new([UnicodeRange {
-                start: 0,
-                end: 0x10ffff,
-            }]),
-        },
-        state: FontFaceState::Errored,
-    });
+    let result = FontFace::new(FontFaceData::builder().errored().build());
     into_v8(state, scope, result)
 }
 

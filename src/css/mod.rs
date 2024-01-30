@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use cssparser::{BasicParseError, ParseError, Parser, ParserInput, ToCss, Token, UnicodeRange};
 use cssparser_color::NumberOrPercentage;
+use itertools::Itertools as _;
 
 pub mod angle;
 pub mod color;
@@ -79,10 +80,41 @@ fn parse_number_or_percentage_with_range<'i>(
     })
 }
 
-fn parse_unicode_range<'i>(
-    input: &mut Parser<'i, '_>,
-) -> Result<UnicodeRange, ParseError<'i, Infallible>> {
-    Ok(UnicodeRange::parse(input)?)
+impl FromCss for UnicodeRange {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        Ok(UnicodeRange::parse(input)?)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct UnicodeRangeSet {
+    bounds: Box<[u32]>,
+}
+
+impl UnicodeRangeSet {
+    pub fn new(ranges: impl IntoIterator<Item = UnicodeRange>) -> Self {
+        Self {
+            bounds: ranges
+                .into_iter()
+                .map(|range| (range.start, range.end + 1))
+                .sorted()
+                .coalesce(|a, b| {
+                    if b.0 <= a.1 {
+                        Ok((a.0, a.1.max(b.1)))
+                    } else {
+                        Err((a, b))
+                    }
+                })
+                .flat_map(|(start, end)| [start, end])
+                .collect(),
+        }
+    }
+
+    pub fn contains(&self, c: u32) -> bool {
+        (self.bounds.partition_point(|&x| x <= c) & 1) != 0
+    }
 }
 
 #[derive(Clone, Copy)]

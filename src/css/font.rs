@@ -8,7 +8,7 @@ use cssparser::{
 
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_string, parse_unicode_range, CssNumber, CssValue, FromCss};
+use super::{parse_string, CssNumber, CssValue, FromCss, UnicodeRangeSet};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ComputedFontStyle {
@@ -526,11 +526,20 @@ pub struct ComputedUnicodeRange {
     pub range_list: Rc<[UnicodeRange]>,
 }
 
+impl Default for ComputedUnicodeRange {
+    fn default() -> Self {
+        Self {
+            range_list: Rc::new([UnicodeRange {
+                start: 0,
+                end: 0x10ffff,
+            }]),
+        }
+    }
+}
+
 impl ComputedUnicodeRange {
-    pub fn contains(&self, c: u32) -> bool {
-        self.range_list
-            .iter()
-            .any(|range| (range.start..=range.end).contains(&c))
+    pub fn to_range_set(&self) -> UnicodeRangeSet {
+        UnicodeRangeSet::new(self.range_list.iter().cloned())
     }
 }
 
@@ -538,7 +547,7 @@ impl FromCss for ComputedUnicodeRange {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        let range_list = input.parse_comma_separated(parse_unicode_range)?.into();
+        let range_list = input.parse_comma_separated(UnicodeRange::from_css)?.into();
         Ok(Self { range_list })
     }
 }
