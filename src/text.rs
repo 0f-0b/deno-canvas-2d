@@ -9,23 +9,27 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use cssparser::ToCss as _;
-use deno_core::error::{custom_error, type_error};
+use deno_core::error::custom_error;
 use deno_core::{anyhow, op2, v8, OpState};
-use euclid::default::{Box2D, Point2D, Transform2D};
+use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2};
 use harfbuzz_rs as hb;
 use hashlink::LinkedHashMap;
+use unicase::UniCase;
 use unicode_bidi::{self as bidi, ParagraphBidiInfo};
 
 use super::css::font::{
-    ComputedFamilyName, ComputedFontFamily, ComputedFontStyle, ComputedFontVariantCss2,
-    ComputedSpecificFamily, ComputedUnicodeRange,
+    font_face, ComputedFamilyName, ComputedFontFamily, ComputedFontStyle, ComputedFontVariantCaps,
+    ComputedFontWeight, ComputedFontWidth,
 };
 use super::css::{FromCss as _, UnicodeRangeSet};
 use super::gc::{borrow_v8, into_v8};
 use super::harfbuzz_ext::FontExt as _;
 use super::path::Path;
-use super::state::{CanvasDirection, CanvasTextAlign, CanvasTextBaseline, DrawingState};
+use super::state::{
+    CanvasDirection, CanvasFontKerning, CanvasTextAlign, CanvasTextBaseline, CanvasTextRendering,
+    DrawingState,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FontFaceId(NonZeroU64);
@@ -41,6 +45,86 @@ impl FontFaceId {
 }
 
 #[derive(Debug)]
+pub struct FontFaceFamily {
+    specified: font_face::SpecifiedFontFamily,
+    casefolded: String,
+}
+
+impl FontFaceFamily {
+    pub fn new(specified: font_face::SpecifiedFontFamily) -> Self {
+        let casefolded = UniCase::new(specified.name.as_ref()).to_folded_case();
+        Self {
+            specified,
+            casefolded,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FontFaceStyle {
+    specified: font_face::SpecifiedFontStyle,
+    computed: font_face::ComputedFontStyle,
+}
+
+impl FontFaceStyle {
+    pub fn new(specified: font_face::SpecifiedFontStyle) -> Self {
+        let computed = specified.compute();
+        Self {
+            specified,
+            computed,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FontFaceWeight {
+    specified: font_face::SpecifiedFontWeight,
+    computed: font_face::ComputedFontWeight,
+}
+
+impl FontFaceWeight {
+    pub fn new(specified: font_face::SpecifiedFontWeight) -> Self {
+        let computed = specified.compute();
+        Self {
+            specified,
+            computed,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FontFaceWidth {
+    specified: font_face::SpecifiedFontWidth,
+    computed: font_face::ComputedFontWidth,
+}
+
+impl FontFaceWidth {
+    pub fn new(specified: font_face::SpecifiedFontWidth) -> Self {
+        let computed = specified.compute();
+        Self {
+            specified,
+            computed,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FontFaceUnicodeRange {
+    specified: font_face::SpecifiedUnicodeRange,
+    simplified: UnicodeRangeSet,
+}
+
+impl FontFaceUnicodeRange {
+    pub fn new(specified: font_face::SpecifiedUnicodeRange) -> Self {
+        let simplified = UnicodeRangeSet::new(specified.range_list.iter().cloned());
+        Self {
+            specified,
+            simplified,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum FontFaceState {
     Unloaded,
     Loaded(hb::Shared<hb::Font<'static>>),
@@ -49,61 +133,30 @@ pub enum FontFaceState {
 
 #[derive(Debug)]
 pub struct FontFaceData {
-    family: ComputedSpecificFamily,
-    unicode_range: ComputedUnicodeRange,
-    unicode_range_set: UnicodeRangeSet,
+    family: FontFaceFamily,
+    style: FontFaceStyle,
+    weight: FontFaceWeight,
+    width: FontFaceWidth,
+    unicode_range: FontFaceUnicodeRange,
     state: FontFaceState,
 }
 
 impl FontFaceData {
-    pub fn builder() -> FontFaceDataBuilder {
-        FontFaceDataBuilder {
-            family: None,
-            unicode_range: None,
-            state: FontFaceState::Unloaded,
-        }
-    }
-}
-
-pub struct FontFaceDataBuilder {
-    family: Option<ComputedSpecificFamily>,
-    unicode_range: Option<ComputedUnicodeRange>,
-    state: FontFaceState,
-}
-
-impl FontFaceDataBuilder {
-    pub fn with_family(self, value: ComputedSpecificFamily) -> Self {
+    pub fn new(
+        family: font_face::SpecifiedFontFamily,
+        style: font_face::SpecifiedFontStyle,
+        weight: font_face::SpecifiedFontWeight,
+        width: font_face::SpecifiedFontWidth,
+        unicode_range: font_face::SpecifiedUnicodeRange,
+        state: FontFaceState,
+    ) -> Self {
         Self {
-            family: Some(value),
-            ..self
-        }
-    }
-
-    pub fn with_unicode_range(self, value: ComputedUnicodeRange) -> Self {
-        Self {
-            unicode_range: Some(value),
-            ..self
-        }
-    }
-
-    pub fn errored(self) -> Self {
-        Self {
-            state: FontFaceState::Errored,
-            ..self
-        }
-    }
-
-    pub fn build(self) -> FontFaceData {
-        let family = self
-            .family
-            .unwrap_or_else(|| ComputedSpecificFamily("".into()));
-        let unicode_range = self.unicode_range.unwrap_or_default();
-        let unicode_range_set = unicode_range.to_range_set();
-        FontFaceData {
-            family,
-            unicode_range,
-            unicode_range_set,
-            state: self.state,
+            family: FontFaceFamily::new(family),
+            style: FontFaceStyle::new(style),
+            weight: FontFaceWeight::new(weight),
+            width: FontFaceWidth::new(width),
+            unicode_range: FontFaceUnicodeRange::new(unicode_range),
+            state,
         }
     }
 }
@@ -122,38 +175,78 @@ impl FontFace {
         }
     }
 
-    pub fn family(&self) -> ComputedSpecificFamily {
+    pub fn id(&self) -> FontFaceId {
+        self.id
+    }
+
+    pub fn family(&self) -> font_face::SpecifiedFontFamily {
         let data = self.data.borrow();
-        data.family.clone()
+        data.family.specified.clone()
     }
 
-    pub fn set_family(&self, value: ComputedSpecificFamily) {
+    pub fn set_family(&self, value: font_face::SpecifiedFontFamily) {
         let mut data = self.data.borrow_mut();
-        data.family = value;
+        data.family = FontFaceFamily::new(value);
     }
 
-    pub fn unicode_range(&self) -> ComputedUnicodeRange {
+    pub fn style(&self) -> font_face::SpecifiedFontStyle {
         let data = self.data.borrow();
-        data.unicode_range.clone()
+        data.style.specified
     }
 
-    pub fn set_unicode_range(&self, value: ComputedUnicodeRange) {
+    pub fn set_style(&self, value: font_face::SpecifiedFontStyle) {
         let mut data = self.data.borrow_mut();
-        data.unicode_range_set = value.to_range_set();
-        data.unicode_range = value;
+        data.style = FontFaceStyle::new(value);
     }
 
-    pub fn load_binary_data(&self, blob: Vec<u8>) -> anyhow::Result<()> {
-        // TODO validate blob
+    pub fn weight(&self) -> font_face::SpecifiedFontWeight {
+        let data = self.data.borrow();
+        data.weight.specified
+    }
+
+    pub fn set_weight(&self, value: font_face::SpecifiedFontWeight) {
         let mut data = self.data.borrow_mut();
-        data.state = FontFaceState::Loaded(hb::Font::new(hb::Face::new(blob, 0)).into());
-        Ok(())
+        data.weight = FontFaceWeight::new(value);
+    }
+
+    pub fn width(&self) -> font_face::SpecifiedFontWidth {
+        let data = self.data.borrow();
+        data.width.specified
+    }
+
+    pub fn set_width(&self, value: font_face::SpecifiedFontWidth) {
+        let mut data = self.data.borrow_mut();
+        data.width = FontFaceWidth::new(value);
+    }
+
+    pub fn unicode_range(&self) -> font_face::SpecifiedUnicodeRange {
+        let data = self.data.borrow();
+        data.unicode_range.specified.clone()
+    }
+
+    pub fn set_unicode_range(&self, value: font_face::SpecifiedUnicodeRange) {
+        let mut data = self.data.borrow_mut();
+        data.unicode_range = FontFaceUnicodeRange::new(value);
+    }
+
+    pub fn load(&self, blob: Vec<u8>) -> anyhow::Result<()> {
+        let mut data = self.data.borrow_mut();
+        match data.state {
+            FontFaceState::Unloaded => {
+                // TODO validate blob
+                data.state = FontFaceState::Loaded(hb::Font::new(hb::Face::new(blob, 0)).into());
+                Ok(())
+            }
+            _ => unreachable!(),
+        }
     }
 }
 
-#[derive(Debug)]
-pub struct FontSelector {
-    family: ComputedFontFamily,
+#[derive(Clone, Copy, Debug)]
+pub struct FontAttributes {
+    pub style: ComputedFontStyle,
+    pub weight: ComputedFontWeight,
+    pub width: ComputedFontWidth,
 }
 
 #[derive(Debug, Default)]
@@ -166,67 +259,204 @@ impl FontFaceSet {
         Self::default()
     }
 
-    pub fn add(&mut self, font: &FontFace) {
+    pub fn insert(&mut self, font: &FontFace) {
         self.entries.insert(font.id, font.data.clone());
     }
 
-    fn resolve_family_name(name: &ComputedFamilyName) -> &str {
-        match *name {
-            ComputedFamilyName::Specific(ref v) => &v.0,
+    pub fn remove(&mut self, id: FontFaceId) {
+        self.entries.remove(&id);
+    }
+
+    pub fn clear(&mut self) {
+        self.entries.clear();
+    }
+
+    fn resolve_family_name(family: &ComputedFamilyName) -> &str {
+        match *family {
+            ComputedFamilyName::Specific(ref v) => &v.name,
             ComputedFamilyName::Generic(_) => "Arial", // TODO actually select a family
         }
     }
 
-    pub fn first_available_font(&self, font_family: &ComputedFontFamily) -> Option<FontFace> {
-        font_family.family_list.iter().find_map(|family_name| {
-            let family_name = Self::resolve_family_name(family_name);
-            for (&id, data_rc) in self.entries.iter().rev() {
-                let data = data_rc.borrow();
-                if unicase::eq(family_name, &data.family.0)
-                    && data.unicode_range_set.contains(' ' as u32)
-                {
-                    return Some(FontFace {
-                        id,
-                        data: data_rc.clone(),
-                    });
+    pub fn match_(&self, family: &ComputedFamilyName, attrs: FontAttributes) -> Vec<FontFace> {
+        fn width_distance(
+            ComputedFontWidth(desired): ComputedFontWidth,
+            font_face::ComputedFontWidth(min, max): font_face::ComputedFontWidth,
+        ) -> (u8, f32) {
+            if desired > 1.0 {
+                match (min > desired, max < desired) {
+                    (false, false) => (0, 0.0),
+                    (false, true) => (1, desired - max),
+                    (true, false) => (0, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            } else {
+                match (min > desired, max < desired) {
+                    (false, false) => (0, 0.0),
+                    (false, true) => (0, desired - max),
+                    (true, false) => (1, min - desired),
+                    (true, true) => unreachable!(),
                 }
             }
-            None
+        }
+
+        fn style_distance(
+            desired: ComputedFontStyle,
+            range: font_face::ComputedFontStyle,
+        ) -> (u8, f32) {
+            match (desired, range) {
+                (ComputedFontStyle::Normal, font_face::ComputedFontStyle::Normal)
+                | (ComputedFontStyle::Italic, font_face::ComputedFontStyle::Italic) => {
+                    return (0, 0.0);
+                }
+                (ComputedFontStyle::Normal, font_face::ComputedFontStyle::Italic) => {
+                    return (3, 0.0);
+                }
+                _ => {}
+            }
+            let desired = match desired {
+                ComputedFontStyle::Normal => 0.0,
+                ComputedFontStyle::Italic => 11.0,
+                ComputedFontStyle::Oblique(angle) => angle.deg,
+            };
+            let (min, max) = match range {
+                font_face::ComputedFontStyle::Normal => (0.0, 0.0),
+                font_face::ComputedFontStyle::Italic => (11.0, 11.0),
+                font_face::ComputedFontStyle::Oblique(min, max) => (min.deg, max.deg),
+            };
+            if desired >= 11.0 {
+                match (min > desired, max < desired) {
+                    (false, false) => (1, 0.0),
+                    (false, true) => (2, desired - max),
+                    (true, false) => (1, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            } else if desired >= 0.0 {
+                match (min > desired, max < desired) {
+                    (false, false) => (1, 0.0),
+                    (false, true) => (if max < 0.0 { 3 } else { 1 }, desired - max),
+                    (true, false) => (2, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            } else if desired > -11.0 {
+                match (min > desired, max < desired) {
+                    (false, false) => (1, 0.0),
+                    (false, true) => (2, desired - max),
+                    (true, false) => (if max < 0.0 { 3 } else { 1 }, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            } else {
+                match (min > desired, max < desired) {
+                    (false, false) => (1, 0.0),
+                    (false, true) => (1, desired - max),
+                    (true, false) => (2, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            }
+        }
+
+        fn weight_distance(
+            ComputedFontWeight(desired): ComputedFontWeight,
+            font_face::ComputedFontWeight(min, max): font_face::ComputedFontWeight,
+        ) -> (u8, f32) {
+            if desired > 500.0 {
+                match (min > desired, max < desired) {
+                    (false, false) => (0, 0.0),
+                    (false, true) => (1, desired - max),
+                    (true, false) => (0, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            } else if desired >= 400.0 {
+                match (min > desired, max < desired) {
+                    (false, false) => (0, 0.0),
+                    (false, true) => (1, desired - max),
+                    (true, false) => (if min > 500.0 { 2 } else { 0 }, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            } else {
+                match (min > desired, max < desired) {
+                    (false, false) => (0, 0.0),
+                    (false, true) => (0, desired - max),
+                    (true, false) => (1, min - desired),
+                    (true, true) => unreachable!(),
+                }
+            }
+        }
+
+        let family = UniCase::new(Self::resolve_family_name(family)).to_folded_case();
+        let mut result = Vec::new();
+        let mut min_distance = [(u8::MAX, f32::INFINITY); 3];
+        for (&id, data_rc) in self.entries.iter().rev() {
+            let data = data_rc.borrow();
+            if family != data.family.casefolded {
+                continue;
+            }
+            let distance = [
+                width_distance(attrs.width, data.width.computed),
+                style_distance(attrs.style, data.style.computed),
+                weight_distance(attrs.weight, data.weight.computed),
+            ];
+            if distance < min_distance {
+                min_distance = distance;
+                result.clear();
+            }
+            result.push(FontFace {
+                id,
+                data: data_rc.clone(),
+            });
+        }
+        result
+    }
+
+    pub fn first_available_font(
+        &self,
+        family: &ComputedFontFamily,
+        attrs: FontAttributes,
+    ) -> Option<FontFace> {
+        family.family_list.iter().find_map(|family| {
+            self.match_(family, attrs).into_iter().find(|font| {
+                let data = font.data.borrow();
+                data.unicode_range.simplified.contains(' ' as u32)
+            })
         })
     }
 
-    pub fn match_char(&self, c: char, selector: &FontSelector) -> Option<FontFace> {
-        fn is_better_match(cur: &FontFaceData, prev: &FontFaceData) -> bool {
-            // TODO compare font stretch
-            // TODO compare font style
-            // TODO compare font weight
-            false
-        }
-
-        selector.family.family_list.iter().find_map(|family_name| {
-            let family_name = Self::resolve_family_name(family_name);
-            let mut best_match = None::<FontFace>;
-            for (&id, data_rc) in self.entries.iter().rev() {
-                let data = data_rc.borrow();
-                if unicase::eq(family_name, &data.family.0)
-                    && match best_match {
-                        Some(ref prev) => is_better_match(&data, &prev.data.borrow()),
-                        None => true,
-                    }
-                    && data.unicode_range_set.contains(c as u32)
-                    && match data.state {
-                        FontFaceState::Loaded(ref font) => font.get_nominal_glyph(c).is_some(),
-                        _ => false,
-                    }
-                {
-                    best_match = Some(FontFace {
-                        id,
-                        data: data_rc.clone(),
-                    });
-                }
-            }
-            best_match
+    pub fn loaded_font_for_char(
+        &self,
+        c: char,
+        family: &ComputedFontFamily,
+        attrs: FontAttributes,
+    ) -> Option<FontFace> {
+        family.family_list.iter().find_map(|family| {
+            self.match_(family, attrs).into_iter().find(|font| {
+                let data = font.data.borrow();
+                matches!(
+                    data.state,
+                    FontFaceState::Loaded(ref font)
+                        if data.unicode_range.simplified.contains(c as u32)
+                            && font.get_nominal_glyph(c).is_some(),
+                )
+            })
         })
+    }
+
+    pub fn fonts_for_str(
+        &self,
+        s: &str,
+        family: &ComputedFontFamily,
+        attrs: FontAttributes,
+    ) -> Vec<FontFace> {
+        family
+            .family_list
+            .iter()
+            .flat_map(|family| {
+                self.match_(family, attrs).into_iter().filter(|font| {
+                    let data = font.data.borrow();
+                    s.chars()
+                        .any(|c| data.unicode_range.simplified.contains(c as u32))
+                })
+            })
+            .collect()
     }
 }
 
@@ -451,19 +681,26 @@ struct TextRun {
 
 fn split_text_to_runs(
     fonts: &FontFaceSet,
-    font_selector: &FontSelector,
+    font_family: &ComputedFontFamily,
+    font_attrs: FontAttributes,
     base_direction: Direction,
     text: &str,
 ) -> Vec<TextRun> {
     let bidi_info = ParagraphBidiInfo::new(text, Some(base_direction.to_bidi_level()));
+    if bidi_info.levels.is_empty() {
+        return vec![];
+    }
     let (levels, runs) = bidi_info.visual_runs(0..bidi_info.levels.len());
     runs.into_iter()
         .flat_map(|range| {
             let direction = Direction::from_bidi_level(levels[range.start]);
             let mut runs = Vec::new();
-            let mut font_mapping = text[range.clone()]
-                .char_indices()
-                .map(|(i, c)| (range.start + i, fonts.match_char(c, font_selector)));
+            let mut font_mapping = text[range.clone()].char_indices().map(|(i, c)| {
+                (
+                    range.start + i,
+                    fonts.loaded_font_for_char(c, font_family, font_attrs),
+                )
+            });
             if let Some((mut start, mut font)) = font_mapping.next() {
                 for (next, next_font) in font_mapping {
                     match (&font, &next_font) {
@@ -504,25 +741,64 @@ pub fn prepare_text(
         return (Path::new(), TextMetrics::empty());
     }
     let text = replace_ascii_whitespace(text);
-    let ppem = drawing_state.font.font_size.0.px;
-    let font_selector = FontSelector {
-        family: drawing_state.font.font_family.clone(),
+    let font_size = drawing_state.font_size.0;
+    let font_family = &drawing_state.font_family;
+    let font_attrs = FontAttributes {
+        style: drawing_state.font_style,
+        weight: drawing_state.font_weight,
+        width: drawing_state.font_stretch.modernize(),
     };
+    let letter_spacing = drawing_state.letter_spacing.compute();
+    let word_spacing = drawing_state.word_spacing.compute();
+    let optimize_speed = matches!(
+        drawing_state.text_rendering,
+        CanvasTextRendering::OptimizeSpeed,
+    );
     let mut features = Vec::new();
-    match drawing_state.font.font_variant {
-        // TODO figure out what to do with `fontVariantCaps`
-        ComputedFontVariantCss2::Normal => {}
-        ComputedFontVariantCss2::SmallCaps => {
-            // TODO synthesis if `smcp` feature is unavailable
+    match drawing_state.font_variant_caps {
+        ComputedFontVariantCaps::Normal => {}
+        // TODO synthesize `small-caps` and `all-small-caps` if unsupported by font
+        ComputedFontVariantCaps::SmallCaps => {
             features.push(hb::Feature::new(b"smcp", 1, ..));
         }
+        ComputedFontVariantCaps::AllSmallCaps => {
+            features.extend([
+                hb::Feature::new(b"c2sc", 1, ..),
+                hb::Feature::new(b"smcp", 1, ..),
+            ]);
+        }
+        ComputedFontVariantCaps::PetiteCaps => {
+            features.push(hb::Feature::new(b"pcap", 1, ..));
+        }
+        ComputedFontVariantCaps::AllPetiteCaps => {
+            features.extend([
+                hb::Feature::new(b"c2pc", 1, ..),
+                hb::Feature::new(b"pcap", 1, ..),
+            ]);
+        }
+        ComputedFontVariantCaps::Unicase => {
+            features.push(hb::Feature::new(b"unic", 1, ..));
+        }
+        ComputedFontVariantCaps::TitlingCaps => {
+            features.push(hb::Feature::new(b"titl", 1, ..));
+        }
     }
-    // TODO <font-weight>
-    // TODO <font-width> and `fontStretch`
-    // TODO `fontKerning`
-    // TODO `textRendering`
-    // TODO `letterSpacing`
-    // TODO `wordSpacing`
+    if match drawing_state.font_kerning {
+        CanvasFontKerning::Auto => optimize_speed,
+        CanvasFontKerning::Normal => false,
+        CanvasFontKerning::None => true,
+    } {
+        features.push(hb::Feature::new(b"kern", 0, ..));
+    }
+    if letter_spacing.px != 0.0 || optimize_speed {
+        features.extend([
+            hb::Feature::new(b"liga", 0, ..),
+            hb::Feature::new(b"clig", 0, ..),
+            hb::Feature::new(b"calt", 0, ..),
+        ])
+    }
+    // TODO font weight
+    // TODO font stretch
     let direction = match drawing_state.direction {
         CanvasDirection::Ltr | CanvasDirection::Inherit => Direction::Ltr,
         CanvasDirection::Rtl => Direction::Rtl,
@@ -536,7 +812,7 @@ pub fn prepare_text(
         | (CanvasTextAlign::Start, Direction::Rtl) => PhysicalAlignment::Right,
         (CanvasTextAlign::Center, _) => PhysicalAlignment::Center,
     };
-    let runs = split_text_to_runs(fonts, &font_selector, direction, &text);
+    let runs = split_text_to_runs(fonts, font_family, font_attrs, direction, &text);
     let mut path_builder = TextPathBuilder {
         path: Path::new(),
         transform: Transform2D::scale(0.0, 0.0),
@@ -544,6 +820,7 @@ pub fn prepare_text(
     let mut cursor = Point2D::zero();
     let mut bounds = Box2D::zero();
     let mut font_cache = HashMap::new();
+    let mut text_has_nonzero_advance = false;
     runs.into_iter().fold(hb::UnicodeBuffer::new(), |buf, run| {
         let Some(font) = run.font else {
             return buf;
@@ -553,15 +830,17 @@ pub fn prepare_text(
             match data.state {
                 FontFaceState::Loaded(ref font) => {
                     let mut font = hb::Font::create_sub_font(font.clone());
-                    match drawing_state.font.font_style {
-                        ComputedFontStyle::Normal => {}
-                        ComputedFontStyle::Italic => {
-                            // TODO use italic face or `ital` feature
-                            font.set_synthetic_slant(0.25);
-                        }
-                        ComputedFontStyle::Oblique(angle) => {
-                            // TODO use oblique face or `slnt` feature
-                            font.set_synthetic_slant(angle.radians().tan())
+                    if matches!(data.style.computed, font_face::ComputedFontStyle::Normal) {
+                        match drawing_state.font_style {
+                            ComputedFontStyle::Normal => {}
+                            ComputedFontStyle::Italic => {
+                                // TODO use `ital` feature if supported
+                                font.set_synthetic_slant(0.25);
+                            }
+                            ComputedFontStyle::Oblique(angle) => {
+                                // TODO use `slnt` feature if supported
+                                font.set_synthetic_slant(angle.radians().tan())
+                            }
                         }
                     }
                     font
@@ -569,14 +848,15 @@ pub fn prepare_text(
                 _ => hb::Font::empty(),
             }
         });
-        let scale = ppem / font.face().upem() as f32;
+        let scale = font_size.px / font.face().upem() as f32;
         let buf = buf
             .add_str_item(&text, &text[run.range])
             .set_direction(run.direction.to_harfbuzz());
         let buf = hb::shape(font, buf, &features);
         let positions = buf.get_glyph_positions();
         let infos = buf.get_glyph_infos();
-        for (position, info) in positions.iter().zip(infos) {
+        let mut cluster_has_nonzero_advance = false;
+        for (index, (&position, &info)) in positions.iter().zip(infos).enumerate() {
             let glyph = info.codepoint;
             let advance = vec2(position.x_advance, position.y_advance).cast() * scale;
             let offset = vec2(position.x_offset, position.y_offset).cast() * scale;
@@ -593,19 +873,36 @@ pub fn prepare_text(
                 ));
             }
             cursor += advance;
+            if advance != Vector2D::zero() {
+                cluster_has_nonzero_advance = true;
+            }
+            if (index + 1 >= infos.len() || info.cluster != infos[index + 1].cluster)
+                && cluster_has_nonzero_advance
+            {
+                cluster_has_nonzero_advance = false;
+                text_has_nonzero_advance = true;
+                let c = text[info.cluster as usize..].chars().next().unwrap();
+                cursor.x += letter_spacing.px;
+                if c == ' ' || c == '\u{a0}' {
+                    cursor.x += word_spacing.px;
+                }
+            }
         }
         buf.clear()
     });
+    if text_has_nonzero_advance {
+        cursor.x -= letter_spacing.px;
+    }
     let width = cursor.x;
     let compression = (max_width / width).min(1.0);
     let width = width * compression;
     let bounds = bounds * compression;
-    let font_metrics = match fonts.first_available_font(&drawing_state.font.font_family) {
+    let font_metrics = match fonts.first_available_font(font_family, font_attrs) {
         Some(ref font) => {
             let data = font.data.borrow();
             match data.state {
                 FontFaceState::Loaded(ref font) => {
-                    let scale = ppem / font.face().upem() as f32;
+                    let scale = font_size.px / font.face().upem() as f32;
                     FontMetrics::new(font).scale(scale * compression)
                 }
                 _ => FontMetrics::empty(),
@@ -646,8 +943,22 @@ pub fn prepare_text(
     (path, text_metrics)
 }
 
-fn parse_family_or_throw(css: &str) -> anyhow::Result<ComputedSpecificFamily> {
-    ComputedSpecificFamily::from_css_string(css).map_err(|err| {
+fn parse_source_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedSource> {
+    font_face::SpecifiedSource::from_css_string(css).map_err(|err| {
+        custom_error(
+            "DOMExceptionSyntaxError",
+            format!(
+                "Invalid font source '{css}': {} at {}:{}",
+                err.kind,
+                err.location.line + 1,
+                err.location.column,
+            ),
+        )
+    })
+}
+
+fn parse_family_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontFamily> {
+    font_face::SpecifiedFontFamily::from_css_string(css).map_err(|err| {
         custom_error(
             "DOMExceptionSyntaxError",
             format!(
@@ -660,8 +971,50 @@ fn parse_family_or_throw(css: &str) -> anyhow::Result<ComputedSpecificFamily> {
     })
 }
 
-fn parse_unicode_range_or_throw(css: &str) -> anyhow::Result<ComputedUnicodeRange> {
-    ComputedUnicodeRange::from_css_string(css).map_err(|err| {
+fn parse_style_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontStyle> {
+    font_face::SpecifiedFontStyle::from_css_string(css).map_err(|err| {
+        custom_error(
+            "DOMExceptionSyntaxError",
+            format!(
+                "Invalid font style range '{css}': {} at {}:{}",
+                err.kind,
+                err.location.line + 1,
+                err.location.column,
+            ),
+        )
+    })
+}
+
+fn parse_weight_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontWeight> {
+    font_face::SpecifiedFontWeight::from_css_string(css).map_err(|err| {
+        custom_error(
+            "DOMExceptionSyntaxError",
+            format!(
+                "Invalid font weight range '{css}': {} at {}:{}",
+                err.kind,
+                err.location.line + 1,
+                err.location.column,
+            ),
+        )
+    })
+}
+
+fn parse_stretch_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontWidth> {
+    font_face::SpecifiedFontWidth::from_css_string(css).map_err(|err| {
+        custom_error(
+            "DOMExceptionSyntaxError",
+            format!(
+                "Invalid font width range '{css}': {} at {}:{}",
+                err.kind,
+                err.location.line + 1,
+                err.location.column,
+            ),
+        )
+    })
+}
+
+fn parse_unicode_range_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedUnicodeRange> {
+    font_face::SpecifiedUnicodeRange::from_css_string(css).map_err(|err| {
         custom_error(
             "DOMExceptionSyntaxError",
             format!(
@@ -672,6 +1025,22 @@ fn parse_unicode_range_or_throw(css: &str) -> anyhow::Result<ComputedUnicodeRang
             ),
         )
     })
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_select_source(#[string] source: &str) -> anyhow::Result<String> {
+    for source in parse_source_or_throw(source)?.font_source_list.iter() {
+        match *source {
+            font_face::SpecifiedFontSource::Url(ref url) => return Ok((**url).to_owned()),
+            font_face::SpecifiedFontSource::Local(_) => {}
+        }
+    }
+    // TODO implement local font fallback
+    Err(custom_error(
+        "DOMExceptionSyntaxError",
+        "Local font fallback is not supported",
+    ))
 }
 
 #[op2]
@@ -690,27 +1059,21 @@ pub fn op_canvas_2d_font_face_new<'a>(
     #[string] ascent_override: String,
     #[string] descent_override: String,
     #[string] line_gap_override: String,
-    #[string] source: Option<String>,
 ) -> anyhow::Result<v8::Local<'a, v8::External>> {
-    if source.is_some() {
-        // TODO implement font loading from url
-        return Err(type_error("Cannot load font from URL"));
-    }
-    let result = FontFace::new(
-        FontFaceData::builder()
-            .with_family(parse_family_or_throw(&family)?)
-            // TODO parse `style`
-            // TODO parse `weight`
-            // TODO parse `stretch`
-            .with_unicode_range(parse_unicode_range_or_throw(&unicode_range)?)
-            // TODO parse `feature_settings`
-            // TODO parse `variation_settings`
-            // TODO parse `display`
-            // TODO parse `ascent_override`
-            // TODO parse `descent_override`
-            // TODO parse `line_gap_override`
-            .build(),
-    );
+    let result = FontFace::new(FontFaceData::new(
+        parse_family_or_throw(&family)?,
+        parse_style_or_throw(&style)?,
+        parse_weight_or_throw(&weight)?,
+        parse_stretch_or_throw(&stretch)?,
+        parse_unicode_range_or_throw(&unicode_range)?,
+        // TODO parse `feature_settings`
+        // TODO parse `variation_settings`
+        // TODO parse `display`
+        // TODO parse `ascent_override`
+        // TODO parse `descent_override`
+        // TODO parse `line_gap_override`
+        FontFaceState::Unloaded,
+    ));
     Ok(into_v8(state, scope, result))
 }
 
@@ -719,7 +1082,14 @@ pub fn op_canvas_2d_font_face_errored<'a>(
     scope: &mut v8::HandleScope<'a>,
     state: &OpState,
 ) -> v8::Local<'a, v8::External> {
-    let result = FontFace::new(FontFaceData::builder().errored().build());
+    let result = FontFace::new(FontFaceData::new(
+        font_face::SpecifiedFontFamily { name: "".into() },
+        font_face::SpecifiedFontStyle::default(),
+        font_face::SpecifiedFontWeight::default(),
+        font_face::SpecifiedFontWidth::default(),
+        font_face::SpecifiedUnicodeRange::default(),
+        FontFaceState::Errored,
+    ));
     into_v8(state, scope, result)
 }
 
@@ -744,6 +1114,63 @@ pub fn op_canvas_2d_font_face_set_family(
 
 #[op2]
 #[string]
+pub fn op_canvas_2d_font_face_style(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<FontFace>(state, this);
+    this.style().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_style(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<FontFace>(state, this);
+    let value = parse_style_or_throw(value)?;
+    this.set_style(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_weight(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<FontFace>(state, this);
+    this.weight().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_weight(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<FontFace>(state, this);
+    let value = parse_weight_or_throw(value)?;
+    this.set_weight(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_stretch(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<FontFace>(state, this);
+    this.width().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_stretch(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<FontFace>(state, this);
+    let value = parse_stretch_or_throw(value)?;
+    this.set_width(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
 pub fn op_canvas_2d_font_face_unicode_range(state: &OpState, this: *const c_void) -> String {
     let this = borrow_v8::<FontFace>(state, this);
     this.unicode_range().to_css_string()
@@ -762,13 +1189,23 @@ pub fn op_canvas_2d_font_face_set_unicode_range(
 }
 
 #[op2]
-pub fn op_canvas_2d_font_face_load_binary_data(
+pub fn op_canvas_2d_font_face_load(
     state: &OpState,
     this: *const c_void,
     #[anybuffer(copy)] source: Vec<u8>,
+    from_url: bool,
 ) -> anyhow::Result<()> {
     let this = borrow_v8::<FontFace>(state, this);
-    this.load_binary_data(source)
+    this.load(source).map_err(|err| {
+        custom_error(
+            if from_url {
+                "DOMExceptionNetworkError"
+            } else {
+                "DOMExceptionSyntaxError"
+            },
+            format!("{}", err),
+        )
+    })
 }
 
 #[op2]
@@ -781,11 +1218,34 @@ pub fn op_canvas_2d_font_face_set_new<'a>(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_font_face_set_add(state: &OpState, this: *const c_void, font: *const c_void) {
+pub fn op_canvas_2d_font_face_set_insert(
+    state: &OpState,
+    this: *const c_void,
+    font: *const c_void,
+) {
     let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
     let font = borrow_v8::<FontFace>(state, font);
     let mut this = this.borrow_mut();
-    this.add(&font)
+    this.insert(&font)
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_remove(
+    state: &OpState,
+    this: *const c_void,
+    font: *const c_void,
+) {
+    let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
+    let font = borrow_v8::<FontFace>(state, font);
+    let mut this = this.borrow_mut();
+    this.remove(font.id())
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_clear(state: &OpState, this: *const c_void) {
+    let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
+    let mut this = this.borrow_mut();
+    this.clear()
 }
 
 #[op2]

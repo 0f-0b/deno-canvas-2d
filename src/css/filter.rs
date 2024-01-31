@@ -6,7 +6,7 @@ use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::color::ComputedColor;
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_number_or_percentage_with_range, parse_one_or_more, parse_string, FromCss};
+use super::{parse_number_or_percentage_with_range, parse_one_or_more, parse_url, FromCss};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Shadow {
@@ -30,6 +30,119 @@ pub enum ComputedFilterFunction {
     Sepia(f32),
 }
 
+impl FromCss for ComputedFilterFunction {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        let location = input.current_source_location();
+        let name = input.expect_function()?.clone();
+        input.parse_nested_block(|input| {
+            Ok(match_ignore_ascii_case! { &name,
+                "blur" => {
+                    let v = match input.try_parse(|input| {
+                        SpecifiedAbsoluteLength::from_css_with_range(input, 0.0..)
+                    }) {
+                        Ok(v) => v.compute(),
+                        Err(_) => ComputedLength::zero(),
+                    };
+                    Self::Blur(v)
+                },
+                "brightness" => {
+                    let v = match input
+                        .try_parse(|input| parse_number_or_percentage_with_range(input, 0.0..))
+                    {
+                        Ok(v) => v.unit_value(),
+                        Err(_) => 1.0,
+                    };
+                    Self::Brightness(v)
+                },
+                "contrast" => {
+                    let v = match input
+                        .try_parse(|input| parse_number_or_percentage_with_range(input, 0.0..))
+                    {
+                        Ok(v) => v.unit_value(),
+                        Err(_) => 1.0,
+                    };
+                    Self::Contrast(v)
+                },
+                "drop-shadow" => {
+                    let color = input.try_parse(ComputedColor::from_css).ok();
+                    let offset_x = SpecifiedAbsoluteLength::from_css(input)?.compute();
+                    let offset_y = SpecifiedAbsoluteLength::from_css(input)?.compute();
+                    let blur = match input.try_parse(|input| {
+                        SpecifiedAbsoluteLength::from_css_with_range(input, 0.0..)
+                    }) {
+                        Ok(v) => v.compute(),
+                        Err(_) => ComputedLength::zero(),
+                    };
+                    let color = color
+                        .or_else(|| input.try_parse(ComputedColor::from_css).ok())
+                        .unwrap_or(ComputedColor::CurrentColor);
+                    Self::DropShadow(Shadow {
+                        color,
+                        offset_x,
+                        offset_y,
+                        blur,
+                    })
+                },
+                "grayscale" => {
+                    let v = match input
+                        .try_parse(|input| parse_number_or_percentage_with_range(input, 0.0..))
+                    {
+                        Ok(v) => v.unit_value(),
+                        Err(_) => 1.0,
+                    };
+                    Self::Grayscale(v)
+                },
+                "hue-rotate" => {
+                    let v = match input.try_parse(SpecifiedAngle::from_css_allow_zero) {
+                        Ok(v) => v.compute(),
+                        Err(_) => ComputedAngle::zero(),
+                    };
+                    Self::HueRotate(v)
+                },
+                "invert" => {
+                    let v = match input
+                        .try_parse(|input| parse_number_or_percentage_with_range(input, 0.0..))
+                    {
+                        Ok(v) => v.unit_value(),
+                        Err(_) => 1.0,
+                    };
+                    Self::Invert(v)
+                },
+                "opacity" => {
+                    let v = match input
+                        .try_parse(|input| parse_number_or_percentage_with_range(input, 0.0..))
+                    {
+                        Ok(v) => v.unit_value(),
+                        Err(_) => 1.0,
+                    };
+                    Self::Opacity(v)
+                },
+                "sepia" => {
+                    let v = match input
+                        .try_parse(|input| parse_number_or_percentage_with_range(input, 0.0..))
+                    {
+                        Ok(v) => v.unit_value(),
+                        Err(_) => 1.0,
+                    };
+                    Self::Sepia(v)
+                },
+                "saturate" => {
+                    let v = match input
+                        .try_parse(|input| parse_number_or_percentage_with_range(input, 0.0..))
+                    {
+                        Ok(v) => v.unit_value(),
+                        Err(_) => 1.0,
+                    };
+                    Self::Saturate(v)
+                },
+                _ => return Err(location.new_unexpected_token_error(Token::Ident(name))),
+            })
+        })
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum ComputedFilterValue {
     Url(Rc<str>),
@@ -40,127 +153,12 @@ impl FromCss for ComputedFilterValue {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        let location = input.current_source_location();
-        Ok(match *input.next()? {
-            Token::UnquotedUrl(ref url) => Self::Url(url.as_ref().into()),
-            Token::Function(ref name) => {
-                let name = name.clone();
-                input.parse_nested_block(|input| {
-                    Ok(match_ignore_ascii_case! { &name,
-                        "blur" => {
-                            let v = match input.try_parse(|input| {
-                                SpecifiedAbsoluteLength::from_css_with_range(
-                                    input,
-                                    0.0,
-                                    f32::INFINITY,
-                                )
-                            }) {
-                                Ok(v) => v.compute(),
-                                Err(_) => ComputedLength::zero(),
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Blur(v))
-                        },
-                        "brightness" => {
-                            let v = match input.try_parse(|input| {
-                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
-                            }) {
-                                Ok(v) => v.unit_value(),
-                                Err(_) => 1.0,
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Brightness(v))
-                        },
-                        "contrast" => {
-                            let v = match input.try_parse(|input| {
-                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
-                            }) {
-                                Ok(v) => v.unit_value(),
-                                Err(_) => 1.0,
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Contrast(v))
-                        },
-                        "drop-shadow" => {
-                            let color = input.try_parse(ComputedColor::from_css).ok();
-                            let offset_x = SpecifiedAbsoluteLength::from_css(input)?.compute();
-                            let offset_y = SpecifiedAbsoluteLength::from_css(input)?.compute();
-                            let blur = match input.try_parse(|input| {
-                                SpecifiedAbsoluteLength::from_css_with_range(
-                                    input,
-                                    0.0,
-                                    f32::INFINITY,
-                                )
-                            }) {
-                                Ok(v) => v.compute(),
-                                Err(_) => ComputedLength::zero(),
-                            };
-                            let color = color
-                                .or_else(|| input.try_parse(ComputedColor::from_css).ok())
-                                .unwrap_or(ComputedColor::CurrentColor);
-                            Self::FilterFunction(ComputedFilterFunction::DropShadow(Shadow {
-                                color,
-                                offset_x,
-                                offset_y,
-                                blur,
-                            }))
-                        },
-                        "grayscale" => {
-                            let v = match input.try_parse(|input| {
-                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
-                            }) {
-                                Ok(v) => v.unit_value(),
-                                Err(_) => 1.0,
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Grayscale(v))
-                        },
-                        "hue-rotate" => {
-                            let v = match input.try_parse(SpecifiedAngle::from_css_allow_zero) {
-                                Ok(v) => v.compute(),
-                                Err(_) => ComputedAngle::zero(),
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::HueRotate(v))
-                        },
-                        "invert" => {
-                            let v = match input.try_parse(|input| {
-                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
-                            }) {
-                                Ok(v) => v.unit_value(),
-                                Err(_) => 1.0,
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Invert(v))
-                        },
-                        "opacity" => {
-                            let v = match input.try_parse(|input| {
-                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
-                            }) {
-                                Ok(v) => v.unit_value(),
-                                Err(_) => 1.0,
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Opacity(v))
-                        },
-                        "sepia" => {
-                            let v = match input.try_parse(|input| {
-                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
-                            }) {
-                                Ok(v) => v.unit_value(),
-                                Err(_) => 1.0,
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Sepia(v))
-                        },
-                        "saturate" => {
-                            let v = match input.try_parse(|input| {
-                                parse_number_or_percentage_with_range(input, 0.0, f32::INFINITY)
-                            }) {
-                                Ok(v) => v.unit_value(),
-                                Err(_) => 1.0,
-                            };
-                            Self::FilterFunction(ComputedFilterFunction::Saturate(v))
-                        },
-                        "url" | "src" => Self::Url(parse_string(input)?),
-                        _ => return Err(location.new_unexpected_token_error(Token::Ident(name))),
-                    })
-                })?
-            }
-            ref t => return Err(location.new_unexpected_token_error(t.clone())),
-        })
+        if let Ok(v) = input.try_parse(parse_url) {
+            return Ok(Self::Url(v));
+        }
+        Ok(Self::FilterFunction(ComputedFilterFunction::from_css(
+            input,
+        )?))
     }
 }
 

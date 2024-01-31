@@ -1,13 +1,22 @@
 import {
   op_canvas_2d_font_face_errored,
   op_canvas_2d_font_face_family,
-  op_canvas_2d_font_face_load_binary_data,
+  op_canvas_2d_font_face_load,
   op_canvas_2d_font_face_new,
-  op_canvas_2d_font_face_set_add,
+  op_canvas_2d_font_face_select_source,
+  op_canvas_2d_font_face_set_clear,
   op_canvas_2d_font_face_set_family,
+  op_canvas_2d_font_face_set_insert,
   op_canvas_2d_font_face_set_new,
+  op_canvas_2d_font_face_set_remove,
+  op_canvas_2d_font_face_set_stretch,
+  op_canvas_2d_font_face_set_style,
   op_canvas_2d_font_face_set_unicode_range,
+  op_canvas_2d_font_face_set_weight,
+  op_canvas_2d_font_face_stretch,
+  op_canvas_2d_font_face_style,
   op_canvas_2d_font_face_unicode_range,
+  op_canvas_2d_font_face_weight,
   op_canvas_2d_font_source,
 } from "ext:canvas_2d/00_ops.js";
 import { IdentityConstructor } from "ext:canvas_2d/01_identity_constructor.js";
@@ -25,6 +34,7 @@ import { convertTypedArray } from "ext:canvas_2d/05_convert_typed_array.js";
 import { EventHandler, readEventInitMembers } from "ext:canvas_2d/15_event.js";
 import { primordials } from "ext:core/mod.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
+import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import {
   dispatch,
   Event,
@@ -42,6 +52,7 @@ import {
 const {
   ObjectFreeze,
   Promise,
+  PromiseReject,
   ReflectConstruct,
   SafeArrayIterator,
   SafeSet,
@@ -113,10 +124,14 @@ export class FontFace {
   #brand() {}
 
   #raw;
+  #url;
   #status = "unloaded";
   #loaded = safePromiseWithResolvers();
   #fontFaceSets = new SafeSet();
   #cachedFamily = null;
+  #cachedStyle = null;
+  #cachedWeight = null;
+  #cachedStretch = null;
   #cachedUnicodeRange = null;
 
   constructor(family, source, descriptors = undefined) {
@@ -124,6 +139,9 @@ export class FontFace {
     source = convertDOMStringOrBinaryData(source);
     descriptors = convertFontFaceDescriptors(descriptors);
     try {
+      this.#url = typeof source === "string"
+        ? op_canvas_2d_font_face_select_source(source)
+        : null;
       this.#raw = op_canvas_2d_font_face_new(
         family,
         descriptors.style,
@@ -136,10 +154,10 @@ export class FontFace {
         descriptors.ascentOverride,
         descriptors.descentOverride,
         descriptors.lineGapOverride,
-        typeof source === "string" ? source : null,
       );
     } catch (e) {
       this.#setError(e);
+      this.#url = null;
       this.#raw = op_canvas_2d_font_face_errored();
       return;
     }
@@ -148,13 +166,15 @@ export class FontFace {
     }
     defer(() => {
       this.#setLoading();
-      try {
-        op_canvas_2d_font_face_load_binary_data(this.#raw, source);
-      } catch (e) {
-        defer(() => this.#setError(e));
-        return;
-      }
-      defer(() => this.#setLoaded());
+      defer(() => {
+        try {
+          op_canvas_2d_font_face_load(this.#raw, source, false);
+        } catch (e) {
+          this.#setError(e);
+          return;
+        }
+        this.#setLoaded();
+      });
     });
   }
 
@@ -175,7 +195,8 @@ export class FontFace {
 
   get style() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedStyle ??= op_canvas_2d_font_face_style(this.#raw);
+    return this.#cachedStyle;
   }
 
   set style(value) {
@@ -183,12 +204,14 @@ export class FontFace {
     const prefix = "Failed to set 'style' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_style(this.#raw, value);
+    this.#cachedStyle = null;
   }
 
   get weight() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedWeight ??= op_canvas_2d_font_face_weight(this.#raw);
+    return this.#cachedWeight;
   }
 
   set weight(value) {
@@ -196,12 +219,14 @@ export class FontFace {
     const prefix = "Failed to set 'weight' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_weight(this.#raw, value);
+    this.#cachedWeight = null;
   }
 
   get stretch() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedStretch ??= op_canvas_2d_font_face_stretch(this.#raw);
+    return this.#cachedStretch;
   }
 
   set stretch(value) {
@@ -209,7 +234,8 @@ export class FontFace {
     const prefix = "Failed to set 'stretch' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_stretch(this.#raw, value);
+    this.#cachedStretch = null;
   }
 
   get unicodeRange() {
@@ -340,12 +366,38 @@ export class FontFace {
   }
 
   load() {
-    this.#brand;
-    throw new TypeError("Unimplemented"); // TODO implement
+    try {
+      this.#brand;
+      const url = this.#url;
+      if (url !== null) {
+        this.#url = null;
+        this.#setLoading();
+        fetchFont(url, (result) => {
+          if (!result.success) {
+            this.#setError(result.reason);
+            return;
+          }
+          try {
+            op_canvas_2d_font_face_load(this.#raw, result.data, true);
+          } catch (e) {
+            this.#setError(e);
+            return;
+          }
+          this.#setLoaded();
+        });
+      }
+      return this.#loaded.promise;
+    } catch (e) {
+      return PromiseReject(e);
+    }
   }
 
   get loaded() {
-    return this.#loaded.promise;
+    try {
+      return this.#loaded.promise;
+    } catch (e) {
+      return PromiseReject(e);
+    }
   }
 
   #inspect(inspect, options) {
@@ -540,14 +592,41 @@ export const FontFaceSetInternals = class FontFaceSet
   }
 
   static add(o, font) {
-    if (!o.#entries.has(font)) {
-      o.#entries.add(font);
-      op_canvas_2d_font_face_set_add(o.#raw, getFontFaceRaw(font));
-      addFontFaceToSet(font, o);
-      if (getFontFaceStatus(font) === "loading") {
-        FontFaceSetInternals.addLoading(o, font);
-      }
+    if (o.#entries.has(font)) {
+      return;
     }
+    o.#entries.add(font);
+    op_canvas_2d_font_face_set_insert(o.#raw, getFontFaceRaw(font));
+    addFontFaceToSet(font, o);
+    if (getFontFaceStatus(font) === "loading") {
+      FontFaceSetInternals.addLoading(o, font);
+    }
+  }
+
+  static delete(o, font) {
+    if (!o.#entries.delete(font)) {
+      return false;
+    }
+    op_canvas_2d_font_face_set_remove(o.#raw, getFontFaceRaw(font));
+    o.#loadedFonts.delete(font);
+    o.#failedFonts.delete(font);
+    o.#loadingFonts.delete(font);
+    if (o.#loadingFonts.size === 0) {
+      FontFaceSetInternals.switchToLoaded(o);
+    }
+    return true;
+  }
+
+  static clear(o) {
+    o.#entries.clear();
+    op_canvas_2d_font_face_set_clear(o.#raw);
+    o.#loadedFonts.clear();
+    o.#failedFonts.clear();
+    if (o.#loadingFonts.size !== 0) {
+      o.#loadingFonts.clear();
+      FontFaceSetInternals.switchToLoaded(o);
+    }
+    return true;
   }
 
   static addLoading(o, font) {
@@ -656,12 +735,12 @@ export class FontFaceSet extends EventTarget {
     const prefix = "Failed to execute 'delete' on 'FontFaceSet'";
     requiredArguments(arguments.length, 1, prefix);
     font = convertFontFace(font);
-    throw new TypeError("Unimplemented"); // TODO implement
+    return FontFaceSetInternals.delete(this, font);
   }
 
   clear() {
     FontFaceSetInternals.checkInstance(this);
-    throw new TypeError("Unimplemented"); // TODO implement
+    FontFaceSetInternals.clear(this);
   }
 
   get onloading() {
@@ -701,12 +780,16 @@ export class FontFaceSet extends EventTarget {
   }
 
   load(font, text = " ") {
-    FontFaceSetInternals.checkInstance(this);
-    const prefix = "Failed to execute 'load' on 'FontFaceSet'";
-    requiredArguments(arguments.length, 1, prefix);
-    font = convertDOMString(font);
-    text = convertDOMString(text);
-    throw new TypeError("Unimplemented"); // TODO implement
+    try {
+      FontFaceSetInternals.checkInstance(this);
+      const prefix = "Failed to execute 'load' on 'FontFaceSet'";
+      requiredArguments(arguments.length, 1, prefix);
+      font = convertDOMString(font);
+      text = convertDOMString(text);
+      throw new TypeError("Unimplemented"); // TODO implement
+    } catch (e) {
+      return PromiseReject(e);
+    }
   }
 
   check(font, text = " ") {
@@ -719,7 +802,11 @@ export class FontFaceSet extends EventTarget {
   }
 
   get ready() {
-    return FontFaceSetInternals.getReady(this);
+    try {
+      return FontFaceSetInternals.getReady(this);
+    } catch (e) {
+      return PromiseReject(e);
+    }
   }
 
   get status() {
@@ -735,6 +822,18 @@ export class FontFaceSet extends EventTarget {
   static {
     configureInterface(this);
   }
+}
+
+let fetchFont = (_url, cb) =>
+  defer(() =>
+    cb({
+      success: false,
+      reason: new DOMException("Unable to load font", "NetworkError"),
+    })
+  );
+
+export function setFetchFont(fn) {
+  fetchFont = fn;
 }
 
 let fonts;

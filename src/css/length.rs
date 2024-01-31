@@ -1,10 +1,11 @@
 use std::convert::Infallible;
+use std::ops::RangeBounds;
 
 use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 
 use super::{impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension, FromCss};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SpecifiedAbsoluteLength {
     Cm(f32),
     Mm(f32),
@@ -60,8 +61,7 @@ impl SpecifiedAbsoluteLength {
 
     pub fn from_css_with_range<'i>(
         input: &mut Parser<'i, '_>,
-        min_px: f32,
-        max_px: f32,
+        px_range: impl RangeBounds<f32>,
     ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
@@ -72,7 +72,7 @@ impl SpecifiedAbsoluteLength {
                     location.new_unexpected_token_error(Token::Ident(unit.clone()))
                 })?;
                 let ComputedLength { px } = result.compute();
-                if !(min_px..=max_px).contains(&px) {
+                if !px_range.contains(&px) {
                     return Err(location.new_unexpected_token_error(t.clone()));
                 }
                 result
@@ -109,7 +109,7 @@ impl_to_css_for_specified_dimension!(SpecifiedAbsoluteLength {
     _ => "px",
 });
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComputedLength {
     pub px: f32,
 }

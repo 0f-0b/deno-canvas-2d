@@ -2145,6 +2145,7 @@ export class OffscreenCanvasRenderingContext2D {
       return;
     }
     op_canvas_2d_state_set_font_stretch(this.#state, repr);
+    this.#cachedFont = null;
   }
 
   get fontVariantCaps() {
@@ -2165,6 +2166,7 @@ export class OffscreenCanvasRenderingContext2D {
       return;
     }
     op_canvas_2d_state_set_font_variant_caps(this.#state, repr);
+    this.#cachedFont = null;
   }
 
   get textRendering() {

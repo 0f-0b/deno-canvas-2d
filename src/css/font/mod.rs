@@ -1,16 +1,16 @@
+pub mod font_face;
+
 use std::convert::Infallible;
 use std::fmt;
 use std::rc::Rc;
 
-use cssparser::{
-    match_ignore_ascii_case, serialize_string, ParseError, Parser, ToCss, Token, UnicodeRange,
-};
+use cssparser::{match_ignore_ascii_case, serialize_string, ParseError, Parser, ToCss, Token};
 
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_string, CssNumber, CssValue, FromCss, UnicodeRangeSet};
+use super::{parse_string, CssNumber, CssPercentage, CssValue, FromCss};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ComputedFontStyle {
     Normal,
     Italic,
@@ -28,7 +28,7 @@ impl FromCss for ComputedFontStyle {
             "italic" => Self::Italic,
             "oblique" => {
                 let angle = match input
-                    .try_parse(|input| SpecifiedAngle::from_css_with_range(input, -90.0, 90.0))
+                    .try_parse(|input| SpecifiedAngle::from_css_with_range(input, -90.0..=90.0))
                 {
                     Ok(v) => v.compute(),
                     Err(_) => ComputedAngle { deg: 14.0 },
@@ -47,7 +47,7 @@ impl ToCss for ComputedFontStyle {
             Self::Italic => dest.write_str("italic"),
             Self::Oblique(angle) => {
                 dest.write_str("oblique")?;
-                if !matches!(angle, ComputedAngle { deg } if deg == 14.0) {
+                if angle.deg != 14.0 {
                     write!(dest, " {}", CssValue(&angle))?;
                 }
                 Ok(())
@@ -56,10 +56,40 @@ impl ToCss for ComputedFontStyle {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ComputedFontVariantCaps {
+    Normal,
+    SmallCaps,
+    AllSmallCaps,
+    PetiteCaps,
+    AllPetiteCaps,
+    Unicase,
+    TitlingCaps,
+}
+
+impl ComputedFontVariantCaps {
+    pub fn to_css2(self) -> Option<ComputedFontVariantCss2> {
+        Some(match self {
+            Self::Normal => ComputedFontVariantCss2::Normal,
+            Self::SmallCaps => ComputedFontVariantCss2::SmallCaps,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ComputedFontVariantCss2 {
     Normal,
     SmallCaps,
+}
+
+impl ComputedFontVariantCss2 {
+    pub fn modernize(self) -> ComputedFontVariantCaps {
+        match self {
+            Self::Normal => ComputedFontVariantCaps::Normal,
+            Self::SmallCaps => ComputedFontVariantCaps::SmallCaps,
+        }
+    }
 }
 
 impl FromCss for ComputedFontVariantCss2 {
@@ -85,7 +115,52 @@ impl ToCss for ComputedFontVariantCss2 {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum SpecifiedAbsoluteFontWeight {
+    #[default]
+    Normal,
+    Bold,
+    Number(f32),
+}
+
+impl SpecifiedAbsoluteFontWeight {
+    pub fn compute(self) -> ComputedFontWeight {
+        match self {
+            Self::Normal => ComputedFontWeight(400.0),
+            Self::Bold => ComputedFontWeight(700.0),
+            Self::Number(v) => ComputedFontWeight(v),
+        }
+    }
+}
+
+impl FromCss for SpecifiedAbsoluteFontWeight {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        let location = input.current_source_location();
+        Ok(match *input.next()? {
+            Token::Ident(ref ident) => match_ignore_ascii_case! { ident,
+                "normal" => Self::Normal,
+                "bold" => Self::Bold,
+                _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
+            },
+            Token::Number { value, .. } if (1.0..=1000.0).contains(&value) => Self::Number(value),
+            ref t => return Err(location.new_unexpected_token_error(t.clone())),
+        })
+    }
+}
+
+impl ToCss for SpecifiedAbsoluteFontWeight {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        match *self {
+            Self::Normal => dest.write_str("normal"),
+            Self::Bold => dest.write_str("bold"),
+            Self::Number(value) => CssNumber(value).to_css(dest),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComputedFontWeight(pub f32);
 
 impl FromCss for ComputedFontWeight {
@@ -113,7 +188,85 @@ impl ToCss for ComputedFontWeight {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum SpecifiedFontWidth {
+    #[default]
+    Normal,
+    Percentage(f32),
+    UltraCondensed,
+    ExtraCondensed,
+    Condensed,
+    SemiCondensed,
+    SemiExpanded,
+    Expanded,
+    ExtraExpanded,
+    UltraExpanded,
+}
+
+impl SpecifiedFontWidth {
+    pub fn compute(self) -> ComputedFontWidth {
+        match self {
+            Self::Normal => ComputedFontWidth(1.0),
+            Self::Percentage(v) => ComputedFontWidth(v),
+            Self::UltraCondensed => ComputedFontWidth(0.5),
+            Self::ExtraCondensed => ComputedFontWidth(0.625),
+            Self::Condensed => ComputedFontWidth(0.75),
+            Self::SemiCondensed => ComputedFontWidth(0.875),
+            Self::SemiExpanded => ComputedFontWidth(1.125),
+            Self::Expanded => ComputedFontWidth(1.25),
+            Self::ExtraExpanded => ComputedFontWidth(1.5),
+            Self::UltraExpanded => ComputedFontWidth(2.0),
+        }
+    }
+}
+
+impl FromCss for SpecifiedFontWidth {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        let location = input.current_source_location();
+        Ok(match *input.next()? {
+            Token::Ident(ref ident) => match_ignore_ascii_case! { ident,
+                "normal" => Self::Normal,
+                "ultra-condensed" => Self::UltraCondensed,
+                "extra-condensed" => Self::ExtraCondensed,
+                "condensed" => Self::Condensed,
+                "semi-condensed" => Self::SemiCondensed,
+                "semi-expanded" => Self::SemiExpanded,
+                "expanded" => Self::Expanded,
+                "extra-expanded" => Self::ExtraExpanded,
+                "ultra-expanded" => Self::UltraExpanded,
+                _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
+            },
+            Token::Percentage { unit_value, .. } if unit_value >= 0.0 => {
+                Self::Percentage(unit_value)
+            }
+            ref t => return Err(location.new_unexpected_token_error(t.clone())),
+        })
+    }
+}
+
+impl ToCss for SpecifiedFontWidth {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        match *self {
+            Self::Normal => dest.write_str("normal"),
+            Self::Percentage(v) => CssPercentage(v).to_css(dest),
+            Self::UltraCondensed => dest.write_str("ultra-condensed"),
+            Self::ExtraCondensed => dest.write_str("extra-condensed"),
+            Self::Condensed => dest.write_str("condensed"),
+            Self::SemiCondensed => dest.write_str("semi-condensed"),
+            Self::SemiExpanded => dest.write_str("semi-expanded"),
+            Self::Expanded => dest.write_str("expanded"),
+            Self::ExtraExpanded => dest.write_str("extra-expanded"),
+            Self::UltraExpanded => dest.write_str("ultra-expanded"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ComputedFontWidth(pub f32);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ComputedFontStretchCss3 {
     Normal,
     UltraCondensed,
@@ -124,6 +277,22 @@ pub enum ComputedFontStretchCss3 {
     Expanded,
     ExtraExpanded,
     UltraExpanded,
+}
+
+impl ComputedFontStretchCss3 {
+    pub fn modernize(self) -> ComputedFontWidth {
+        match self {
+            Self::Normal => ComputedFontWidth(1.0),
+            Self::UltraCondensed => ComputedFontWidth(0.5),
+            Self::ExtraCondensed => ComputedFontWidth(0.625),
+            Self::Condensed => ComputedFontWidth(0.75),
+            Self::SemiCondensed => ComputedFontWidth(0.875),
+            Self::SemiExpanded => ComputedFontWidth(1.125),
+            Self::Expanded => ComputedFontWidth(1.25),
+            Self::ExtraExpanded => ComputedFontWidth(1.5),
+            Self::UltraExpanded => ComputedFontWidth(2.0),
+        }
+    }
 }
 
 impl FromCss for ComputedFontStretchCss3 {
@@ -170,9 +339,9 @@ impl FromCss for ComputedFontSize {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        if let Ok(v) = input.try_parse(|input| {
-            SpecifiedAbsoluteLength::from_css_with_range(input, 0.0, f32::INFINITY)
-        }) {
+        if let Ok(v) =
+            input.try_parse(|input| SpecifiedAbsoluteLength::from_css_with_range(input, 0.0..))
+        {
             return Ok(Self(v.compute()));
         }
         let location = input.current_source_location();
@@ -205,7 +374,7 @@ impl ToCss for ComputedFontSize {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ComputedLineHeight {
     Normal,
     Length(ComputedLength),
@@ -217,9 +386,9 @@ impl ComputedLineHeight {
         input: &mut Parser<'i, '_>,
         font_size: ComputedFontSize,
     ) -> Result<Self, ParseError<'i, Infallible>> {
-        if let Ok(v) = input.try_parse(|input| {
-            SpecifiedAbsoluteLength::from_css_with_range(input, 0.0, f32::INFINITY)
-        }) {
+        if let Ok(v) =
+            input.try_parse(|input| SpecifiedAbsoluteLength::from_css_with_range(input, 0.0..))
+        {
             return Ok(Self::Length(v.compute()));
         }
         let location = input.current_source_location();
@@ -250,14 +419,16 @@ impl ToCss for ComputedLineHeight {
 }
 
 #[derive(Clone, Debug)]
-pub struct ComputedSpecificFamily(pub Rc<str>);
+pub struct ComputedSpecificFamily {
+    pub name: Rc<str>,
+}
 
 impl FromCss for ComputedSpecificFamily {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         if let Ok(name) = input.try_parse(parse_string) {
-            return Ok(Self(name));
+            return Ok(Self { name });
         }
         let mut name = input.expect_ident()?.as_ref().to_owned();
         match_ignore_ascii_case! { &name,
@@ -272,13 +443,13 @@ impl FromCss for ComputedSpecificFamily {
             name.push(' ');
             name.push_str(ident);
         }
-        Ok(Self(name.into()))
+        Ok(Self { name: name.into() })
     }
 }
 
 impl ToCss for ComputedSpecificFamily {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        serialize_string(&self.0, dest)
+        serialize_string(&self.name, dest)
     }
 }
 
@@ -419,146 +590,123 @@ impl ToCss for ComputedFontFamily {
 
 #[derive(Clone, Debug)]
 pub struct ComputedFont {
-    pub font_style: ComputedFontStyle,
-    pub font_variant: ComputedFontVariantCss2,
-    pub font_weight: ComputedFontWeight,
-    pub font_stretch: ComputedFontStretchCss3,
-    pub font_size: ComputedFontSize,
+    pub style: ComputedFontStyle,
+    pub variant: ComputedFontVariantCss2,
+    pub weight: ComputedFontWeight,
+    pub stretch: ComputedFontStretchCss3,
+    pub size: ComputedFontSize,
     pub line_height: ComputedLineHeight,
-    pub font_family: ComputedFontFamily,
+    pub family: ComputedFontFamily,
 }
 
 impl FromCss for ComputedFont {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        let mut max_attr = 4;
-        let mut font_style = None;
-        let mut font_variant = None;
-        let mut font_weight = None;
-        let mut font_stretch = None;
-        while max_attr != 0 {
+        let mut max_attrs = 4;
+        let mut style = None;
+        let mut variant = None;
+        let mut weight = None;
+        let mut stretch = None;
+        while max_attrs != 0 {
             if input
                 .try_parse(|input| input.expect_ident_matching("normal"))
                 .is_ok()
             {
-                max_attr -= 1;
+                max_attrs -= 1;
                 continue;
             }
-            if font_style.is_none() {
+            if style.is_none() {
                 if let Ok(v) = input.try_parse(ComputedFontStyle::from_css) {
-                    font_style = Some(v);
-                    max_attr -= 1;
+                    style = Some(v);
+                    max_attrs -= 1;
                     continue;
                 }
             }
-            if font_variant.is_none() {
+            if variant.is_none() {
                 if let Ok(v) = input.try_parse(ComputedFontVariantCss2::from_css) {
-                    font_variant = Some(v);
-                    max_attr -= 1;
+                    variant = Some(v);
+                    max_attrs -= 1;
                     continue;
                 }
             }
-            if font_weight.is_none() {
+            if weight.is_none() {
                 if let Ok(v) = input.try_parse(ComputedFontWeight::from_css) {
-                    font_weight = Some(v);
-                    max_attr -= 1;
+                    weight = Some(v);
+                    max_attrs -= 1;
                     continue;
                 }
             }
-            if font_stretch.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontStretchCss3::from_css) {
-                    font_stretch = Some(v);
-                    max_attr -= 1;
+            if stretch.is_none() {
+                if let Ok(v) = input.try_parse(|input| {
+                    let location = input.current_source_location();
+                    let ident = input.expect_ident()?;
+                    Ok(match_ignore_ascii_case! { ident,
+                        "normal" => ComputedFontStretchCss3::Normal,
+                        "ultra-condensed" => ComputedFontStretchCss3::UltraCondensed,
+                        "extra-condensed" => ComputedFontStretchCss3::ExtraCondensed,
+                        "condensed" => ComputedFontStretchCss3::Condensed,
+                        "semi-condensed" => ComputedFontStretchCss3::SemiCondensed,
+                        "semi-expanded" => ComputedFontStretchCss3::SemiExpanded,
+                        "expanded" => ComputedFontStretchCss3::Expanded,
+                        "extra-expanded" => ComputedFontStretchCss3::ExtraExpanded,
+                        "ultra-expanded" => ComputedFontStretchCss3::UltraExpanded,
+                        _ => {
+                            return Err(location.new_unexpected_token_error::<Infallible>(
+                                Token::Ident(ident.clone()),
+                            ))
+                        }
+                    })
+                }) {
+                    stretch = Some(v);
+                    max_attrs -= 1;
                     continue;
                 }
             }
             break;
         }
-        let font_style = font_style.unwrap_or(ComputedFontStyle::Normal);
-        let font_variant = font_variant.unwrap_or(ComputedFontVariantCss2::Normal);
-        let font_weight = font_weight.unwrap_or(ComputedFontWeight(400.0));
-        let font_stretch = font_stretch.unwrap_or(ComputedFontStretchCss3::Normal);
-        let font_size = ComputedFontSize::from_css(input)?;
+        let style = style.unwrap_or(ComputedFontStyle::Normal);
+        let variant = variant.unwrap_or(ComputedFontVariantCss2::Normal);
+        let weight = weight.unwrap_or(ComputedFontWeight(400.0));
+        let stretch = stretch.unwrap_or(ComputedFontStretchCss3::Normal);
+        let size = ComputedFontSize::from_css(input)?;
         let line_height = if input.try_parse(|input| input.expect_delim('/')).is_ok() {
-            ComputedLineHeight::from_css(input, font_size)?
+            ComputedLineHeight::from_css(input, size)?
         } else {
             ComputedLineHeight::Normal
         };
-        let font_family = ComputedFontFamily::from_css(input)?;
+        let family = ComputedFontFamily::from_css(input)?;
         Ok(Self {
-            font_style,
-            font_variant,
-            font_weight,
-            font_stretch,
-            font_size,
+            style,
+            variant,
+            weight,
+            stretch,
+            size,
             line_height,
-            font_family,
+            family,
         })
     }
 }
 
 impl ToCss for ComputedFont {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        if !matches!(self.font_style, ComputedFontStyle::Normal) {
-            write!(dest, "{} ", CssValue(&self.font_style))?;
+        if self.style != ComputedFontStyle::Normal {
+            write!(dest, "{} ", CssValue(&self.style))?;
         }
-        if !matches!(self.font_variant, ComputedFontVariantCss2::Normal) {
-            write!(dest, "{} ", CssValue(&self.font_variant))?;
+        if self.variant != ComputedFontVariantCss2::Normal {
+            write!(dest, "{} ", CssValue(&self.variant))?;
         }
-        if !matches!(self.font_weight, ComputedFontWeight(v) if v == 400.0) {
-            write!(dest, "{} ", CssValue(&self.font_weight))?;
+        if self.weight != ComputedFontWeight(400.0) {
+            write!(dest, "{} ", CssValue(&self.weight))?;
         }
-        if !matches!(self.font_stretch, ComputedFontStretchCss3::Normal) {
-            write!(dest, "{} ", CssValue(&self.font_stretch))?;
+        if self.stretch != ComputedFontStretchCss3::Normal {
+            write!(dest, "{} ", CssValue(&self.stretch))?;
         }
-        write!(dest, "{} ", CssValue(&self.font_size))?;
-        if !matches!(self.line_height, ComputedLineHeight::Normal) {
+        write!(dest, "{} ", CssValue(&self.size))?;
+        if self.line_height != ComputedLineHeight::Normal {
             write!(dest, "/ {} ", CssValue(&self.line_height))?;
         }
-        self.font_family.to_css(dest)?;
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ComputedUnicodeRange {
-    pub range_list: Rc<[UnicodeRange]>,
-}
-
-impl Default for ComputedUnicodeRange {
-    fn default() -> Self {
-        Self {
-            range_list: Rc::new([UnicodeRange {
-                start: 0,
-                end: 0x10ffff,
-            }]),
-        }
-    }
-}
-
-impl ComputedUnicodeRange {
-    pub fn to_range_set(&self) -> UnicodeRangeSet {
-        UnicodeRangeSet::new(self.range_list.iter().cloned())
-    }
-}
-
-impl FromCss for ComputedUnicodeRange {
-    type Err = Infallible;
-
-    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        let range_list = input.parse_comma_separated(UnicodeRange::from_css)?.into();
-        Ok(Self { range_list })
-    }
-}
-
-impl ToCss for ComputedUnicodeRange {
-    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
-        let mut iter = self.range_list.iter();
-        iter.next().unwrap().to_css(dest)?;
-        for name in iter {
-            write!(dest, ", {}", CssValue(name))?;
-        }
+        self.family.to_css(dest)?;
         Ok(())
     }
 }

@@ -235,7 +235,7 @@ impl FromCss for ComputedTransformFunction {
                 },
                 "perspective" => {
                     let d = match input.try_parse(|input| {
-                        SpecifiedAbsoluteLength::from_css_with_range(input, 0.0, f32::INFINITY)
+                        SpecifiedAbsoluteLength::from_css_with_range(input, 0.0..)
                     }) {
                         Ok(d) => Some(d.compute()),
                         Err(_) => {

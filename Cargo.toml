@@ -22,5 +22,5 @@ palette = "0.7.4"
 png = "0.17.11"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "dea2df32a58b51539e93ba74140cf702292d5d02", default-features = false }
 strum_macros = "0.26.1"
-unicase = "2.7.0"
+unicase = { git = "https://github.com/seanmonstar/unicase.git", rev = "07f81c14cd6a146f4b86e033999919a5159255c7" }
 unicode-bidi = "0.3.15"

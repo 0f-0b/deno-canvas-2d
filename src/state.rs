@@ -1,4 +1,5 @@
 use std::array;
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::convert::Infallible;
 use std::ffi::c_void;
@@ -22,7 +23,7 @@ use super::css::color::AbsoluteColor;
 use super::css::filter::ComputedFilter;
 use super::css::font::{
     ComputedFamilyName, ComputedFont, ComputedFontFamily, ComputedFontSize,
-    ComputedFontStretchCss3, ComputedFontStyle, ComputedFontVariantCss2, ComputedFontWeight,
+    ComputedFontStretchCss3, ComputedFontStyle, ComputedFontVariantCaps, ComputedFontWeight,
     ComputedGenericFamily, ComputedLineHeight,
 };
 use super::css::length::{ComputedLength, SpecifiedAbsoluteLength};
@@ -139,6 +140,38 @@ pub enum CanvasFontStretch {
     UltraExpanded,
 }
 
+impl From<ComputedFontStretchCss3> for CanvasFontStretch {
+    fn from(value: ComputedFontStretchCss3) -> Self {
+        match value {
+            ComputedFontStretchCss3::Normal => Self::Normal,
+            ComputedFontStretchCss3::UltraCondensed => Self::UltraCondensed,
+            ComputedFontStretchCss3::ExtraCondensed => Self::ExtraCondensed,
+            ComputedFontStretchCss3::Condensed => Self::Condensed,
+            ComputedFontStretchCss3::SemiCondensed => Self::SemiCondensed,
+            ComputedFontStretchCss3::SemiExpanded => Self::SemiExpanded,
+            ComputedFontStretchCss3::Expanded => Self::Expanded,
+            ComputedFontStretchCss3::ExtraExpanded => Self::ExtraExpanded,
+            ComputedFontStretchCss3::UltraExpanded => Self::UltraExpanded,
+        }
+    }
+}
+
+impl From<CanvasFontStretch> for ComputedFontStretchCss3 {
+    fn from(value: CanvasFontStretch) -> ComputedFontStretchCss3 {
+        match value {
+            CanvasFontStretch::UltraCondensed => Self::UltraCondensed,
+            CanvasFontStretch::ExtraCondensed => Self::ExtraCondensed,
+            CanvasFontStretch::Condensed => Self::Condensed,
+            CanvasFontStretch::SemiCondensed => Self::SemiCondensed,
+            CanvasFontStretch::Normal => Self::Normal,
+            CanvasFontStretch::SemiExpanded => Self::SemiExpanded,
+            CanvasFontStretch::Expanded => Self::Expanded,
+            CanvasFontStretch::ExtraExpanded => Self::ExtraExpanded,
+            CanvasFontStretch::UltraExpanded => Self::UltraExpanded,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
 pub enum CanvasFontVariantCaps {
@@ -149,6 +182,34 @@ pub enum CanvasFontVariantCaps {
     AllPetiteCaps,
     Unicase,
     TitlingCaps,
+}
+
+impl From<ComputedFontVariantCaps> for CanvasFontVariantCaps {
+    fn from(value: ComputedFontVariantCaps) -> Self {
+        match value {
+            ComputedFontVariantCaps::Normal => Self::Normal,
+            ComputedFontVariantCaps::SmallCaps => Self::SmallCaps,
+            ComputedFontVariantCaps::AllSmallCaps => Self::AllSmallCaps,
+            ComputedFontVariantCaps::PetiteCaps => Self::PetiteCaps,
+            ComputedFontVariantCaps::AllPetiteCaps => Self::AllPetiteCaps,
+            ComputedFontVariantCaps::Unicase => Self::Unicase,
+            ComputedFontVariantCaps::TitlingCaps => Self::TitlingCaps,
+        }
+    }
+}
+
+impl From<CanvasFontVariantCaps> for ComputedFontVariantCaps {
+    fn from(value: CanvasFontVariantCaps) -> ComputedFontVariantCaps {
+        match value {
+            CanvasFontVariantCaps::Normal => Self::Normal,
+            CanvasFontVariantCaps::SmallCaps => Self::SmallCaps,
+            CanvasFontVariantCaps::AllSmallCaps => Self::AllSmallCaps,
+            CanvasFontVariantCaps::PetiteCaps => Self::PetiteCaps,
+            CanvasFontVariantCaps::AllPetiteCaps => Self::AllPetiteCaps,
+            CanvasFontVariantCaps::Unicase => Self::Unicase,
+            CanvasFontVariantCaps::TitlingCaps => Self::TitlingCaps,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, FromRepr)]
@@ -336,15 +397,18 @@ pub struct DrawingState {
     miter_limit: f64,
     dash_list: Box<[f64]>,
     line_dash_offset: f64,
-    pub font: ComputedFont,
+    pub font_style: ComputedFontStyle,
+    pub font_weight: ComputedFontWeight,
+    pub font_size: ComputedFontSize,
+    pub font_family: ComputedFontFamily,
     pub text_align: CanvasTextAlign,
     pub text_baseline: CanvasTextBaseline,
     pub direction: CanvasDirection,
     pub letter_spacing: SpecifiedAbsoluteLength,
     pub word_spacing: SpecifiedAbsoluteLength,
     pub font_kerning: CanvasFontKerning,
-    pub font_stretch: CanvasFontStretch,
-    pub font_variant_caps: CanvasFontVariantCaps,
+    pub font_stretch: ComputedFontStretchCss3,
+    pub font_variant_caps: ComputedFontVariantCaps,
     pub text_rendering: CanvasTextRendering,
     transformation_matrix: Transform2D<f64>,
     fill_style: FillOrStrokeStyle,
@@ -369,18 +433,13 @@ impl Default for DrawingState {
             miter_limit: 10.0,
             dash_list: Box::new([]),
             line_dash_offset: 0.0,
-            font: ComputedFont {
-                font_style: ComputedFontStyle::Normal,
-                font_variant: ComputedFontVariantCss2::Normal,
-                font_weight: ComputedFontWeight(400.0),
-                font_stretch: ComputedFontStretchCss3::Normal,
-                font_size: ComputedFontSize(ComputedLength { px: 10.0 }),
-                line_height: ComputedLineHeight::Normal,
-                font_family: ComputedFontFamily {
-                    family_list: Rc::new([ComputedFamilyName::Generic(
-                        ComputedGenericFamily::SansSerif,
-                    )]),
-                },
+            font_style: ComputedFontStyle::Normal,
+            font_weight: ComputedFontWeight(400.0),
+            font_size: ComputedFontSize(ComputedLength { px: 10.0 }),
+            font_family: ComputedFontFamily {
+                family_list: Rc::new([ComputedFamilyName::Generic(
+                    ComputedGenericFamily::SansSerif,
+                )]),
             },
             text_align: CanvasTextAlign::Start,
             text_baseline: CanvasTextBaseline::Alphabetic,
@@ -388,8 +447,8 @@ impl Default for DrawingState {
             letter_spacing: SpecifiedAbsoluteLength::zero(),
             word_spacing: SpecifiedAbsoluteLength::zero(),
             font_kerning: CanvasFontKerning::Auto,
-            font_stretch: CanvasFontStretch::Normal,
-            font_variant_caps: CanvasFontVariantCaps::Normal,
+            font_stretch: ComputedFontStretchCss3::Normal,
+            font_variant_caps: ComputedFontVariantCaps::Normal,
             text_rendering: CanvasTextRendering::Auto,
             transformation_matrix: Transform2D::identity(),
             fill_style: FillOrStrokeStyle::Color(AbsoluteColor::OPAQUE_BLACK),
@@ -572,12 +631,25 @@ impl CanvasState {
         self.current_drawing_state.line_dash_offset = value;
     }
 
-    pub fn font(&self) -> &ComputedFont {
-        &self.current_drawing_state.font
+    pub fn font(&self) -> Option<ComputedFont> {
+        Some(ComputedFont {
+            style: self.current_drawing_state.font_style,
+            variant: self.current_drawing_state.font_variant_caps.to_css2()?,
+            weight: self.current_drawing_state.font_weight,
+            stretch: self.current_drawing_state.font_stretch,
+            size: self.current_drawing_state.font_size,
+            line_height: ComputedLineHeight::Normal,
+            family: self.current_drawing_state.font_family.clone(),
+        })
     }
 
     pub fn set_font(&mut self, value: ComputedFont) {
-        self.current_drawing_state.font = value;
+        self.current_drawing_state.font_style = value.style;
+        self.current_drawing_state.font_variant_caps = value.variant.modernize();
+        self.current_drawing_state.font_weight = value.weight;
+        self.current_drawing_state.font_stretch = value.stretch;
+        self.current_drawing_state.font_size = value.size;
+        self.current_drawing_state.font_family = value.family;
     }
 
     pub fn text_align(&self) -> CanvasTextAlign {
@@ -629,19 +701,19 @@ impl CanvasState {
     }
 
     pub fn font_stretch(&self) -> CanvasFontStretch {
-        self.current_drawing_state.font_stretch
+        self.current_drawing_state.font_stretch.into()
     }
 
     pub fn set_font_stretch(&mut self, value: CanvasFontStretch) {
-        self.current_drawing_state.font_stretch = value;
+        self.current_drawing_state.font_stretch = value.into();
     }
 
     pub fn font_variant_caps(&self) -> CanvasFontVariantCaps {
-        self.current_drawing_state.font_variant_caps
+        self.current_drawing_state.font_variant_caps.into()
     }
 
     pub fn set_font_variant_caps(&mut self, value: CanvasFontVariantCaps) {
-        self.current_drawing_state.font_variant_caps = value;
+        self.current_drawing_state.font_variant_caps = value.into();
     }
 
     pub fn text_rendering(&self) -> CanvasTextRendering {
@@ -1451,9 +1523,12 @@ pub fn op_canvas_2d_state_set_line_dash_offset(state: &OpState, this: *const c_v
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_font(state: &OpState, this: *const c_void) -> String {
+pub fn op_canvas_2d_state_font(state: &OpState, this: *const c_void) -> Cow<'static, str> {
     let this = borrow_v8::<CanvasState>(state, this);
-    this.font().to_css_string()
+    match this.font() {
+        Some(v) => v.to_css_string().into(),
+        None => "".into(),
+    }
 }
 
 #[op2(fast)]

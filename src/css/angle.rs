@@ -1,10 +1,11 @@
 use std::convert::Infallible;
+use std::ops::RangeBounds;
 
 use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 
 use super::{impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SpecifiedAngle {
     Deg(f32),
     Grad(f32),
@@ -45,8 +46,7 @@ impl SpecifiedAngle {
 
     pub fn from_css_with_range<'i>(
         input: &mut Parser<'i, '_>,
-        min_deg: f32,
-        max_deg: f32,
+        deg_range: impl RangeBounds<f32>,
     ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
@@ -57,7 +57,7 @@ impl SpecifiedAngle {
                     location.new_unexpected_token_error(Token::Ident(unit.clone()))
                 })?;
                 let ComputedAngle { deg } = result.compute();
-                if !(min_deg..=max_deg).contains(&deg) {
+                if !deg_range.contains(&deg) {
                     return Err(location.new_unexpected_token_error(t.clone()));
                 }
                 result
@@ -89,7 +89,7 @@ impl_to_css_for_specified_dimension!(SpecifiedAngle {
     _ => "deg",
 });
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComputedAngle {
     pub deg: f32,
 }

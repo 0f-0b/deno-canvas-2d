@@ -1,8 +1,12 @@
 use std::convert::Infallible;
 use std::fmt::{self, Display};
+use std::ops::RangeBounds;
 use std::rc::Rc;
 
-use cssparser::{BasicParseError, ParseError, Parser, ParserInput, ToCss, Token, UnicodeRange};
+use cssparser::{
+    match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, ToCss, Token,
+    UnicodeRange,
+};
 use cssparser_color::NumberOrPercentage;
 use itertools::Itertools as _;
 
@@ -48,32 +52,54 @@ fn parse_string<'i>(input: &mut Parser<'i, '_>) -> Result<Rc<str>, ParseError<'i
     Ok(input.expect_string()?.as_ref().into())
 }
 
+fn parse_url<'i>(input: &mut Parser<'i, '_>) -> Result<Rc<str>, ParseError<'i, Infallible>> {
+    let location = input.current_source_location();
+    Ok(match *input.next()? {
+        Token::UnquotedUrl(ref url) => url.as_ref().into(),
+        Token::Function(ref name) => {
+            let name = name.clone();
+            input.parse_nested_block(|input| {
+                match_ignore_ascii_case! { &name,
+                    "url" | "src" => parse_string(input),
+                    _ => Err(location.new_unexpected_token_error(Token::Ident(name))),
+                }
+            })?
+        }
+        ref t => return Err(location.new_unexpected_token_error(t.clone())),
+    })
+}
+
 fn parse_number<'i>(input: &mut Parser<'i, '_>) -> Result<f32, ParseError<'i, Infallible>> {
-    Ok(input.expect_number()?)
+    parse_number_with_range(input, ..)
+}
+
+fn parse_number_with_range<'i>(
+    input: &mut Parser<'i, '_>,
+    range: impl RangeBounds<f32>,
+) -> Result<f32, ParseError<'i, Infallible>> {
+    let location = input.current_source_location();
+    Ok(match *input.next()? {
+        Token::Number { value, .. } if range.contains(&value) => value,
+        ref t => return Err(location.new_unexpected_token_error(t.clone())),
+    })
 }
 
 fn parse_number_or_percentage<'i>(
     input: &mut Parser<'i, '_>,
 ) -> Result<NumberOrPercentage, ParseError<'i, Infallible>> {
-    let location = input.current_source_location();
-    Ok(match *input.next()? {
-        Token::Number { value, .. } => NumberOrPercentage::Number { value },
-        Token::Percentage { unit_value, .. } => NumberOrPercentage::Percentage { unit_value },
-        ref t => return Err(location.new_unexpected_token_error(t.clone())),
-    })
+    parse_number_or_percentage_with_range(input, ..)
 }
 
 fn parse_number_or_percentage_with_range<'i>(
     input: &mut Parser<'i, '_>,
-    min: f32,
-    max: f32,
+    range: impl RangeBounds<f32>,
 ) -> Result<NumberOrPercentage, ParseError<'i, Infallible>> {
     let location = input.current_source_location();
     Ok(match *input.next()? {
-        Token::Number { value, .. } if (min..=max).contains(&value) => {
+        Token::Number { value, .. } if range.contains(&value) => {
             NumberOrPercentage::Number { value }
         }
-        Token::Percentage { unit_value, .. } if (min..=max).contains(&unit_value) => {
+        Token::Percentage { unit_value, .. } if range.contains(&unit_value) => {
             NumberOrPercentage::Percentage { unit_value }
         }
         ref t => return Err(location.new_unexpected_token_error(t.clone())),
