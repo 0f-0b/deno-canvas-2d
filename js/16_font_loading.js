@@ -50,12 +50,20 @@ import {
 } from "ext:deno_webidl/00_webidl.js";
 
 const {
+  ObjectDefineProperties,
+  ObjectGetOwnPropertyDescriptors,
   ObjectFreeze,
   Promise,
   PromiseReject,
   ReflectConstruct,
   SafeArrayIterator,
   SafeSet,
+  Set,
+  SetPrototypeGetSize,
+  SetPrototypeEntries,
+  SetPrototypeForEach,
+  SetPrototypeHas,
+  SetPrototypeValues,
   SymbolFor,
   SymbolIterator,
   SymbolToStringTag,
@@ -546,7 +554,7 @@ export const FontFaceSetInternals = class FontFaceSet
   #brand() {}
 
   #raw;
-  #entries = new SafeSet();
+  #setEntries = new SafeSet();
   #status = "loaded";
   #ready = safePromiseWithResolvers();
   #readyResolved = false;
@@ -571,6 +579,10 @@ export const FontFaceSetInternals = class FontFaceSet
     o.#brand;
   }
 
+  static getSetEntries(o) {
+    return o.#setEntries;
+  }
+
   static getStatus(o) {
     return o.#status;
   }
@@ -592,10 +604,10 @@ export const FontFaceSetInternals = class FontFaceSet
   }
 
   static add(o, font) {
-    if (o.#entries.has(font)) {
+    if (o.#setEntries.has(font)) {
       return;
     }
-    o.#entries.add(font);
+    o.#setEntries.add(font);
     op_canvas_2d_font_face_set_insert(o.#raw, getFontFaceRaw(font));
     addFontFaceToSet(font, o);
     if (getFontFaceStatus(font) === "loading") {
@@ -604,7 +616,7 @@ export const FontFaceSetInternals = class FontFaceSet
   }
 
   static delete(o, font) {
-    if (!o.#entries.delete(font)) {
+    if (!o.#setEntries.delete(font)) {
       return false;
     }
     op_canvas_2d_font_face_set_remove(o.#raw, getFontFaceRaw(font));
@@ -618,7 +630,7 @@ export const FontFaceSetInternals = class FontFaceSet
   }
 
   static clear(o) {
-    o.#entries.clear();
+    o.#setEntries.clear();
     op_canvas_2d_font_face_set_clear(o.#raw);
     o.#loadedFonts.clear();
     o.#failedFonts.clear();
@@ -684,21 +696,59 @@ export const FontFaceSetInternals = class FontFaceSet
 
   static inspect(inspect, options) {
     return inspect(
-      createFilteredInspectProxy({
-        object: this,
-        evaluate: true,
-        keys: [
-          "onloading",
-          "onloadingdone",
-          "onloadingerror",
-          "ready",
-          "status",
-        ],
-      }),
+      new class FontFaceSet extends Set {
+        onloading;
+        onloadingdone;
+        onloadingerror;
+        ready;
+        status;
+
+        constructor(o) {
+          super(o.#setEntries);
+          this.onloading = o.#onloading.value;
+          this.onloadingdone = o.#onloadingdone.value;
+          this.onloadingerror = o.#onloadingerror.value;
+          this.ready = o.#ready.promise;
+          this.status = o.#status;
+        }
+
+        get [SymbolToStringTag]() {
+          return "FontFaceSet";
+        }
+      }(this),
       options,
     );
   }
 };
+
+function makeSetlike(prototype, getSetEntries) {
+  const setlike = ObjectGetOwnPropertyDescriptors({
+    get size() {
+      return SetPrototypeGetSize(getSetEntries(this));
+    },
+    entries() {
+      return SetPrototypeEntries(getSetEntries(this));
+    },
+    values() {
+      return SetPrototypeValues(getSetEntries(this));
+    },
+    forEach(callbackFn, thisArg = undefined) {
+      return SetPrototypeForEach(getSetEntries(this), callbackFn, thisArg);
+    },
+    has(value) {
+      return SetPrototypeHas(getSetEntries(this), value);
+    },
+  });
+  ObjectDefineProperties(prototype, {
+    size: setlike.size,
+    [SymbolIterator]: setlike.values,
+    entries: setlike.entries,
+    keys: setlike.values,
+    values: setlike.values,
+    forEach: setlike.forEach,
+    has: setlike.has,
+  });
+}
 
 export class FontFaceSet extends EventTarget {
   constructor(initialFaces) {
@@ -718,8 +768,6 @@ export class FontFaceSet extends EventTarget {
     }
     return o;
   }
-
-  // TODO setlike<FontFace>;
 
   add(font) {
     FontFaceSetInternals.checkInstance(this);
@@ -820,6 +868,7 @@ export class FontFaceSet extends EventTarget {
   }
 
   static {
+    makeSetlike(this.prototype, FontFaceSetInternals.getSetEntries);
     configureInterface(this);
   }
 }
