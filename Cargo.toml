@@ -8,6 +8,7 @@ cssparser = "0.33.0"
 cssparser-color = "0.1.0"
 deno_core = "0.257.0"
 euclid = "0.22.9"
+fontsan = { git = "https://github.com/servo/fontsan.git", rev = "0e9bc746517ffc68aac43aa3408a3c854c7ea9e9" }
 harfbuzz_rs = { git = "https://github.com/harfbuzz/harfbuzz_rs.git", rev = "b3c92bf1692426f665fe536cd29ee1c38f6f4ecd" }
 hashlink = "0.9.0"
 image = { version = "0.24.8", default-features = false, features = [

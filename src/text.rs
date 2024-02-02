@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use cssparser::ToCss as _;
-use deno_core::error::custom_error;
+use deno_core::error::{custom_error, type_error};
 use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2};
@@ -229,11 +229,11 @@ impl FontFace {
         data.unicode_range = FontFaceUnicodeRange::new(value);
     }
 
-    pub fn load(&self, blob: Vec<u8>) -> anyhow::Result<()> {
+    pub fn load(&self, blob: &[u8]) -> anyhow::Result<()> {
         let mut data = self.data.borrow_mut();
         match data.state {
             FontFaceState::Unloaded => {
-                // TODO validate blob
+                let blob = fontsan::process(blob).map_err(|_| type_error("Invalid font data"))?;
                 data.state = FontFaceState::Loaded(hb::Font::new(hb::Face::new(blob, 0)).into());
                 Ok(())
             }
@@ -1192,7 +1192,7 @@ pub fn op_canvas_2d_font_face_set_unicode_range(
 pub fn op_canvas_2d_font_face_load(
     state: &OpState,
     this: *const c_void,
-    #[anybuffer(copy)] source: Vec<u8>,
+    #[anybuffer] source: &[u8],
     from_url: bool,
 ) -> anyhow::Result<()> {
     let this = borrow_v8::<FontFace>(state, this);
