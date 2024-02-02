@@ -37,7 +37,7 @@ use super::pattern::CanvasPattern;
 use super::text::{prepare_text, FontFaceSet, TextMetrics};
 use super::{
     parse_color_for_canvas, premultiply, raqote_ext, serialize_color_for_canvas, to_raqote_color,
-    to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace,
+    to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace, ARGB32_ALPHA_MASK,
 };
 
 const TRANSPARENT_SOLID_SOURCE: raqote::SolidSource = raqote::SolidSource {
@@ -524,7 +524,7 @@ impl CanvasState {
         let size = to_raqote_size(width, height)?;
         let mut draw_target = raqote::DrawTarget::new(size.width, size.height);
         if !alpha {
-            draw_target.get_data_mut().fill(0xff000000);
+            draw_target.get_data_mut().fill(ARGB32_ALPHA_MASK);
         }
         Ok(CanvasState {
             draw_target,
@@ -577,9 +577,9 @@ impl CanvasState {
 
     pub fn clear(&mut self) {
         if self.alpha {
-            self.draw_target.get_data_mut().fill(0x00000000);
+            self.draw_target.get_data_mut().fill(0);
         } else {
-            self.draw_target.get_data_mut().fill(0xff000000);
+            self.draw_target.get_data_mut().fill(ARGB32_ALPHA_MASK);
         }
     }
 
@@ -1212,10 +1212,10 @@ impl CanvasState {
     ) -> anyhow::Result<()> {
         let dst_color_space = dst.color_space;
         let mut dst = dst.as_raqote_surface_rgba8()?;
-        let origin = to_raqote_point(x, y)?;
+        let src_origin = to_raqote_point(x, y)?;
         dst.composite_surface(
             &self.draw_target,
-            Box2D::from_origin_and_size(origin, size2(dst.width(), dst.height())),
+            Box2D::from_origin_and_size(src_origin, size2(dst.width(), dst.height())),
             Point2D::origin(),
             |src, dst| {
                 dst.copy_from_slice(src);
@@ -1272,7 +1272,7 @@ impl CanvasState {
                 }
                 if !self.alpha {
                     for pixel in dst {
-                        *pixel |= 0xff000000;
+                        *pixel |= ARGB32_ALPHA_MASK;
                     }
                 }
             },

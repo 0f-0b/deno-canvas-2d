@@ -141,7 +141,6 @@ import {
   alignUint8ClampedArrayToUint32,
   checkUsabilityAndClone,
   colorSpaceToRepr,
-  ImageBitmap,
   objectIsImageBitmap,
   OffscreenCanvasInternals,
   registerCanvasContextMode,
@@ -2476,23 +2475,23 @@ registerCanvasContextMode("2d", {
     const state = getOffscreenCanvasRenderingContext2DState(ctx);
     return op_canvas_2d_state_width(state);
   },
-  setWidth(ctx, value) {
+  setWidth(ctx, width) {
     const state = getOffscreenCanvasRenderingContext2DState(ctx);
-    op_canvas_2d_state_set_width(state, value);
+    op_canvas_2d_state_set_width(state, width);
   },
   getHeight(ctx) {
     const state = getOffscreenCanvasRenderingContext2DState(ctx);
     return op_canvas_2d_state_height(state);
   },
-  setHeight(ctx, value) {
+  setHeight(ctx, height) {
     const state = getOffscreenCanvasRenderingContext2DState(ctx);
-    op_canvas_2d_state_set_height(state, value);
+    op_canvas_2d_state_set_height(state, height);
   },
   transferToImageBitmap(ctx) {
     const state = getOffscreenCanvasRenderingContext2DState(ctx);
     const bitmap = op_canvas_2d_image_bitmap_from_canvas_state(state);
     op_canvas_2d_state_clear(state);
-    return new ImageBitmap(illegalConstructor, bitmap);
+    return bitmap;
   },
   cloneToImageBitmap(ctx) {
     const state = getOffscreenCanvasRenderingContext2DState(ctx);

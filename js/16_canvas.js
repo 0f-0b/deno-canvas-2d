@@ -48,7 +48,6 @@ import {
 } from "ext:deno_webidl/00_webidl.js";
 
 const {
-  MathMin,
   ObjectFreeze,
   ObjectGetPrototypeOf,
   Promise,
@@ -100,23 +99,20 @@ registerCanvasContextMode("none", {
   getWidth(ctx) {
     return ctx.width;
   },
-  setWidth(ctx, value) {
-    ctx.width = value;
+  setWidth(ctx, width) {
+    ctx.width = width;
   },
   getHeight(ctx) {
     return ctx.height;
   },
-  setHeight(ctx, value) {
-    ctx.height = value;
+  setHeight(ctx, height) {
+    ctx.height = height;
   },
   transferToImageBitmap() {
     throw new DOMException("Canvas has no context", "InvalidStateError");
   },
-  cloneToImageBitmap(ctx) {
-    return op_canvas_2d_image_bitmap_empty(
-      MathMin(ctx.width, 0xffffffff),
-      MathMin(ctx.height, 0xffffffff),
-    );
+  cloneToImageBitmap() {
+    return op_canvas_2d_image_bitmap_empty(1, 1);
   },
   cropToImageBitmap(ctx, _sx, _sy, sw, sh, dw, dh) {
     return {
@@ -328,7 +324,7 @@ export class OffscreenCanvas extends EventTarget {
       throw new DOMException("Canvas is detached", "InvalidStateError");
     }
     const mode = getOffscreenCanvasContextMode(ctx);
-    return mode.transferToImageBitmap(ctx);
+    return new ImageBitmap(illegalConstructor, mode.transferToImageBitmap(ctx));
   }
 
   async convertToBlob(options = undefined) {
@@ -399,6 +395,10 @@ export const alignUint8ClampedArrayToUint32 = (data) => {
       TypedArrayPrototypeGetBuffer(new Uint8ClampedArray(data)),
     );
 };
+export const colorSpaceFromRepr = ObjectFreeze([
+  "srgb",
+  "display-p3",
+]);
 export const colorSpaceToRepr = ObjectFreeze({
   __proto__: null,
   "srgb": 0,
@@ -406,6 +406,7 @@ export const colorSpaceToRepr = ObjectFreeze({
 });
 export let objectIsImageBitmap;
 export let getImageBitmapRaw;
+export let transferImageBitmap;
 
 export class ImageBitmap {
   #brand() {}
@@ -428,10 +429,16 @@ export class ImageBitmap {
   }
 
   close() {
-    if (this.#raw) {
-      op_canvas_2d_image_bitmap_close(this.#raw);
-      this.#raw = null;
+    const bitmap = this.#transfer();
+    if (bitmap) {
+      op_canvas_2d_image_bitmap_close(bitmap);
     }
+  }
+
+  #transfer() {
+    const bitmap = this.#raw;
+    this.#raw = null;
+    return bitmap;
   }
 
   #inspect(inspect, options) {
@@ -458,13 +465,14 @@ export class ImageBitmap {
     // deno-lint-ignore prefer-primordials
     objectIsImageBitmap = (o) => #brand in o;
     getImageBitmapRaw = (o) => o.#raw;
+    transferImageBitmap = (o) => o.#transfer();
   }
 }
 
 export function checkUsabilityAndClone(image) {
   if (objectIsImageBitmap(image)) {
     const raw = getImageBitmapRaw(image);
-    if (raw === null) {
+    if (!raw) {
       throw new DOMException("Image is detached", "InvalidStateError");
     }
     return op_canvas_2d_image_bitmap_clone(raw);
@@ -584,7 +592,7 @@ async function checkUsabilityAndCropWithFormatting(
   }
   if (objectIsImageBitmap(image)) {
     const raw = getImageBitmapRaw(image);
-    if (raw === null) {
+    if (!raw) {
       throw new DOMException("Image is detached", "InvalidStateError");
     }
     return op_canvas_2d_image_bitmap_resize(

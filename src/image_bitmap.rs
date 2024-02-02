@@ -9,13 +9,15 @@ use strum_macros::FromRepr;
 
 use super::convert::{
     premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
+    premultiplied_linear_display_p3_to_srgb, premultiplied_linear_srgb_to_display_p3,
     premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
-    srgb_to_premultiplied_linear_srgb, transform_argb32,
+    premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_srgb, transform_argb32,
+    unpack_argb32_to_rgba8,
 };
 use super::gc::{borrow_v8, from_v8, into_v8};
-use super::image_data::{ImageData, ImageDataView};
+use super::image_data::{AlignedImageDataViewMut, ImageData, ImageDataView};
 use super::state::CanvasState;
-use super::{raqote_ext, to_raqote_point, to_raqote_size, CanvasColorSpace};
+use super::{raqote_ext, to_raqote_point, to_raqote_size, CanvasColorSpace, ARGB32_ALPHA_MASK};
 
 pub fn non_zero_u32(x: u32) -> Option<u32> {
     (x != 0).then_some(x)
@@ -65,6 +67,14 @@ pub fn aspect_resize(
         .try_into()
         .map_err(|_| range_error(format!("Invalid bitmap height: {dh}")))?;
     Ok(size2(dw, dh))
+}
+
+// TODO use `Rc::make_mut` after rust-lang/rust#116113
+fn rc_slice_make_mut<T: Clone>(rc: &mut Rc<[T]>) -> &mut [T] {
+    if Rc::strong_count(rc) != 1 || Rc::weak_count(rc) != 0 {
+        *rc = rc.as_ref().into();
+    }
+    Rc::get_mut(rc).unwrap()
 }
 
 #[derive(Clone, Copy, Debug, FromRepr)]
@@ -280,16 +290,14 @@ impl ImageBitmap {
                 (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
                 | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {}
                 (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
-                    *data = data.as_ref().into();
                     transform_argb32(
-                        Rc::get_mut(data).unwrap(), // TODO use `Rc::make_mut`
+                        rc_slice_make_mut(data),
                         premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
                     );
                 }
                 (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
-                    *data = data.as_ref().into();
                     transform_argb32(
-                        Rc::get_mut(data).unwrap(),
+                        rc_slice_make_mut(data),
                         premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
                     );
                 }
@@ -414,6 +422,64 @@ impl ImageBitmap {
             );
         })
     }
+
+    pub fn get_image_data(
+        &self,
+        mut dst: AlignedImageDataViewMut,
+        x: i64,
+        y: i64,
+    ) -> anyhow::Result<()> {
+        let Some(image) = self.as_raqote_image()? else {
+            dst.data.fill(0);
+            return Ok(());
+        };
+        let dst_color_space = dst.color_space;
+        let mut dst = dst.as_raqote_surface_rgba8()?;
+        let src_origin = to_raqote_point(x, y)?;
+        let src = raqote::DrawTarget::from_backing(image.width, image.height, image.data);
+        dst.composite_surface(
+            &src,
+            Box2D::from_origin_and_size(src_origin, size2(dst.width(), dst.height())),
+            Point2D::origin(),
+            |src, dst| {
+                dst.copy_from_slice(src);
+                match (self.color_space, dst_color_space) {
+                    (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
+                    | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb);
+                    }
+                    (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_display_p3);
+                    }
+                    (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_srgb);
+                    }
+                }
+            },
+        );
+        Ok(())
+    }
+
+    pub fn remove_alpha(self) -> Self {
+        let data = match self.data {
+            Some(mut data) => {
+                for pixel in rc_slice_make_mut(&mut data) {
+                    *pixel |= ARGB32_ALPHA_MASK;
+                }
+                data
+            }
+            None => {
+                let size = (self.width as u64 * self.height as u64).try_into().unwrap();
+                std::iter::repeat(ARGB32_ALPHA_MASK).take(size).collect()
+            }
+        };
+        Self {
+            width: self.width,
+            height: self.height,
+            color_space: self.color_space,
+            data: Some(data),
+        }
+    }
 }
 
 #[op2]
@@ -519,6 +585,12 @@ pub fn op_canvas_2d_image_bitmap_height(state: &OpState, this: *const c_void) ->
     this.height
 }
 
+#[op2(fast)]
+pub fn op_canvas_2d_image_bitmap_color_space(state: &OpState, this: *const c_void) -> i32 {
+    let this = borrow_v8::<ImageBitmap>(state, this);
+    this.color_space as i32
+}
+
 #[op2]
 pub fn op_canvas_2d_image_bitmap_clone<'a>(
     scope: &mut v8::HandleScope<'a>,
@@ -573,6 +645,39 @@ pub fn op_canvas_2d_image_bitmap_resize<'a>(
         matches!(image_orientation, ImageOrientation::FlipY),
     )?;
     Ok(into_v8(state, scope, result))
+}
+
+#[op2(fast)]
+#[allow(clippy::too_many_arguments)]
+pub fn op_canvas_2d_image_bitmap_get_image_data(
+    state: &OpState,
+    this: *const c_void,
+    #[buffer] dst_data: &mut [u32],
+    dst_width: u32,
+    dst_height: u32,
+    dst_color_space: i32,
+    #[number] x: i64,
+    #[number] y: i64,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<ImageBitmap>(state, this);
+    let dst = AlignedImageDataViewMut {
+        width: dst_width,
+        height: dst_height,
+        color_space: CanvasColorSpace::from_repr(dst_color_space).unwrap(),
+        data: dst_data,
+    };
+    this.get_image_data(dst, x, y)
+}
+
+#[op2]
+pub fn op_canvas_2d_image_bitmap_remove_alpha<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    state: &OpState,
+    this: *const c_void,
+) -> v8::Local<'a, v8::External> {
+    let this = from_v8::<ImageBitmap>(state, this);
+    let result = this.remove_alpha();
+    into_v8(state, scope, result)
 }
 
 #[op2(fast)]

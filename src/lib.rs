@@ -114,6 +114,8 @@ fn premultiply(c: u8, a: u8) -> u8 {
     (((c as u32 * a as u32 + 128) * 257) >> 16) as u8
 }
 
+const ARGB32_ALPHA_MASK: u32 = 0xff000000;
+
 deno_core::extension!(
     canvas_2d,
     deps = [deno_web],
@@ -235,9 +237,12 @@ deno_core::extension!(
         image_bitmap::op_canvas_2d_image_bitmap_empty_resize,
         image_bitmap::op_canvas_2d_image_bitmap_width,
         image_bitmap::op_canvas_2d_image_bitmap_height,
+        image_bitmap::op_canvas_2d_image_bitmap_color_space,
         image_bitmap::op_canvas_2d_image_bitmap_clone,
         image_bitmap::op_canvas_2d_image_bitmap_crop,
         image_bitmap::op_canvas_2d_image_bitmap_resize,
+        image_bitmap::op_canvas_2d_image_bitmap_get_image_data,
+        image_bitmap::op_canvas_2d_image_bitmap_remove_alpha,
         image_bitmap::op_canvas_2d_image_bitmap_close,
         text::op_canvas_2d_font_face_select_source,
         text::op_canvas_2d_font_face_new,
@@ -306,6 +311,7 @@ deno_core::extension!(
         "16_canvas.js",
         "16_font_loading.js",
         "17_context_2d.js",
+        "17_context_bitmaprenderer.js",
     ],
     state = |state| {
         gc::init(state);
