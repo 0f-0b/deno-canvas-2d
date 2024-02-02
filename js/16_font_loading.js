@@ -42,6 +42,7 @@ import {
   setIsTrusted,
 } from "ext:deno_web/02_event.js";
 import { defer } from "ext:deno_web/02_timers.js";
+import { Deferred } from "ext:deno_web/06_streams.js";
 import {
   configureInterface,
   illegalConstructor,
@@ -53,7 +54,6 @@ const {
   ObjectDefineProperties,
   ObjectGetOwnPropertyDescriptors,
   ObjectFreeze,
-  Promise,
   PromiseReject,
   ReflectConstruct,
   SafeArrayIterator,
@@ -75,15 +75,6 @@ const empty = ObjectFreeze({
   next: () => ({ done: true }),
   [SymbolIterator]: () => empty,
 });
-const safePromiseWithResolvers = () => {
-  let resolve;
-  let reject;
-  const promise = new Promise((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-};
 const convertDOMStringOrBinaryData = (value) => {
   if (isArrayBuffer(value)) {
     return convertArrayBuffer(value);
@@ -134,7 +125,7 @@ export class FontFace {
   #raw;
   #url;
   #status = "unloaded";
-  #loaded = safePromiseWithResolvers();
+  #loaded = new Deferred();
   #fontFaceSets = new SafeSet();
   #cachedFamily = null;
   #cachedStyle = null;
@@ -556,8 +547,7 @@ export const FontFaceSetInternals = class FontFaceSet
   #raw;
   #setEntries = new SafeSet();
   #status = "loaded";
-  #ready = safePromiseWithResolvers();
-  #readyResolved = false;
+  #ready = new Deferred();
   #loadingFonts = new SafeSet();
   #loadedFonts = new SafeSet();
   #failedFonts = new SafeSet();
@@ -672,9 +662,8 @@ export const FontFaceSetInternals = class FontFaceSet
 
   static switchToLoading(o) {
     o.#status = "loading";
-    if (o.#readyResolved) {
-      o.#ready = safePromiseWithResolvers();
-      o.#readyResolved = false;
+    if (o.#ready.state === "fulfilled") {
+      o.#ready = new Deferred();
     }
     defer(() => FontFaceSetInternals.fireFontLoadEvent(o, "loading"));
   }
