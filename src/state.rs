@@ -395,7 +395,7 @@ pub struct DrawingState {
     line_cap: CanvasLineCap,
     line_join: CanvasLineJoin,
     miter_limit: f64,
-    dash_list: Box<[f64]>,
+    dash_list: Option<Rc<[f64]>>,
     line_dash_offset: f64,
     pub font_style: ComputedFontStyle,
     pub font_weight: ComputedFontWeight,
@@ -431,7 +431,7 @@ impl Default for DrawingState {
             line_cap: CanvasLineCap::Butt,
             line_join: CanvasLineJoin::Miter,
             miter_limit: 10.0,
-            dash_list: Box::new([]),
+            dash_list: None,
             line_dash_offset: 0.0,
             font_style: ComputedFontStyle::Normal,
             font_weight: ComputedFontWeight(400.0),
@@ -461,7 +461,7 @@ impl Default for DrawingState {
             shadow_color: AbsoluteColor::TRANSPARENT_BLACK,
             shadow_offset: Vector2D::zero(),
             shadow_blur: 0.0,
-            filter: ComputedFilter::none(),
+            filter: ComputedFilter::default(),
         }
     }
 }
@@ -489,7 +489,10 @@ impl DrawingState {
             cap: self.line_cap.to_raqote(),
             join: self.line_join.to_raqote(),
             miter_limit: self.miter_limit as f32,
-            dash_array: self.dash_list.iter().map(|&x| x as f32).collect(),
+            dash_array: match self.dash_list {
+                Some(ref v) => v.iter().map(|&x| x as f32).collect(),
+                None => vec![],
+            },
             dash_offset: self.line_dash_offset as f32,
         }
     }
@@ -616,11 +619,18 @@ impl CanvasState {
     }
 
     pub fn dash_list(&self) -> &[f64] {
-        &self.current_drawing_state.dash_list
+        match self.current_drawing_state.dash_list {
+            Some(ref v) => v,
+            None => &[],
+        }
     }
 
-    pub fn set_dash_list(&mut self, segments: Box<[f64]>) {
-        self.current_drawing_state.dash_list = segments;
+    pub fn set_dash_list(&mut self, segments: &[f64]) {
+        self.current_drawing_state.dash_list = if segments.is_empty() {
+            None
+        } else {
+            Some(segments.into())
+        };
     }
 
     pub fn line_dash_offset(&self) -> f64 {
@@ -1504,7 +1514,7 @@ pub fn op_canvas_2d_state_set_dash_list(
     #[buffer] segments: &[f64],
 ) {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    this.set_dash_list(segments.into())
+    this.set_dash_list(segments)
 }
 
 #[op2(fast)]

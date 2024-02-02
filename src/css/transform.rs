@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::rc::Rc;
 
 use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
 use euclid::default::{Transform2D, Transform3D, Vector3D};
@@ -251,28 +252,25 @@ impl FromCss for ComputedTransformFunction {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ComputedTransform {
-    pub transform_list: Box<[ComputedTransformFunction]>,
+    pub transform_list: Option<Rc<[ComputedTransformFunction]>>,
 }
 
 impl ComputedTransform {
-    pub fn none() -> Self {
-        Self {
-            transform_list: Box::new([]),
-        }
-    }
-
     pub fn to_matrix(&self) -> Matrix {
-        self.transform_list.iter().map(|f| f.to_matrix()).fold(
-            Matrix::_2D(Transform2D::identity()),
-            |a, b| match (a, b) {
-                (Matrix::_2D(a), Matrix::_2D(b)) => b.then(&a).into(),
-                (Matrix::_2D(a), Matrix::_3D(b)) => b.then(&a.to_3d()).into(),
-                (Matrix::_3D(a), Matrix::_2D(b)) => b.to_3d().then(&a).into(),
-                (Matrix::_3D(a), Matrix::_3D(b)) => b.then(&a).into(),
-            },
-        )
+        match self.transform_list {
+            Some(ref v) => v.iter().map(|f| f.to_matrix()).fold(
+                Matrix::_2D(Transform2D::identity()),
+                |a, b| match (a, b) {
+                    (Matrix::_2D(a), Matrix::_2D(b)) => b.then(&a).into(),
+                    (Matrix::_2D(a), Matrix::_3D(b)) => b.then(&a.to_3d()).into(),
+                    (Matrix::_3D(a), Matrix::_2D(b)) => b.to_3d().then(&a).into(),
+                    (Matrix::_3D(a), Matrix::_3D(b)) => b.then(&a).into(),
+                },
+            ),
+            None => Matrix::_2D(Transform2D::identity()),
+        }
     }
 }
 
@@ -281,14 +279,10 @@ impl FromCss for ComputedTransform {
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         input.skip_whitespace();
-        if input
-            .try_parse(|input| input.expect_ident_matching("none"))
-            .is_ok()
-        {
-            return Ok(Self::none());
-        }
-        let transform_list =
-            parse_one_or_more(input, ComputedTransformFunction::from_css)?.into_boxed_slice();
+        let transform_list = match input.try_parse(|input| input.expect_ident_matching("none")) {
+            Ok(_) => None,
+            Err(_) => Some(parse_one_or_more(input, ComputedTransformFunction::from_css)?.into()),
+        };
         Ok(Self { transform_list })
     }
 }

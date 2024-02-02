@@ -29,7 +29,7 @@ pub fn op_canvas_2d_parse_matrix(
     #[buffer] out: &mut [f64],
 ) -> anyhow::Result<bool> {
     let transform = if transform_list.is_empty() {
-        ComputedTransform::none()
+        ComputedTransform::default()
     } else {
         ComputedTransform::from_css_string(transform_list).map_err(|err| {
             custom_error(

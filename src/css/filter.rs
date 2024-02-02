@@ -162,17 +162,9 @@ impl FromCss for ComputedFilterValue {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ComputedFilter {
-    pub filter_value_list: Box<[ComputedFilterValue]>,
-}
-
-impl ComputedFilter {
-    pub fn none() -> Self {
-        Self {
-            filter_value_list: Box::new([]),
-        }
-    }
+    pub filter_value_list: Option<Rc<[ComputedFilterValue]>>,
 }
 
 impl FromCss for ComputedFilter {
@@ -180,14 +172,10 @@ impl FromCss for ComputedFilter {
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         input.skip_whitespace();
-        if input
-            .try_parse(|input| input.expect_ident_matching("none"))
-            .is_ok()
-        {
-            return Ok(Self::none());
-        }
-        let filter_value_list =
-            parse_one_or_more(input, ComputedFilterValue::from_css)?.into_boxed_slice();
+        let filter_value_list = match input.try_parse(|input| input.expect_ident_matching("none")) {
+            Ok(_) => None,
+            Err(_) => Some(parse_one_or_more(input, ComputedFilterValue::from_css)?.into()),
+        };
         Ok(Self { filter_value_list })
     }
 }
