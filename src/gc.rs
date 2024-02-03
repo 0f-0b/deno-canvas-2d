@@ -33,7 +33,7 @@ struct ExternalBox<T> {
     value: RefCell<T>,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct ExternalRegistry {
     inner: Rc<RefCell<HashSet<(TypeId, *mut c_void)>>>,
 }

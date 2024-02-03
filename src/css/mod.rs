@@ -1,11 +1,12 @@
 use std::convert::Infallible;
+use std::error::Error;
 use std::fmt::{self, Display};
 use std::ops::RangeBounds;
 use std::rc::Rc;
 
 use cssparser::{
-    match_ignore_ascii_case, BasicParseError, ParseError, Parser, ParserInput, ToCss, Token,
-    UnicodeRange,
+    match_ignore_ascii_case, serialize_string, BasicParseError, ParseError, Parser, ParserInput,
+    SourceLocation, ToCss, Token, UnicodeRange,
 };
 use cssparser_color::NumberOrPercentage;
 use itertools::Itertools as _;
@@ -22,15 +23,10 @@ pub trait FromCss: Sized {
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>>;
 
-    fn from_css_string(css: &str) -> Result<Self, BasicParseError>
-    where
-        Self: FromCss<Err = Infallible>,
-    {
+    fn from_css_string(css: &str) -> Result<Self, ParseError<Self::Err>> {
         let mut input = ParserInput::new(css);
         let mut parser = Parser::new(&mut input);
-        parser
-            .parse_entirely(Self::from_css)
-            .map_err(ParseError::basic)
+        parser.parse_entirely(Self::from_css)
     }
 }
 
@@ -80,6 +76,20 @@ fn parse_number_with_range<'i>(
     let location = input.current_source_location();
     Ok(match *input.next()? {
         Token::Number { value, .. } if range.contains(&value) => value,
+        ref t => return Err(location.new_unexpected_token_error(t.clone())),
+    })
+}
+
+fn parse_integer_with_range<'i>(
+    input: &mut Parser<'i, '_>,
+    range: impl RangeBounds<i32>,
+) -> Result<i32, ParseError<'i, Infallible>> {
+    let location = input.current_source_location();
+    Ok(match *input.next()? {
+        Token::Number {
+            int_value: Some(int_value),
+            ..
+        } if range.contains(&int_value) => int_value,
         ref t => return Err(location.new_unexpected_token_error(t.clone())),
     })
 }
@@ -147,6 +157,9 @@ impl UnicodeRangeSet {
 struct CssValue<'a, T: ?Sized>(&'a T);
 
 #[derive(Clone, Copy)]
+struct CssString<'a>(&'a str);
+
+#[derive(Clone, Copy)]
 struct CssNumber<T: ?Sized>(T);
 
 #[derive(Clone, Copy)]
@@ -163,12 +176,19 @@ macro_rules! display_css {
 }
 
 display_css!(impl ['a, T: ?Sized] for CssValue<'a, T>);
+display_css!(impl ['a] for CssString<'a>);
 display_css!(impl [T: ?Sized] for CssNumber<T>);
 display_css!(impl [T: ?Sized] for CssPercentage<T>);
 
 impl<'a, T: ToCss + ?Sized> ToCss for CssValue<'a, T> {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         self.0.to_css(dest)
+    }
+}
+
+impl<'a> ToCss for CssString<'a> {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        serialize_string(self.0, dest)
     }
 }
 
@@ -253,3 +273,62 @@ macro_rules! impl_to_css_for_computed_dimension {
 }
 
 use impl_to_css_for_computed_dimension;
+
+macro_rules! try_match_next_ident_ignore_ascii_case {
+    ($input:expr, $($pattern:pat $(if $guard:expr)? => $then:expr),+ $(,)?) => {
+        'block: {
+            let location = $input.current_source_location();
+            let ident = match $input.expect_ident() {
+                Ok(ident) => ident,
+                Err(err) => break 'block Err(err),
+            };
+            Ok(cssparser::match_ignore_ascii_case! { ident,
+                $($pattern $(if $guard)? => $then,)+
+                _ => {
+                    break 'block Err(location
+                        .new_basic_unexpected_token_error(cssparser::Token::Ident(ident.clone())))
+                }
+            })
+        }
+    }
+}
+
+use try_match_next_ident_ignore_ascii_case;
+
+#[derive(Debug)]
+pub struct SyntaxError {
+    message: String,
+    location: SourceLocation,
+}
+
+impl<'i> From<BasicParseError<'i>> for SyntaxError {
+    fn from(value: BasicParseError<'i>) -> Self {
+        Self {
+            message: value.kind.to_string(),
+            location: value.location,
+        }
+    }
+}
+
+impl<'i, E: Display> From<ParseError<'i, E>> for SyntaxError {
+    fn from(value: ParseError<'i, E>) -> Self {
+        Self {
+            message: value.kind.to_string(),
+            location: value.location,
+        }
+    }
+}
+
+impl Display for SyntaxError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} at {}:{}",
+            self.message,
+            self.location.line + 1,
+            self.location.column,
+        )
+    }
+}
+
+impl Error for SyntaxError {}

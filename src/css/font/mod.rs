@@ -8,7 +8,10 @@ use cssparser::{match_ignore_ascii_case, serialize_string, ParseError, Parser, T
 
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_string, CssNumber, CssPercentage, CssValue, FromCss};
+use super::{
+    parse_string, try_match_next_ident_ignore_ascii_case, CssNumber, CssPercentage, CssValue,
+    FromCss,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ComputedFontStyle {
@@ -21,9 +24,7 @@ impl FromCss for ComputedFontStyle {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        let location = input.current_source_location();
-        let ident = input.expect_ident()?;
-        Ok(match_ignore_ascii_case! { ident,
+        try_match_next_ident_ignore_ascii_case! { input,
             "normal" => Self::Normal,
             "italic" => Self::Italic,
             "oblique" => {
@@ -35,8 +36,8 @@ impl FromCss for ComputedFontStyle {
                 };
                 Self::Oblique(angle)
             },
-            _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
-        })
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -96,13 +97,11 @@ impl FromCss for ComputedFontVariantCss2 {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        let location = input.current_source_location();
-        let ident = input.expect_ident()?;
-        Ok(match_ignore_ascii_case! { ident,
+        try_match_next_ident_ignore_ascii_case! { input,
             "normal" => Self::Normal,
             "small-caps" => Self::SmallCaps,
-            _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
-        })
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -299,9 +298,7 @@ impl FromCss for ComputedFontStretchCss3 {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
-        let location = input.current_source_location();
-        let ident = input.expect_ident()?;
-        Ok(match_ignore_ascii_case! { ident,
+        try_match_next_ident_ignore_ascii_case! { input,
             "normal" => Self::Normal,
             "ultra-condensed" => Self::UltraCondensed,
             "extra-condensed" => Self::ExtraCondensed,
@@ -311,8 +308,8 @@ impl FromCss for ComputedFontStretchCss3 {
             "expanded" => Self::Expanded,
             "extra-expanded" => Self::ExtraExpanded,
             "ultra-expanded" => Self::UltraExpanded,
-            _ => return Err(location.new_unexpected_token_error(Token::Ident(ident.clone()))),
-        })
+        }
+        .map_err(Into::into)
     }
 }
 
@@ -419,11 +416,17 @@ impl ToCss for ComputedLineHeight {
 }
 
 #[derive(Clone, Debug)]
-pub struct ComputedSpecificFamily {
+pub struct SpecifiedSpecificFamily {
     pub name: Rc<str>,
 }
 
-impl FromCss for ComputedSpecificFamily {
+impl SpecifiedSpecificFamily {
+    pub fn compute(self) -> ComputedSpecificFamily {
+        ComputedSpecificFamily { name: self.name }
+    }
+}
+
+impl FromCss for SpecifiedSpecificFamily {
     type Err = Infallible;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
@@ -444,6 +447,25 @@ impl FromCss for ComputedSpecificFamily {
             name.push_str(ident);
         }
         Ok(Self { name: name.into() })
+    }
+}
+
+impl ToCss for SpecifiedSpecificFamily {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        serialize_string(&self.name, dest)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ComputedSpecificFamily {
+    pub name: Rc<str>,
+}
+
+impl FromCss for ComputedSpecificFamily {
+    type Err = Infallible;
+
+    fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
+        Ok(SpecifiedSpecificFamily::from_css(input)?.compute())
     }
 }
 
@@ -496,17 +518,12 @@ impl FromCss for ComputedGenericFamily {
                     return Err(location.new_unexpected_token_error(Token::Ident(name.clone())));
                 }
                 input.parse_nested_block(|input| {
-                    let ident = input.expect_ident()?;
-                    Ok(match_ignore_ascii_case! { ident,
+                    try_match_next_ident_ignore_ascii_case! { input,
                         "fangsong" => Self::Fangsong,
                         "kai" => Self::Kai,
                         "nastaliq" => Self::Nastaliq,
-                        _ => {
-                            return Err(
-                                location.new_unexpected_token_error(Token::Ident(ident.clone()))
-                            )
-                        }
-                    })
+                    }
+                    .map_err(Into::into)
                 })?
             }
             ref t => return Err(location.new_unexpected_token_error(t.clone())),
@@ -639,9 +656,7 @@ impl FromCss for ComputedFont {
             }
             if stretch.is_none() {
                 if let Ok(v) = input.try_parse(|input| {
-                    let location = input.current_source_location();
-                    let ident = input.expect_ident()?;
-                    Ok(match_ignore_ascii_case! { ident,
+                    try_match_next_ident_ignore_ascii_case! { input,
                         "normal" => ComputedFontStretchCss3::Normal,
                         "ultra-condensed" => ComputedFontStretchCss3::UltraCondensed,
                         "extra-condensed" => ComputedFontStretchCss3::ExtraCondensed,
@@ -651,12 +666,7 @@ impl FromCss for ComputedFont {
                         "expanded" => ComputedFontStretchCss3::Expanded,
                         "extra-expanded" => ComputedFontStretchCss3::ExtraExpanded,
                         "ultra-expanded" => ComputedFontStretchCss3::UltraExpanded,
-                        _ => {
-                            return Err(location.new_unexpected_token_error::<Infallible>(
-                                Token::Ident(ident.clone()),
-                            ))
-                        }
-                    })
+                    }
                 }) {
                     stretch = Some(v);
                     max_attrs -= 1;

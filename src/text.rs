@@ -9,6 +9,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use cssparser::ToCss as _;
+use deno_core::anyhow::Context as _;
 use deno_core::error::{custom_error, type_error};
 use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
@@ -18,13 +19,20 @@ use hashlink::LinkedHashMap;
 use unicase::UniCase;
 use unicode_bidi::{self as bidi, ParagraphBidiInfo};
 
-use super::css::font::{
-    font_face, ComputedFamilyName, ComputedFontFamily, ComputedFontStyle, ComputedFontVariantCaps,
-    ComputedFontWeight, ComputedFontWidth,
+use super::css::font::font_face::{
+    ComputedFontStyleRange, ComputedFontWeightRange, ComputedFontWidthRange, SpecifiedFontDisplay,
+    SpecifiedFontFeatureSettings, SpecifiedFontSource, SpecifiedFontSources,
+    SpecifiedFontStyleRange, SpecifiedFontVariationSettings, SpecifiedFontWeightRange,
+    SpecifiedFontWidthRange, SpecifiedMetricsOverride, SpecifiedMetricsOverrideValue,
+    SpecifiedUnicodeRange,
 };
-use super::css::{FromCss as _, UnicodeRangeSet};
+use super::css::font::{
+    ComputedFamilyName, ComputedFontFamily, ComputedFontStyle, ComputedFontVariantCaps,
+    ComputedFontWeight, ComputedFontWidth, SpecifiedSpecificFamily,
+};
+use super::css::{FromCss as _, SyntaxError, UnicodeRangeSet};
 use super::gc::{borrow_v8, into_v8};
-use super::harfbuzz_ext::FontExt as _;
+use super::harfbuzz_ext::{FaceExt as _, FontExt as _};
 use super::path::Path;
 use super::state::{
     CanvasDirection, CanvasFontKerning, CanvasTextAlign, CanvasTextBaseline, CanvasTextRendering,
@@ -45,13 +53,13 @@ impl FontFaceId {
 }
 
 #[derive(Debug)]
-pub struct FontFaceFamily {
-    specified: font_face::SpecifiedFontFamily,
+pub struct CachedFamily {
+    specified: SpecifiedSpecificFamily,
     casefolded: String,
 }
 
-impl FontFaceFamily {
-    pub fn new(specified: font_face::SpecifiedFontFamily) -> Self {
+impl CachedFamily {
+    pub fn new(specified: SpecifiedSpecificFamily) -> Self {
         let casefolded = UniCase::new(specified.name.as_ref()).to_folded_case();
         Self {
             specified,
@@ -61,13 +69,13 @@ impl FontFaceFamily {
 }
 
 #[derive(Debug)]
-pub struct FontFaceStyle {
-    specified: font_face::SpecifiedFontStyle,
-    computed: font_face::ComputedFontStyle,
+pub struct CachedStyle {
+    specified: SpecifiedFontStyleRange,
+    computed: ComputedFontStyleRange,
 }
 
-impl FontFaceStyle {
-    pub fn new(specified: font_face::SpecifiedFontStyle) -> Self {
+impl CachedStyle {
+    pub fn new(specified: SpecifiedFontStyleRange) -> Self {
         let computed = specified.compute();
         Self {
             specified,
@@ -77,13 +85,13 @@ impl FontFaceStyle {
 }
 
 #[derive(Debug)]
-pub struct FontFaceWeight {
-    specified: font_face::SpecifiedFontWeight,
-    computed: font_face::ComputedFontWeight,
+pub struct CachedWeight {
+    specified: SpecifiedFontWeightRange,
+    computed: ComputedFontWeightRange,
 }
 
-impl FontFaceWeight {
-    pub fn new(specified: font_face::SpecifiedFontWeight) -> Self {
+impl CachedWeight {
+    pub fn new(specified: SpecifiedFontWeightRange) -> Self {
         let computed = specified.compute();
         Self {
             specified,
@@ -93,13 +101,13 @@ impl FontFaceWeight {
 }
 
 #[derive(Debug)]
-pub struct FontFaceWidth {
-    specified: font_face::SpecifiedFontWidth,
-    computed: font_face::ComputedFontWidth,
+pub struct CachedWidth {
+    specified: SpecifiedFontWidthRange,
+    computed: ComputedFontWidthRange,
 }
 
-impl FontFaceWidth {
-    pub fn new(specified: font_face::SpecifiedFontWidth) -> Self {
+impl CachedWidth {
+    pub fn new(specified: SpecifiedFontWidthRange) -> Self {
         let computed = specified.compute();
         Self {
             specified,
@@ -109,13 +117,13 @@ impl FontFaceWidth {
 }
 
 #[derive(Debug)]
-pub struct FontFaceUnicodeRange {
-    specified: font_face::SpecifiedUnicodeRange,
+pub struct CachedUnicodeRange {
+    specified: SpecifiedUnicodeRange,
     simplified: UnicodeRangeSet,
 }
 
-impl FontFaceUnicodeRange {
-    pub fn new(specified: font_face::SpecifiedUnicodeRange) -> Self {
+impl CachedUnicodeRange {
+    pub fn new(specified: SpecifiedUnicodeRange) -> Self {
         let simplified = UnicodeRangeSet::new(specified.range_list.iter().cloned());
         Self {
             specified,
@@ -124,8 +132,9 @@ impl FontFaceUnicodeRange {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum FontFaceState {
+    #[default]
     Unloaded,
     Loaded(hb::Shared<hb::Font<'static>>),
     Errored,
@@ -133,30 +142,148 @@ pub enum FontFaceState {
 
 #[derive(Debug)]
 pub struct FontFaceData {
-    family: FontFaceFamily,
-    style: FontFaceStyle,
-    weight: FontFaceWeight,
-    width: FontFaceWidth,
-    unicode_range: FontFaceUnicodeRange,
+    family: CachedFamily,
+    style: CachedStyle,
+    weight: CachedWeight,
+    width: CachedWidth,
+    unicode_range: CachedUnicodeRange,
+    feature_settings: SpecifiedFontFeatureSettings,
+    variation_settings: SpecifiedFontVariationSettings,
+    display: SpecifiedFontDisplay,
+    ascent_override: SpecifiedMetricsOverride,
+    descent_override: SpecifiedMetricsOverride,
+    line_gap_override: SpecifiedMetricsOverride,
     state: FontFaceState,
 }
 
 impl FontFaceData {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        family: font_face::SpecifiedFontFamily,
-        style: font_face::SpecifiedFontStyle,
-        weight: font_face::SpecifiedFontWeight,
-        width: font_face::SpecifiedFontWidth,
-        unicode_range: font_face::SpecifiedUnicodeRange,
+        family: SpecifiedSpecificFamily,
+        style: SpecifiedFontStyleRange,
+        weight: SpecifiedFontWeightRange,
+        width: SpecifiedFontWidthRange,
+        unicode_range: SpecifiedUnicodeRange,
+        feature_settings: SpecifiedFontFeatureSettings,
+        variation_settings: SpecifiedFontVariationSettings,
+        display: SpecifiedFontDisplay,
+        ascent_override: SpecifiedMetricsOverride,
+        descent_override: SpecifiedMetricsOverride,
+        line_gap_override: SpecifiedMetricsOverride,
         state: FontFaceState,
     ) -> Self {
         Self {
-            family: FontFaceFamily::new(family),
-            style: FontFaceStyle::new(style),
-            weight: FontFaceWeight::new(weight),
-            width: FontFaceWidth::new(width),
-            unicode_range: FontFaceUnicodeRange::new(unicode_range),
+            family: CachedFamily::new(family),
+            style: CachedStyle::new(style),
+            weight: CachedWeight::new(weight),
+            width: CachedWidth::new(width),
+            unicode_range: CachedUnicodeRange::new(unicode_range),
+            feature_settings,
+            variation_settings,
+            display,
+            ascent_override,
+            descent_override,
+            line_gap_override,
             state,
+        }
+    }
+
+    pub fn family(&self) -> SpecifiedSpecificFamily {
+        self.family.specified.clone()
+    }
+
+    pub fn set_family(&mut self, value: SpecifiedSpecificFamily) {
+        self.family = CachedFamily::new(value);
+    }
+
+    pub fn style(&self) -> SpecifiedFontStyleRange {
+        self.style.specified
+    }
+
+    pub fn set_style(&mut self, value: SpecifiedFontStyleRange) {
+        self.style = CachedStyle::new(value);
+    }
+
+    pub fn weight(&self) -> SpecifiedFontWeightRange {
+        self.weight.specified
+    }
+
+    pub fn set_weight(&mut self, value: SpecifiedFontWeightRange) {
+        self.weight = CachedWeight::new(value);
+    }
+
+    pub fn width(&self) -> SpecifiedFontWidthRange {
+        self.width.specified
+    }
+
+    pub fn set_width(&mut self, value: SpecifiedFontWidthRange) {
+        self.width = CachedWidth::new(value);
+    }
+
+    pub fn unicode_range(&self) -> SpecifiedUnicodeRange {
+        self.unicode_range.specified.clone()
+    }
+
+    pub fn set_unicode_range(&mut self, value: SpecifiedUnicodeRange) {
+        self.unicode_range = CachedUnicodeRange::new(value);
+    }
+
+    pub fn feature_settings(&self) -> SpecifiedFontFeatureSettings {
+        self.feature_settings.clone()
+    }
+
+    pub fn set_feature_settings(&mut self, value: SpecifiedFontFeatureSettings) {
+        self.feature_settings = value;
+    }
+
+    pub fn variation_settings(&self) -> SpecifiedFontVariationSettings {
+        self.variation_settings.clone()
+    }
+
+    pub fn set_variation_settings(&mut self, value: SpecifiedFontVariationSettings) {
+        self.variation_settings = value;
+    }
+
+    pub fn display(&self) -> SpecifiedFontDisplay {
+        self.display
+    }
+
+    pub fn set_display(&mut self, value: SpecifiedFontDisplay) {
+        self.display = value;
+    }
+
+    pub fn ascent_override(&self) -> SpecifiedMetricsOverride {
+        self.ascent_override
+    }
+
+    pub fn set_ascent_override(&mut self, value: SpecifiedMetricsOverride) {
+        self.ascent_override = value;
+    }
+
+    pub fn descent_override(&self) -> SpecifiedMetricsOverride {
+        self.descent_override
+    }
+
+    pub fn set_descent_override(&mut self, value: SpecifiedMetricsOverride) {
+        self.descent_override = value;
+    }
+
+    pub fn line_gap_override(&self) -> SpecifiedMetricsOverride {
+        self.line_gap_override
+    }
+
+    pub fn set_line_gap_override(&mut self, value: SpecifiedMetricsOverride) {
+        self.line_gap_override = value;
+    }
+
+    pub fn load(&mut self, blob: &[u8]) -> anyhow::Result<()> {
+        match self.state {
+            FontFaceState::Unloaded => {
+                let blob = fontsan::process(blob).map_err(|_| type_error("Invalid font data"))?;
+                self.state = FontFaceState::Loaded(hb::Font::new(hb::Face::new(blob, 0)).into());
+                Ok(())
+            }
+            _ => unreachable!(),
         }
     }
 }
@@ -164,14 +291,14 @@ impl FontFaceData {
 #[derive(Debug)]
 pub struct FontFace {
     id: FontFaceId,
-    data: Rc<RefCell<FontFaceData>>,
+    data: RefCell<FontFaceData>,
 }
 
 impl FontFace {
     pub fn new(data: FontFaceData) -> Self {
         Self {
             id: FontFaceId::new(),
-            data: Rc::new(RefCell::new(data)),
+            data: RefCell::new(data),
         }
     }
 
@@ -179,66 +306,8 @@ impl FontFace {
         self.id
     }
 
-    pub fn family(&self) -> font_face::SpecifiedFontFamily {
-        let data = self.data.borrow();
-        data.family.specified.clone()
-    }
-
-    pub fn set_family(&self, value: font_face::SpecifiedFontFamily) {
-        let mut data = self.data.borrow_mut();
-        data.family = FontFaceFamily::new(value);
-    }
-
-    pub fn style(&self) -> font_face::SpecifiedFontStyle {
-        let data = self.data.borrow();
-        data.style.specified
-    }
-
-    pub fn set_style(&self, value: font_face::SpecifiedFontStyle) {
-        let mut data = self.data.borrow_mut();
-        data.style = FontFaceStyle::new(value);
-    }
-
-    pub fn weight(&self) -> font_face::SpecifiedFontWeight {
-        let data = self.data.borrow();
-        data.weight.specified
-    }
-
-    pub fn set_weight(&self, value: font_face::SpecifiedFontWeight) {
-        let mut data = self.data.borrow_mut();
-        data.weight = FontFaceWeight::new(value);
-    }
-
-    pub fn width(&self) -> font_face::SpecifiedFontWidth {
-        let data = self.data.borrow();
-        data.width.specified
-    }
-
-    pub fn set_width(&self, value: font_face::SpecifiedFontWidth) {
-        let mut data = self.data.borrow_mut();
-        data.width = FontFaceWidth::new(value);
-    }
-
-    pub fn unicode_range(&self) -> font_face::SpecifiedUnicodeRange {
-        let data = self.data.borrow();
-        data.unicode_range.specified.clone()
-    }
-
-    pub fn set_unicode_range(&self, value: font_face::SpecifiedUnicodeRange) {
-        let mut data = self.data.borrow_mut();
-        data.unicode_range = FontFaceUnicodeRange::new(value);
-    }
-
-    pub fn load(&self, blob: &[u8]) -> anyhow::Result<()> {
-        let mut data = self.data.borrow_mut();
-        match data.state {
-            FontFaceState::Unloaded => {
-                let blob = fontsan::process(blob).map_err(|_| type_error("Invalid font data"))?;
-                data.state = FontFaceState::Loaded(hb::Font::new(hb::Face::new(blob, 0)).into());
-                Ok(())
-            }
-            _ => unreachable!(),
-        }
+    pub fn data(&self) -> &RefCell<FontFaceData> {
+        &self.data
     }
 }
 
@@ -251,7 +320,7 @@ pub struct FontAttributes {
 
 #[derive(Debug, Default)]
 pub struct FontFaceSet {
-    entries: LinkedHashMap<FontFaceId, Rc<RefCell<FontFaceData>>>,
+    entries: LinkedHashMap<FontFaceId, Rc<FontFace>>,
 }
 
 impl FontFaceSet {
@@ -259,8 +328,8 @@ impl FontFaceSet {
         Self::default()
     }
 
-    pub fn insert(&mut self, font: &FontFace) {
-        self.entries.insert(font.id, font.data.clone());
+    pub fn insert(&mut self, font: Rc<FontFace>) {
+        self.entries.insert(font.id, font);
     }
 
     pub fn remove(&mut self, id: FontFaceId) {
@@ -278,10 +347,10 @@ impl FontFaceSet {
         }
     }
 
-    pub fn match_(&self, family: &ComputedFamilyName, attrs: FontAttributes) -> Vec<FontFace> {
+    pub fn match_(&self, family: &ComputedFamilyName, attrs: FontAttributes) -> Vec<Rc<FontFace>> {
         fn width_distance(
             ComputedFontWidth(desired): ComputedFontWidth,
-            font_face::ComputedFontWidth(min, max): font_face::ComputedFontWidth,
+            ComputedFontWidthRange(min, max): ComputedFontWidthRange,
         ) -> (u8, f32) {
             if desired > 1.0 {
                 match (min > desired, max < desired) {
@@ -300,16 +369,13 @@ impl FontFaceSet {
             }
         }
 
-        fn style_distance(
-            desired: ComputedFontStyle,
-            range: font_face::ComputedFontStyle,
-        ) -> (u8, f32) {
+        fn style_distance(desired: ComputedFontStyle, range: ComputedFontStyleRange) -> (u8, f32) {
             match (desired, range) {
-                (ComputedFontStyle::Normal, font_face::ComputedFontStyle::Normal)
-                | (ComputedFontStyle::Italic, font_face::ComputedFontStyle::Italic) => {
+                (ComputedFontStyle::Normal, ComputedFontStyleRange::Normal)
+                | (ComputedFontStyle::Italic, ComputedFontStyleRange::Italic) => {
                     return (0, 0.0);
                 }
-                (ComputedFontStyle::Normal, font_face::ComputedFontStyle::Italic) => {
+                (ComputedFontStyle::Normal, ComputedFontStyleRange::Italic) => {
                     return (3, 0.0);
                 }
                 _ => {}
@@ -320,9 +386,9 @@ impl FontFaceSet {
                 ComputedFontStyle::Oblique(angle) => angle.deg,
             };
             let (min, max) = match range {
-                font_face::ComputedFontStyle::Normal => (0.0, 0.0),
-                font_face::ComputedFontStyle::Italic => (11.0, 11.0),
-                font_face::ComputedFontStyle::Oblique(min, max) => (min.deg, max.deg),
+                ComputedFontStyleRange::Normal => (0.0, 0.0),
+                ComputedFontStyleRange::Italic => (11.0, 11.0),
+                ComputedFontStyleRange::Oblique(min, max) => (min.deg, max.deg),
             };
             if desired >= 11.0 {
                 match (min > desired, max < desired) {
@@ -357,7 +423,7 @@ impl FontFaceSet {
 
         fn weight_distance(
             ComputedFontWeight(desired): ComputedFontWeight,
-            font_face::ComputedFontWeight(min, max): font_face::ComputedFontWeight,
+            ComputedFontWeightRange(min, max): ComputedFontWeightRange,
         ) -> (u8, f32) {
             if desired > 500.0 {
                 match (min > desired, max < desired) {
@@ -386,8 +452,8 @@ impl FontFaceSet {
         let family = UniCase::new(Self::resolve_family_name(family)).to_folded_case();
         let mut result = Vec::new();
         let mut min_distance = [(u8::MAX, f32::INFINITY); 3];
-        for (&id, data_rc) in self.entries.iter().rev() {
-            let data = data_rc.borrow();
+        for font in self.entries.values().rev() {
+            let data = font.data.borrow();
             if family != data.family.casefolded {
                 continue;
             }
@@ -400,10 +466,7 @@ impl FontFaceSet {
                 min_distance = distance;
                 result.clear();
             }
-            result.push(FontFace {
-                id,
-                data: data_rc.clone(),
-            });
+            result.push(font.clone());
         }
         result
     }
@@ -412,21 +475,24 @@ impl FontFaceSet {
         &self,
         family: &ComputedFontFamily,
         attrs: FontAttributes,
-    ) -> Option<FontFace> {
+    ) -> Option<Rc<FontFace>> {
         family.family_list.iter().find_map(|family| {
             self.match_(family, attrs).into_iter().find(|font| {
                 let data = font.data.borrow();
-                data.unicode_range.simplified.contains(' ' as u32)
+                matches!(
+                    data.state,
+                    FontFaceState::Loaded(_) if data.unicode_range.simplified.contains(' ' as u32),
+                )
             })
         })
     }
 
-    pub fn loaded_font_for_char(
+    pub fn find_available_font_for_char(
         &self,
         c: char,
         family: &ComputedFontFamily,
         attrs: FontAttributes,
-    ) -> Option<FontFace> {
+    ) -> Option<Rc<FontFace>> {
         family.family_list.iter().find_map(|family| {
             self.match_(family, attrs).into_iter().find(|font| {
                 let data = font.data.borrow();
@@ -440,12 +506,12 @@ impl FontFaceSet {
         })
     }
 
-    pub fn fonts_for_str(
+    pub fn find_all_fonts_for_str(
         &self,
         s: &str,
         family: &ComputedFontFamily,
         attrs: FontAttributes,
-    ) -> Vec<FontFace> {
+    ) -> Vec<Rc<FontFace>> {
         family
             .family_list
             .iter()
@@ -569,25 +635,29 @@ struct FontMetrics {
 }
 
 impl FontMetrics {
-    pub fn new(font: &hb::Font) -> Self {
-        let upem = font.face().upem() as f32;
-        let ascent = match font.get_position(b"hasc") {
-            Some(v) => v as f32,
-            None => upem * 0.8,
-        };
-        let descent = match font.get_position(b"hdsc") {
-            Some(v) => v as f32,
-            None => upem * -0.2,
-        };
+    pub fn new(
+        font: &hb::Font,
+        ascent_override: Option<f32>,
+        descent_override: Option<f32>,
+    ) -> Self {
+        let unit = 1.0 / font.face().upem() as f32;
+        let ascent = ascent_override.unwrap_or_else(|| match font.get_position(b"hasc") {
+            Some(v) => v as f32 * unit,
+            None => 0.8,
+        });
+        let descent = descent_override.unwrap_or_else(|| match font.get_position(b"hdsc") {
+            Some(v) => v as f32 * unit,
+            None => -0.2,
+        });
         let os2_ascent = match font.get_position(b"Oasc") {
-            Some(v) => v as f32,
-            None => upem * 0.8,
+            Some(v) => v as f32 * unit,
+            None => 0.8,
         };
         let os2_descent = match font.get_position(b"Odsc") {
-            Some(v) => v as f32,
-            None => upem * -0.2,
+            Some(v) => v as f32 * unit,
+            None => -0.2,
         };
-        let em_scale = upem / (os2_ascent - os2_descent);
+        let em_scale = 1.0 / (os2_ascent - os2_descent);
         let em_ascent = os2_ascent * em_scale;
         let em_descent = os2_descent * em_scale;
         let hanging_baseline = match font.get_generic_baseline(b"hang") {
@@ -676,7 +746,7 @@ impl TextMetrics {
 struct TextRun {
     range: Range<usize>,
     direction: Direction,
-    font: Option<FontFace>,
+    font: Option<Rc<FontFace>>,
 }
 
 fn split_text_to_runs(
@@ -698,7 +768,7 @@ fn split_text_to_runs(
             let mut font_mapping = text[range.clone()].char_indices().map(|(i, c)| {
                 (
                     range.start + i,
-                    fonts.loaded_font_for_char(c, font_family, font_attrs),
+                    fonts.find_available_font_for_char(c, font_family, font_attrs),
                 )
             });
             if let Some((mut start, mut font)) = font_mapping.next() {
@@ -754,51 +824,6 @@ pub fn prepare_text(
         drawing_state.text_rendering,
         CanvasTextRendering::OptimizeSpeed,
     );
-    let mut features = Vec::new();
-    match drawing_state.font_variant_caps {
-        ComputedFontVariantCaps::Normal => {}
-        // TODO synthesize `small-caps` and `all-small-caps` if unsupported by font
-        ComputedFontVariantCaps::SmallCaps => {
-            features.push(hb::Feature::new(b"smcp", 1, ..));
-        }
-        ComputedFontVariantCaps::AllSmallCaps => {
-            features.extend([
-                hb::Feature::new(b"c2sc", 1, ..),
-                hb::Feature::new(b"smcp", 1, ..),
-            ]);
-        }
-        ComputedFontVariantCaps::PetiteCaps => {
-            features.push(hb::Feature::new(b"pcap", 1, ..));
-        }
-        ComputedFontVariantCaps::AllPetiteCaps => {
-            features.extend([
-                hb::Feature::new(b"c2pc", 1, ..),
-                hb::Feature::new(b"pcap", 1, ..),
-            ]);
-        }
-        ComputedFontVariantCaps::Unicase => {
-            features.push(hb::Feature::new(b"unic", 1, ..));
-        }
-        ComputedFontVariantCaps::TitlingCaps => {
-            features.push(hb::Feature::new(b"titl", 1, ..));
-        }
-    }
-    if match drawing_state.font_kerning {
-        CanvasFontKerning::Auto => optimize_speed,
-        CanvasFontKerning::Normal => false,
-        CanvasFontKerning::None => true,
-    } {
-        features.push(hb::Feature::new(b"kern", 0, ..));
-    }
-    if letter_spacing.px != 0.0 || optimize_speed {
-        features.extend([
-            hb::Feature::new(b"liga", 0, ..),
-            hb::Feature::new(b"clig", 0, ..),
-            hb::Feature::new(b"calt", 0, ..),
-        ])
-    }
-    // TODO font weight
-    // TODO font stretch
     let direction = match drawing_state.direction {
         CanvasDirection::Ltr | CanvasDirection::Inherit => Direction::Ltr,
         CanvasDirection::Rtl => Direction::Rtl,
@@ -825,34 +850,123 @@ pub fn prepare_text(
         let Some(font) = run.font else {
             return buf;
         };
-        let font = font_cache.entry(font.id).or_insert_with(|| {
+        let Some((ref font, ref features)) = *font_cache.entry(font.id).or_insert_with(|| {
             let data = font.data.borrow();
             match data.state {
                 FontFaceState::Loaded(ref font) => {
-                    let mut font = hb::Font::create_sub_font(font.clone());
-                    if matches!(data.style.computed, font_face::ComputedFontStyle::Normal) {
-                        match drawing_state.font_style {
-                            ComputedFontStyle::Normal => {}
-                            ComputedFontStyle::Italic => {
-                                // TODO use `ital` feature if supported
+                    // TODO `set_synthetic_bold` does not work on subfonts
+                    // let mut font = hb::Font::create_sub_font(font.clone());
+                    let mut font = hb::Font::new(font.face());
+                    let face = font.face();
+                    let mut features = HashMap::<hb::Tag, _>::new();
+                    if optimize_speed {
+                        features.insert(b"kern".into(), 0);
+                        features.insert(b"liga".into(), 0);
+                        features.insert(b"clig".into(), 0);
+                        features.insert(b"calt".into(), 0);
+                    }
+                    if let Some(ref list) = data.feature_settings.feature_tag_value_list {
+                        for entry in list.iter() {
+                            features.insert((&entry.tag).into(), entry.value);
+                        }
+                    }
+                    match drawing_state.font_variant_caps {
+                        ComputedFontVariantCaps::Normal => {}
+                        // TODO synthesize `small-caps` and `all-small-caps` if unsupported by font
+                        ComputedFontVariantCaps::SmallCaps => {
+                            features.insert(b"smcp".into(), 1);
+                        }
+                        ComputedFontVariantCaps::AllSmallCaps => {
+                            features.insert(b"c2sc".into(), 1);
+                            features.insert(b"smcp".into(), 1);
+                        }
+                        ComputedFontVariantCaps::PetiteCaps => {
+                            features.insert(b"pcap".into(), 1);
+                        }
+                        ComputedFontVariantCaps::AllPetiteCaps => {
+                            features.insert(b"c2pc".into(), 1);
+                            features.insert(b"pcap".into(), 1);
+                        }
+                        ComputedFontVariantCaps::Unicase => {
+                            features.insert(b"unic".into(), 1);
+                        }
+                        ComputedFontVariantCaps::TitlingCaps => {
+                            features.insert(b"titl".into(), 1);
+                        }
+                    }
+                    match drawing_state.font_kerning {
+                        CanvasFontKerning::Auto => {}
+                        CanvasFontKerning::Normal => {
+                            features.insert(b"kern".into(), 1);
+                        }
+                        CanvasFontKerning::None => {
+                            features.insert(b"kern".into(), 0);
+                        }
+                    }
+                    if letter_spacing.px != 0.0 {
+                        features.insert(b"liga".into(), 0);
+                        features.insert(b"clig".into(), 0);
+                        features.insert(b"dlig".into(), 0);
+                        features.insert(b"hlig".into(), 0);
+                        features.insert(b"calt".into(), 0);
+                    }
+                    let features = features
+                        .into_iter()
+                        .map(|(tag, value)| hb::Feature::new(tag, value, ..))
+                        .collect::<Box<[_]>>();
+                    let mut variations = HashMap::new();
+                    let weight = drawing_state.font_weight.0;
+                    if let Some(info) = face.find_variation_axis_info(b"wght") {
+                        variations.insert(info.tag, weight);
+                    } else {
+                        let embolden = (weight - data.weight.computed.1).max(0.0) * (1.0 / 14400.0);
+                        font.set_synthetic_bold(embolden, embolden, false);
+                    }
+                    let width = drawing_state.font_stretch.modernize().0;
+                    if let Some(info) = face.find_variation_axis_info(b"wdth") {
+                        variations.insert(info.tag, width * 100.0);
+                    }
+                    match drawing_state.font_style {
+                        ComputedFontStyle::Normal => {}
+                        ComputedFontStyle::Italic => {
+                            if let Some(info) = face.find_variation_axis_info(b"ital") {
+                                variations.insert(info.tag, 1.0);
+                            } else if data.style.computed == ComputedFontStyleRange::Normal {
                                 font.set_synthetic_slant(0.25);
                             }
-                            ComputedFontStyle::Oblique(angle) => {
-                                // TODO use `slnt` feature if supported
-                                font.set_synthetic_slant(angle.radians().tan())
+                        }
+                        ComputedFontStyle::Oblique(angle) => {
+                            if let Some(info) = face.find_variation_axis_info(b"slnt") {
+                                variations.insert(info.tag, -angle.deg);
+                            } else if data.style.computed == ComputedFontStyleRange::Normal {
+                                font.set_synthetic_slant(angle.radians().tan());
                             }
                         }
                     }
-                    font
+                    if let Some(ref list) = data.variation_settings.variation_value_list {
+                        for entry in list.iter() {
+                            if let Some(info) = face.find_variation_axis_info(&entry.tag) {
+                                variations.insert(info.tag, entry.value);
+                            }
+                        }
+                    }
+                    let variations = variations
+                        .into_iter()
+                        .map(|(tag, value)| hb::Variation::new(tag, value))
+                        .collect::<Box<[_]>>();
+                    font.set_variations(&variations);
+                    Some((font, features))
                 }
-                _ => hb::Font::empty(),
+                _ => None,
             }
-        });
+        }) else {
+            return buf;
+        };
         let scale = font_size.px / font.face().upem() as f32;
         let buf = buf
             .add_str_item(&text, &text[run.range])
             .set_direction(run.direction.to_harfbuzz());
-        let buf = hb::shape(font, buf, &features);
+        let buf = hb::shape(font, buf, features);
         let positions = buf.get_glyph_positions();
         let infos = buf.get_glyph_infos();
         let mut cluster_has_nonzero_advance = false;
@@ -902,8 +1016,16 @@ pub fn prepare_text(
             let data = font.data.borrow();
             match data.state {
                 FontFaceState::Loaded(ref font) => {
-                    let scale = font_size.px / font.face().upem() as f32;
-                    FontMetrics::new(font).scale(scale * compression)
+                    let ascent_override = match data.ascent_override.0 {
+                        SpecifiedMetricsOverrideValue::Normal => None,
+                        SpecifiedMetricsOverrideValue::Percentage(v) => Some(v),
+                    };
+                    let descent_override = match data.descent_override.0 {
+                        SpecifiedMetricsOverrideValue::Normal => None,
+                        SpecifiedMetricsOverrideValue::Percentage(v) => Some(v),
+                    };
+                    FontMetrics::new(font, ascent_override, descent_override)
+                        .scale(font_size.px * compression)
                 }
                 _ => FontMetrics::empty(),
             }
@@ -943,88 +1065,76 @@ pub fn prepare_text(
     (path, text_metrics)
 }
 
-fn parse_source_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedSource> {
-    font_face::SpecifiedSource::from_css_string(css).map_err(|err| {
-        custom_error(
-            "DOMExceptionSyntaxError",
-            format!(
-                "Invalid font source '{css}': {} at {}:{}",
-                err.kind,
-                err.location.line + 1,
-                err.location.column,
-            ),
-        )
-    })
+fn parse_source_or_throw(css: &str) -> anyhow::Result<SpecifiedFontSources> {
+    SpecifiedFontSources::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font source '{css}'"))
 }
 
-fn parse_family_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontFamily> {
-    font_face::SpecifiedFontFamily::from_css_string(css).map_err(|err| {
-        custom_error(
-            "DOMExceptionSyntaxError",
-            format!(
-                "Invalid family name '{css}': {} at {}:{}",
-                err.kind,
-                err.location.line + 1,
-                err.location.column,
-            ),
-        )
-    })
+fn parse_family_or_throw(css: &str) -> anyhow::Result<SpecifiedSpecificFamily> {
+    SpecifiedSpecificFamily::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font family name '{css}'"))
 }
 
-fn parse_style_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontStyle> {
-    font_face::SpecifiedFontStyle::from_css_string(css).map_err(|err| {
-        custom_error(
-            "DOMExceptionSyntaxError",
-            format!(
-                "Invalid font style range '{css}': {} at {}:{}",
-                err.kind,
-                err.location.line + 1,
-                err.location.column,
-            ),
-        )
-    })
+fn parse_style_or_throw(css: &str) -> anyhow::Result<SpecifiedFontStyleRange> {
+    SpecifiedFontStyleRange::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font style range '{css}'"))
 }
 
-fn parse_weight_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontWeight> {
-    font_face::SpecifiedFontWeight::from_css_string(css).map_err(|err| {
-        custom_error(
-            "DOMExceptionSyntaxError",
-            format!(
-                "Invalid font weight range '{css}': {} at {}:{}",
-                err.kind,
-                err.location.line + 1,
-                err.location.column,
-            ),
-        )
-    })
+fn parse_weight_or_throw(css: &str) -> anyhow::Result<SpecifiedFontWeightRange> {
+    SpecifiedFontWeightRange::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font weight range '{css}'"))
 }
 
-fn parse_stretch_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedFontWidth> {
-    font_face::SpecifiedFontWidth::from_css_string(css).map_err(|err| {
-        custom_error(
-            "DOMExceptionSyntaxError",
-            format!(
-                "Invalid font width range '{css}': {} at {}:{}",
-                err.kind,
-                err.location.line + 1,
-                err.location.column,
-            ),
-        )
-    })
+fn parse_stretch_or_throw(css: &str) -> anyhow::Result<SpecifiedFontWidthRange> {
+    SpecifiedFontWidthRange::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font width range '{css}'"))
 }
 
-fn parse_unicode_range_or_throw(css: &str) -> anyhow::Result<font_face::SpecifiedUnicodeRange> {
-    font_face::SpecifiedUnicodeRange::from_css_string(css).map_err(|err| {
-        custom_error(
-            "DOMExceptionSyntaxError",
-            format!(
-                "Invalid unicode range '{css}': {} at {}:{}",
-                err.kind,
-                err.location.line + 1,
-                err.location.column,
-            ),
-        )
-    })
+fn parse_unicode_range_or_throw(css: &str) -> anyhow::Result<SpecifiedUnicodeRange> {
+    SpecifiedUnicodeRange::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid unicode range '{css}'"))
+}
+
+fn parse_feature_settings_or_throw(css: &str) -> anyhow::Result<SpecifiedFontFeatureSettings> {
+    SpecifiedFontFeatureSettings::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font feature settings '{css}'"))
+}
+
+fn parse_variation_settings_or_throw(css: &str) -> anyhow::Result<SpecifiedFontVariationSettings> {
+    SpecifiedFontVariationSettings::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font variation settings '{css}'"))
+}
+
+fn parse_display_or_throw(css: &str) -> anyhow::Result<SpecifiedFontDisplay> {
+    SpecifiedFontDisplay::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font display policy '{css}'"))
+}
+
+fn parse_ascent_override_or_throw(css: &str) -> anyhow::Result<SpecifiedMetricsOverride> {
+    SpecifiedMetricsOverride::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid ascent override '{css}'"))
+}
+
+fn parse_descent_override_or_throw(css: &str) -> anyhow::Result<SpecifiedMetricsOverride> {
+    SpecifiedMetricsOverride::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid descent override '{css}'"))
+}
+
+fn parse_line_gap_override_or_throw(css: &str) -> anyhow::Result<SpecifiedMetricsOverride> {
+    SpecifiedMetricsOverride::from_css_string(css)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid line gap override '{css}'"))
 }
 
 #[op2]
@@ -1032,8 +1142,8 @@ fn parse_unicode_range_or_throw(css: &str) -> anyhow::Result<font_face::Specifie
 pub fn op_canvas_2d_font_face_select_source(#[string] source: &str) -> anyhow::Result<String> {
     for source in parse_source_or_throw(source)?.font_source_list.iter() {
         match *source {
-            font_face::SpecifiedFontSource::Url(ref url) => return Ok((**url).to_owned()),
-            font_face::SpecifiedFontSource::Local(_) => {}
+            SpecifiedFontSource::Url(ref url) => return Ok((**url).to_owned()),
+            SpecifiedFontSource::Local(_) => {}
         }
     }
     // TODO implement local font fallback
@@ -1060,20 +1170,20 @@ pub fn op_canvas_2d_font_face_new<'a>(
     #[string] descent_override: String,
     #[string] line_gap_override: String,
 ) -> anyhow::Result<v8::Local<'a, v8::External>> {
-    let result = FontFace::new(FontFaceData::new(
+    let result = Rc::new(FontFace::new(FontFaceData::new(
         parse_family_or_throw(&family)?,
         parse_style_or_throw(&style)?,
         parse_weight_or_throw(&weight)?,
         parse_stretch_or_throw(&stretch)?,
         parse_unicode_range_or_throw(&unicode_range)?,
-        // TODO parse `feature_settings`
-        // TODO parse `variation_settings`
-        // TODO parse `display`
-        // TODO parse `ascent_override`
-        // TODO parse `descent_override`
-        // TODO parse `line_gap_override`
+        parse_feature_settings_or_throw(&feature_settings)?,
+        parse_variation_settings_or_throw(&variation_settings)?,
+        parse_display_or_throw(&display)?,
+        parse_ascent_override_or_throw(&ascent_override)?,
+        parse_descent_override_or_throw(&descent_override)?,
+        parse_line_gap_override_or_throw(&line_gap_override)?,
         FontFaceState::Unloaded,
-    ));
+    )));
     Ok(into_v8(state, scope, result))
 }
 
@@ -1082,22 +1192,29 @@ pub fn op_canvas_2d_font_face_errored<'a>(
     scope: &mut v8::HandleScope<'a>,
     state: &OpState,
 ) -> v8::Local<'a, v8::External> {
-    let result = FontFace::new(FontFaceData::new(
-        font_face::SpecifiedFontFamily { name: "".into() },
-        font_face::SpecifiedFontStyle::default(),
-        font_face::SpecifiedFontWeight::default(),
-        font_face::SpecifiedFontWidth::default(),
-        font_face::SpecifiedUnicodeRange::default(),
+    let result = Rc::new(FontFace::new(FontFaceData::new(
+        SpecifiedSpecificFamily { name: "".into() },
+        SpecifiedFontStyleRange::default(),
+        SpecifiedFontWeightRange::default(),
+        SpecifiedFontWidthRange::default(),
+        SpecifiedUnicodeRange::default(),
+        SpecifiedFontFeatureSettings::default(),
+        SpecifiedFontVariationSettings::default(),
+        SpecifiedFontDisplay::default(),
+        SpecifiedMetricsOverride::default(),
+        SpecifiedMetricsOverride::default(),
+        SpecifiedMetricsOverride::default(),
         FontFaceState::Errored,
-    ));
+    )));
     into_v8(state, scope, result)
 }
 
 #[op2]
 #[string]
 pub fn op_canvas_2d_font_face_family(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<FontFace>(state, this);
-    this.family().to_css_string()
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.family().to_css_string()
 }
 
 #[op2(fast)]
@@ -1106,17 +1223,19 @@ pub fn op_canvas_2d_font_face_set_family(
     this: *const c_void,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<FontFace>(state, this);
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_family_or_throw(value)?;
-    this.set_family(value);
+    let mut data = this.data().borrow_mut();
+    data.set_family(value);
     Ok(())
 }
 
 #[op2]
 #[string]
 pub fn op_canvas_2d_font_face_style(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<FontFace>(state, this);
-    this.style().to_css_string()
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.style().to_css_string()
 }
 
 #[op2(fast)]
@@ -1125,17 +1244,19 @@ pub fn op_canvas_2d_font_face_set_style(
     this: *const c_void,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<FontFace>(state, this);
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_style_or_throw(value)?;
-    this.set_style(value);
+    let mut data = this.data().borrow_mut();
+    data.set_style(value);
     Ok(())
 }
 
 #[op2]
 #[string]
 pub fn op_canvas_2d_font_face_weight(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<FontFace>(state, this);
-    this.weight().to_css_string()
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.weight().to_css_string()
 }
 
 #[op2(fast)]
@@ -1144,17 +1265,19 @@ pub fn op_canvas_2d_font_face_set_weight(
     this: *const c_void,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<FontFace>(state, this);
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_weight_or_throw(value)?;
-    this.set_weight(value);
+    let mut data = this.data().borrow_mut();
+    data.set_weight(value);
     Ok(())
 }
 
 #[op2]
 #[string]
 pub fn op_canvas_2d_font_face_stretch(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<FontFace>(state, this);
-    this.width().to_css_string()
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.width().to_css_string()
 }
 
 #[op2(fast)]
@@ -1163,17 +1286,19 @@ pub fn op_canvas_2d_font_face_set_stretch(
     this: *const c_void,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<FontFace>(state, this);
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_stretch_or_throw(value)?;
-    this.set_width(value);
+    let mut data = this.data().borrow_mut();
+    data.set_width(value);
     Ok(())
 }
 
 #[op2]
 #[string]
 pub fn op_canvas_2d_font_face_unicode_range(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<FontFace>(state, this);
-    this.unicode_range().to_css_string()
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.unicode_range().to_css_string()
 }
 
 #[op2(fast)]
@@ -1182,9 +1307,136 @@ pub fn op_canvas_2d_font_face_set_unicode_range(
     this: *const c_void,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<FontFace>(state, this);
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_unicode_range_or_throw(value)?;
-    this.set_unicode_range(value);
+    let mut data = this.data().borrow_mut();
+    data.set_unicode_range(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_feature_settings(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.feature_settings().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_feature_settings(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let value = parse_feature_settings_or_throw(value)?;
+    let mut data = this.data().borrow_mut();
+    data.set_feature_settings(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_variation_settings(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.variation_settings().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_variation_settings(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let value = parse_variation_settings_or_throw(value)?;
+    let mut data = this.data().borrow_mut();
+    data.set_variation_settings(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_display(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.display().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_display(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let value = parse_display_or_throw(value)?;
+    let mut data = this.data().borrow_mut();
+    data.set_display(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_ascent_override(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.ascent_override().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_ascent_override(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let value = parse_ascent_override_or_throw(value)?;
+    let mut data = this.data().borrow_mut();
+    data.set_ascent_override(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_descent_override(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.descent_override().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_descent_override(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let value = parse_descent_override_or_throw(value)?;
+    let mut data = this.data().borrow_mut();
+    data.set_descent_override(value);
+    Ok(())
+}
+
+#[op2]
+#[string]
+pub fn op_canvas_2d_font_face_line_gap_override(state: &OpState, this: *const c_void) -> String {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let data = this.data().borrow();
+    data.line_gap_override().to_css_string()
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_font_face_set_line_gap_override(
+    state: &OpState,
+    this: *const c_void,
+    #[string] value: &str,
+) -> anyhow::Result<()> {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let value = parse_line_gap_override_or_throw(value)?;
+    let mut data = this.data().borrow_mut();
+    data.set_line_gap_override(value);
     Ok(())
 }
 
@@ -1195,8 +1447,9 @@ pub fn op_canvas_2d_font_face_load(
     #[anybuffer] source: &[u8],
     from_url: bool,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<FontFace>(state, this);
-    this.load(source).map_err(|err| {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    let mut data = this.data().borrow_mut();
+    data.load(source).map_err(|err| {
         custom_error(
             if from_url {
                 "DOMExceptionNetworkError"
@@ -1224,9 +1477,9 @@ pub fn op_canvas_2d_font_face_set_insert(
     font: *const c_void,
 ) {
     let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
-    let font = borrow_v8::<FontFace>(state, font);
+    let font = borrow_v8::<Rc<FontFace>>(state, font);
     let mut this = this.borrow_mut();
-    this.insert(&font)
+    this.insert(font.clone())
 }
 
 #[op2(fast)]
@@ -1236,7 +1489,7 @@ pub fn op_canvas_2d_font_face_set_remove(
     font: *const c_void,
 ) {
     let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
-    let font = borrow_v8::<FontFace>(state, font);
+    let font = borrow_v8::<Rc<FontFace>>(state, font);
     let mut this = this.borrow_mut();
     this.remove(font.id())
 }

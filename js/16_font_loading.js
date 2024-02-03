@@ -1,21 +1,33 @@
 import {
+  op_canvas_2d_font_face_ascent_override,
+  op_canvas_2d_font_face_descent_override,
+  op_canvas_2d_font_face_display,
   op_canvas_2d_font_face_errored,
   op_canvas_2d_font_face_family,
+  op_canvas_2d_font_face_feature_settings,
+  op_canvas_2d_font_face_line_gap_override,
   op_canvas_2d_font_face_load,
   op_canvas_2d_font_face_new,
   op_canvas_2d_font_face_select_source,
+  op_canvas_2d_font_face_set_ascent_override,
   op_canvas_2d_font_face_set_clear,
+  op_canvas_2d_font_face_set_descent_override,
+  op_canvas_2d_font_face_set_display,
   op_canvas_2d_font_face_set_family,
+  op_canvas_2d_font_face_set_feature_settings,
   op_canvas_2d_font_face_set_insert,
+  op_canvas_2d_font_face_set_line_gap_override,
   op_canvas_2d_font_face_set_new,
   op_canvas_2d_font_face_set_remove,
   op_canvas_2d_font_face_set_stretch,
   op_canvas_2d_font_face_set_style,
   op_canvas_2d_font_face_set_unicode_range,
+  op_canvas_2d_font_face_set_variation_settings,
   op_canvas_2d_font_face_set_weight,
   op_canvas_2d_font_face_stretch,
   op_canvas_2d_font_face_style,
   op_canvas_2d_font_face_unicode_range,
+  op_canvas_2d_font_face_variation_settings,
   op_canvas_2d_font_face_weight,
   op_canvas_2d_font_source,
 } from "ext:canvas_2d/00_ops.js";
@@ -132,6 +144,12 @@ export class FontFace {
   #cachedWeight = null;
   #cachedStretch = null;
   #cachedUnicodeRange = null;
+  #cachedFeatureSettings = null;
+  #cachedVariationSettings = null;
+  #cachedDisplay = null;
+  #cachedAscentOverride = null;
+  #cachedDescentOverride = null;
+  #cachedLineGapOverride = null;
 
   constructor(family, source, descriptors = undefined) {
     family = convertDOMString(family);
@@ -256,7 +274,10 @@ export class FontFace {
 
   get featureSettings() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedFeatureSettings ??= op_canvas_2d_font_face_feature_settings(
+      this.#raw,
+    );
+    return this.#cachedFeatureSettings;
   }
 
   set featureSettings(value) {
@@ -264,12 +285,16 @@ export class FontFace {
     const prefix = "Failed to set 'featureSettings' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_feature_settings(this.#raw, value);
+    this.#cachedFeatureSettings = null;
   }
 
   get variationSettings() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedVariationSettings = op_canvas_2d_font_face_variation_settings(
+      this.#raw,
+    );
+    return this.#cachedVariationSettings;
   }
 
   set variationSettings(value) {
@@ -277,12 +302,14 @@ export class FontFace {
     const prefix = "Failed to set 'variationSettings' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_variation_settings(this.#raw, value);
+    this.#cachedVariationSettings = null;
   }
 
   get display() {
     this.#brand;
-    return "auto"; // TODO implement
+    this.#cachedDisplay = op_canvas_2d_font_face_display(this.#raw);
+    return this.#cachedDisplay;
   }
 
   set display(value) {
@@ -290,12 +317,16 @@ export class FontFace {
     const prefix = "Failed to set 'display' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_display(this.#raw, value);
+    this.#cachedDisplay = null;
   }
 
   get ascentOverride() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedAscentOverride = op_canvas_2d_font_face_ascent_override(
+      this.#raw,
+    );
+    return this.#cachedAscentOverride;
   }
 
   set ascentOverride(value) {
@@ -303,12 +334,16 @@ export class FontFace {
     const prefix = "Failed to set 'ascentOverride' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_ascent_override(this.#raw, value);
+    this.#cachedAscentOverride = null;
   }
 
   get descentOverride() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedDescentOverride = op_canvas_2d_font_face_descent_override(
+      this.#raw,
+    );
+    return this.#cachedDescentOverride;
   }
 
   set descentOverride(value) {
@@ -316,12 +351,16 @@ export class FontFace {
     const prefix = "Failed to set 'descentOverride' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_descent_override(this.#raw, value);
+    this.#cachedDescentOverride = null;
   }
 
   get lineGapOverride() {
     this.#brand;
-    return "normal"; // TODO implement
+    this.#cachedLineGapOverride = op_canvas_2d_font_face_line_gap_override(
+      this.#raw,
+    );
+    return this.#cachedLineGapOverride;
   }
 
   set lineGapOverride(value) {
@@ -329,7 +368,8 @@ export class FontFace {
     const prefix = "Failed to set 'lineGapOverride' on 'FontFace'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    throw new TypeError("Unimplemented"); // TODO implement
+    op_canvas_2d_font_face_set_line_gap_override(this.#raw, value);
+    this.#cachedLineGapOverride = null;
   }
 
   #setLoading() {

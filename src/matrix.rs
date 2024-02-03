@@ -1,9 +1,9 @@
-use deno_core::error::custom_error;
+use deno_core::anyhow::Context as _;
 use deno_core::{anyhow, op2};
 use euclid::default::{Transform2D, Transform3D};
 
 use super::css::transform::ComputedTransform;
-use super::css::FromCss as _;
+use super::css::{FromCss as _, SyntaxError};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Matrix {
@@ -31,17 +31,9 @@ pub fn op_canvas_2d_parse_matrix(
     let transform = if transform_list.is_empty() {
         ComputedTransform::default()
     } else {
-        ComputedTransform::from_css_string(transform_list).map_err(|err| {
-            custom_error(
-                "DOMExceptionSyntaxError",
-                format!(
-                    "Invalid CSS transform list '{transform_list}': {} at {}:{}",
-                    err.kind,
-                    err.location.line + 1,
-                    err.location.column,
-                ),
-            )
-        })?
+        ComputedTransform::from_css_string(transform_list)
+            .map_err(SyntaxError::from)
+            .with_context(|| format!("Invalid CSS transform list '{transform_list}'"))?
     };
     Ok(match transform.to_matrix() {
         Matrix::_2D(m) => {

@@ -3,14 +3,15 @@ use std::f64::consts::TAU;
 use std::ffi::c_void;
 use std::rc::Rc;
 
-use deno_core::error::custom_error;
+use deno_core::anyhow::Context as _;
 use deno_core::{anyhow, op2, v8, OpState};
 use euclid::default::Point2D;
 use euclid::{point2, Angle};
 
-use super::css::color::AbsoluteColor;
+use super::css::color::{AbsoluteColor, ComputedColor};
+use super::css::{FromCss as _, SyntaxError};
 use super::gc::{borrow_v8, into_v8};
-use super::{parse_color_for_canvas, raqote_ext, to_raqote_color, CanvasColorSpace};
+use super::{raqote_ext, resolve_color_for_canvas, to_raqote_color, CanvasColorSpace};
 
 #[derive(Clone, Copy, Debug)]
 pub enum CanvasGradientStyle {
@@ -203,17 +204,9 @@ pub fn op_canvas_2d_gradient_add_color_stop(
     #[string] color: &str,
 ) -> anyhow::Result<()> {
     let this = borrow_v8::<Rc<CanvasGradient>>(state, this);
-    let color = parse_color_for_canvas(color).map_err(|err| {
-        custom_error(
-            "DOMExceptionSyntaxError",
-            format!(
-                "Invalid CSS color value '{color}': {} at {}:{}",
-                err.kind,
-                err.location.line + 1,
-                err.location.column,
-            ),
-        )
-    })?;
-    this.add_color_stop(offset, color);
+    let color = ComputedColor::from_css_string(color)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid CSS color '{color}'"))?;
+    this.add_color_stop(offset, resolve_color_for_canvas(color));
     Ok(())
 }

@@ -19,7 +19,7 @@ use super::convert::{
     premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_display_p3,
     srgb_to_premultiplied_linear_srgb, unpack_argb32_to_rgba8,
 };
-use super::css::color::AbsoluteColor;
+use super::css::color::{AbsoluteColor, ComputedColor};
 use super::css::filter::ComputedFilter;
 use super::css::font::{
     ComputedFamilyName, ComputedFont, ComputedFontFamily, ComputedFontSize,
@@ -36,7 +36,7 @@ use super::path::{CanvasFillRule, Path};
 use super::pattern::CanvasPattern;
 use super::text::{prepare_text, FontFaceSet, TextMetrics};
 use super::{
-    parse_color_for_canvas, premultiply, raqote_ext, serialize_color_for_canvas, to_raqote_color,
+    premultiply, raqote_ext, resolve_color_for_canvas, serialize_color_for_canvas, to_raqote_color,
     to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace, ARGB32_ALPHA_MASK,
 };
 
@@ -1786,8 +1786,8 @@ pub fn op_canvas_2d_state_set_fill_style_color(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(value) = parse_color_for_canvas(value) {
-        this.set_fill_style(FillOrStrokeStyle::Color(value));
+    if let Ok(value) = ComputedColor::from_css_string(value) {
+        this.set_fill_style(FillOrStrokeStyle::Color(resolve_color_for_canvas(value)));
         true
     } else {
         false
@@ -1834,8 +1834,8 @@ pub fn op_canvas_2d_state_set_stroke_style_color(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(value) = parse_color_for_canvas(value) {
-        this.set_stroke_style(FillOrStrokeStyle::Color(value));
+    if let Ok(value) = ComputedColor::from_css_string(value) {
+        this.set_stroke_style(FillOrStrokeStyle::Color(resolve_color_for_canvas(value)));
         true
     } else {
         false
@@ -2179,8 +2179,8 @@ pub fn op_canvas_2d_state_set_shadow_color(
     #[string] value: &str,
 ) -> bool {
     let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    if let Ok(value) = parse_color_for_canvas(value) {
-        this.set_shadow_color(value);
+    if let Ok(value) = ComputedColor::from_css_string(value) {
+        this.set_shadow_color(resolve_color_for_canvas(value));
         true
     } else {
         false

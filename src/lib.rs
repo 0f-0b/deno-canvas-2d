@@ -15,8 +15,6 @@ mod state;
 mod text;
 
 use css::color::{AbsoluteColor, ComputedColor};
-use css::FromCss as _;
-use cssparser::BasicParseError;
 use deno_core::anyhow;
 use deno_core::error::range_error;
 use euclid::default::{Point2D, Size2D};
@@ -89,11 +87,11 @@ fn to_raqote_solid_source(
     }
 }
 
-fn parse_color_for_canvas(css: &str) -> Result<AbsoluteColor, BasicParseError> {
-    ComputedColor::from_css_string(css).map(|computed| match computed {
+fn resolve_color_for_canvas(computed: ComputedColor) -> AbsoluteColor {
+    match computed {
         ComputedColor::Absolute(c) => c,
         ComputedColor::CurrentColor => AbsoluteColor::OPAQUE_BLACK,
-    })
+    }
 }
 
 fn serialize_color_for_canvas(color: AbsoluteColor) -> String {
@@ -257,6 +255,18 @@ deno_core::extension!(
         text::op_canvas_2d_font_face_set_stretch,
         text::op_canvas_2d_font_face_unicode_range,
         text::op_canvas_2d_font_face_set_unicode_range,
+        text::op_canvas_2d_font_face_feature_settings,
+        text::op_canvas_2d_font_face_set_feature_settings,
+        text::op_canvas_2d_font_face_variation_settings,
+        text::op_canvas_2d_font_face_set_variation_settings,
+        text::op_canvas_2d_font_face_display,
+        text::op_canvas_2d_font_face_set_display,
+        text::op_canvas_2d_font_face_ascent_override,
+        text::op_canvas_2d_font_face_set_ascent_override,
+        text::op_canvas_2d_font_face_descent_override,
+        text::op_canvas_2d_font_face_set_descent_override,
+        text::op_canvas_2d_font_face_line_gap_override,
+        text::op_canvas_2d_font_face_set_line_gap_override,
         text::op_canvas_2d_font_face_load,
         text::op_canvas_2d_font_face_set_new,
         text::op_canvas_2d_font_face_set_insert,
@@ -320,6 +330,9 @@ deno_core::extension!(
 );
 
 pub fn get_error_class_name(e: &anyhow::Error) -> Option<&'static str> {
+    if e.is::<css::SyntaxError>() {
+        return Some("DOMExceptionSyntaxError");
+    }
     if e.is::<png::EncodingError>() {
         return Some("DOMExceptionEncodingError");
     }

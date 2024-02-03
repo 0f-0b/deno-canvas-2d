@@ -336,7 +336,7 @@ where
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct F256_563;
 
 impl Number for F256_563 {
