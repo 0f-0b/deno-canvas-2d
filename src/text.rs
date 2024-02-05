@@ -340,14 +340,11 @@ impl FontFaceSet {
         self.entries.clear();
     }
 
-    fn resolve_family_name(family: &ComputedFamilyName) -> &str {
-        match *family {
-            ComputedFamilyName::Specific(ref v) => &v.name,
-            ComputedFamilyName::Generic(_) => "Arial", // TODO actually select a family
-        }
-    }
-
-    pub fn match_(&self, family: &ComputedFamilyName, attrs: FontAttributes) -> Vec<Rc<FontFace>> {
+    pub fn match_fonts(
+        &self,
+        family: &ComputedFamilyName,
+        attrs: FontAttributes,
+    ) -> Vec<Rc<FontFace>> {
         fn width_distance(
             ComputedFontWidth(desired): ComputedFontWidth,
             ComputedFontWidthRange(min, max): ComputedFontWidthRange,
@@ -449,12 +446,16 @@ impl FontFaceSet {
             }
         }
 
-        let family = UniCase::new(Self::resolve_family_name(family)).to_folded_case();
+        let family = match *family {
+            ComputedFamilyName::Specific(ref v) => &v.name,
+            ComputedFamilyName::Generic(_) => return vec![], // TODO actually select a family
+        };
+        let casefolded_family = UniCase::new(family).to_folded_case();
         let mut result = Vec::new();
         let mut min_distance = [(u8::MAX, f32::INFINITY); 3];
         for font in self.entries.values().rev() {
             let data = font.data.borrow();
-            if family != data.family.casefolded {
+            if casefolded_family != data.family.casefolded {
                 continue;
             }
             let distance = [
@@ -477,7 +478,7 @@ impl FontFaceSet {
         attrs: FontAttributes,
     ) -> Option<Rc<FontFace>> {
         family.family_list.iter().find_map(|family| {
-            self.match_(family, attrs).into_iter().find(|font| {
+            self.match_fonts(family, attrs).into_iter().find(|font| {
                 let data = font.data.borrow();
                 matches!(
                     data.state,
@@ -494,7 +495,7 @@ impl FontFaceSet {
         attrs: FontAttributes,
     ) -> Option<Rc<FontFace>> {
         family.family_list.iter().find_map(|family| {
-            self.match_(family, attrs).into_iter().find(|font| {
+            self.match_fonts(family, attrs).into_iter().find(|font| {
                 let data = font.data.borrow();
                 matches!(
                     data.state,
@@ -516,7 +517,7 @@ impl FontFaceSet {
             .family_list
             .iter()
             .flat_map(|family| {
-                self.match_(family, attrs).into_iter().filter(|font| {
+                self.match_fonts(family, attrs).into_iter().filter(|font| {
                     let data = font.data.borrow();
                     s.chars()
                         .any(|c| data.unicode_range.simplified.contains(c as u32))
