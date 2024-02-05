@@ -8,8 +8,8 @@ use cssparser::{
 
 use super::super::angle::{ComputedAngle, SpecifiedAngle};
 use super::super::{
-    parse_integer_with_range, parse_number, parse_one_or_more, parse_url,
-    try_match_next_ident_ignore_ascii_case, CssNumber, CssPercentage, CssString, CssValue, FromCss,
+    parse_integer_with_range, parse_number, parse_url, try_match_next_ident_ignore_ascii_case,
+    CssNumber, CssPercentage, CssString, CssValue, FromCss,
 };
 use super::{ComputedSpecificFamily, SpecifiedAbsoluteFontWeight, SpecifiedFontWidth};
 
@@ -319,12 +319,15 @@ impl FromCss for SpecifiedFontFeatureSettings {
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         input.skip_whitespace();
-        let feature_tag_value_list = match input
-            .try_parse(|input| input.expect_ident_matching("normal"))
-        {
-            Ok(_) => None,
-            Err(_) => Some(parse_one_or_more(input, SpecifiedFeatureTagValue::from_css)?.into()),
-        };
+        let feature_tag_value_list =
+            match input.try_parse(|input| input.expect_ident_matching("normal")) {
+                Ok(_) => None,
+                Err(_) => Some(
+                    input
+                        .parse_comma_separated(SpecifiedFeatureTagValue::from_css)?
+                        .into(),
+                ),
+            };
         Ok(Self {
             feature_tag_value_list,
         })
@@ -387,7 +390,11 @@ impl FromCss for SpecifiedFontVariationSettings {
         let variation_value_list =
             match input.try_parse(|input| input.expect_ident_matching("normal")) {
                 Ok(_) => None,
-                Err(_) => Some(parse_one_or_more(input, SpecifiedVariationValue::from_css)?.into()),
+                Err(_) => Some(
+                    input
+                        .parse_comma_separated(SpecifiedVariationValue::from_css)?
+                        .into(),
+                ),
             };
         Ok(Self {
             variation_value_list,
