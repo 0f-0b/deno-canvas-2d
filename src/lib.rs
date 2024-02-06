@@ -245,6 +245,7 @@ deno_core::extension!(
         text::op_canvas_2d_font_face_select_source,
         text::op_canvas_2d_font_face_new,
         text::op_canvas_2d_font_face_errored,
+        text::op_canvas_2d_font_face_id,
         text::op_canvas_2d_font_face_family,
         text::op_canvas_2d_font_face_set_family,
         text::op_canvas_2d_font_face_style,
@@ -272,6 +273,7 @@ deno_core::extension!(
         text::op_canvas_2d_font_face_set_insert,
         text::op_canvas_2d_font_face_set_remove,
         text::op_canvas_2d_font_face_set_clear,
+        text::op_canvas_2d_font_face_set_match,
         text::op_canvas_2d_font_source,
     ],
     esm = [

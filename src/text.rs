@@ -27,7 +27,7 @@ use super::css::font::font_face::{
     SpecifiedUnicodeRange,
 };
 use super::css::font::{
-    ComputedFamilyName, ComputedFontFamily, ComputedFontStyle, ComputedFontVariantCaps,
+    ComputedFamilyName, ComputedFont, ComputedFontStyle, ComputedFontVariantCaps,
     ComputedFontWeight, ComputedFontWidth, SpecifiedSpecificFamily,
 };
 use super::css::{FromCss as _, SyntaxError, UnicodeRangeSet};
@@ -49,6 +49,10 @@ impl FontFaceId {
             NonZeroU64::new(NEXT.fetch_add(1, Ordering::Relaxed))
                 .unwrap_or_else(|| process::abort()),
         )
+    }
+
+    pub fn as_u64(self) -> u64 {
+        self.0.get()
     }
 }
 
@@ -474,10 +478,10 @@ impl FontFaceSet {
 
     pub fn first_available_font(
         &self,
-        family: &ComputedFontFamily,
+        family: &[ComputedFamilyName],
         attrs: FontAttributes,
     ) -> Option<Rc<FontFace>> {
-        family.family_list.iter().find_map(|family| {
+        family.iter().find_map(|family| {
             self.match_fonts(family, attrs).into_iter().find(|font| {
                 let data = font.data.borrow();
                 matches!(
@@ -491,10 +495,10 @@ impl FontFaceSet {
     pub fn find_available_font_for_char(
         &self,
         c: char,
-        family: &ComputedFontFamily,
+        family: &[ComputedFamilyName],
         attrs: FontAttributes,
     ) -> Option<Rc<FontFace>> {
-        family.family_list.iter().find_map(|family| {
+        family.iter().find_map(|family| {
             self.match_fonts(family, attrs).into_iter().find(|font| {
                 let data = font.data.borrow();
                 matches!(
@@ -507,23 +511,19 @@ impl FontFaceSet {
         })
     }
 
-    pub fn find_all_fonts_for_str(
-        &self,
-        s: &str,
-        family: &ComputedFontFamily,
+    pub fn find_all_fonts_for_str<'a>(
+        &'a self,
+        s: &'a str,
+        family: &'a [ComputedFamilyName],
         attrs: FontAttributes,
-    ) -> Vec<Rc<FontFace>> {
-        family
-            .family_list
-            .iter()
-            .flat_map(|family| {
-                self.match_fonts(family, attrs).into_iter().filter(|font| {
-                    let data = font.data.borrow();
-                    s.chars()
-                        .any(|c| data.unicode_range.simplified.contains(c as u32))
-                })
+    ) -> impl Iterator<Item = Rc<FontFace>> + 'a {
+        family.iter().flat_map(move |family| {
+            self.match_fonts(family, attrs).into_iter().filter(|font| {
+                let data = font.data.borrow();
+                s.chars()
+                    .any(|c| data.unicode_range.simplified.contains(c as u32))
             })
-            .collect()
+        })
     }
 }
 
@@ -752,7 +752,7 @@ struct TextRun {
 
 fn split_text_to_runs(
     fonts: &FontFaceSet,
-    font_family: &ComputedFontFamily,
+    font_family: &[ComputedFamilyName],
     font_attrs: FontAttributes,
     base_direction: Direction,
     text: &str,
@@ -813,7 +813,7 @@ pub fn prepare_text(
     }
     let text = replace_ascii_whitespace(text);
     let font_size = drawing_state.font_size.0;
-    let font_family = &drawing_state.font_family;
+    let font_family = drawing_state.font_family.family_list.as_ref();
     let font_attrs = FontAttributes {
         style: drawing_state.font_style,
         weight: drawing_state.font_weight,
@@ -1210,6 +1210,13 @@ pub fn op_canvas_2d_font_face_errored<'a>(
     into_v8(state, scope, result)
 }
 
+#[op2(fast)]
+#[bigint]
+pub fn op_canvas_2d_font_face_id(state: &OpState, this: *const c_void) -> u64 {
+    let this = borrow_v8::<Rc<FontFace>>(state, this);
+    this.id().as_u64()
+}
+
 #[op2]
 #[string]
 pub fn op_canvas_2d_font_face_family(state: &OpState, this: *const c_void) -> String {
@@ -1500,6 +1507,33 @@ pub fn op_canvas_2d_font_face_set_clear(state: &OpState, this: *const c_void) {
     let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
     let mut this = this.borrow_mut();
     this.clear()
+}
+
+#[op2]
+pub fn op_canvas_2d_font_face_set_match<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    state: &OpState,
+    this: *const c_void,
+    #[string] font: &str,
+    #[string] text: &str,
+) -> anyhow::Result<v8::Local<'a, v8::Set>> {
+    let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
+    let this = this.borrow();
+    let font = ComputedFont::from_css_string(font)
+        .map_err(SyntaxError::from)
+        .with_context(|| format!("Invalid font '{font}'"))?;
+    let family = font.family.family_list.as_ref();
+    let attrs = FontAttributes {
+        style: font.style,
+        weight: font.weight,
+        width: font.stretch.modernize(),
+    };
+    let set = v8::Set::new(scope);
+    for font in this.find_all_fonts_for_str(text, family, attrs) {
+        let value = v8::BigInt::new_from_u64(scope, font.id().as_u64()).into();
+        set.add(scope, value);
+    }
+    Ok(set)
 }
 
 #[op2]
