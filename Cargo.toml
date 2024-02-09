@@ -25,3 +25,10 @@ raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "dea2df32a58b51539
 strum_macros = "0.26.1"
 unicase = { git = "https://github.com/seanmonstar/unicase.git", rev = "07f81c14cd6a146f4b86e033999919a5159255c7" }
 unicode-bidi = "0.3.15"
+
+[dev-dependencies]
+deno_console = "0.137.0"
+deno_url = "0.137.0"
+deno_web = "0.168.0"
+deno_webidl = "0.137.0"
+tokio = { version = "1.36.0", features = ["fs", "rt", "macros"] }
