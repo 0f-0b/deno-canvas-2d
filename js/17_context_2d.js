@@ -21,6 +21,7 @@ import {
   op_canvas_2d_path_ellipse,
   op_canvas_2d_path_ensure_subpath,
   op_canvas_2d_path_extend,
+  op_canvas_2d_path_from_svg,
   op_canvas_2d_path_line_to,
   op_canvas_2d_path_move_to,
   op_canvas_2d_path_new,
@@ -569,12 +570,10 @@ export class Path2D {
     if (path !== undefined) {
       path = convertPath2DOrDOMString(path);
     }
-    if (typeof path === "string") {
-      // TODO parse svg path
-      throw new TypeError("Unimplemented");
-    }
     this.#raw = path === undefined
       ? op_canvas_2d_path_new()
+      : typeof path === "string"
+      ? op_canvas_2d_path_from_svg(path)
       : op_canvas_2d_path_clone(/** @type {Path2D} */ (path).#raw);
   }
 

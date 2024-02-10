@@ -4,7 +4,7 @@ use std::ffi::c_void;
 use deno_core::{op2, v8, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D};
 use euclid::{point2, size2, vec2, Angle};
-use lyon_geom::Arc;
+use lyon_geom::{Arc, ArcFlags, SvgArc};
 use strum_macros::FromRepr;
 
 use super::gc::{borrow_v8, borrow_v8_mut, into_v8};
@@ -82,6 +82,168 @@ impl Path {
         }
     }
 
+    pub fn from_svg(path_data: &str) -> Self {
+        use svgtypes::{PathParser, PathSegment};
+
+        #[derive(Clone, Copy, Debug)]
+        enum ControlPoint {
+            None,
+            Quad(Point2D<f64>),
+            Cubic(Point2D<f64>),
+        }
+
+        let mut path = Self::new();
+        let mut ctrl = ControlPoint::None;
+        let mut cursor = Point2D::zero();
+        let mut parser = PathParser::from(path_data);
+        while let Some(Ok(segment)) = parser.next() {
+            match segment {
+                PathSegment::MoveTo { abs, x, y } => {
+                    let p = if abs {
+                        point2(x, y)
+                    } else {
+                        cursor + vec2(x, y)
+                    };
+                    path.do_move_to(p);
+                    ctrl = ControlPoint::None;
+                    cursor = p;
+                }
+                PathSegment::LineTo { abs, x, y } => {
+                    let p = if abs {
+                        point2(x, y)
+                    } else {
+                        cursor + vec2(x, y)
+                    };
+                    path.do_line_to(p);
+                    ctrl = ControlPoint::None;
+                    cursor = p;
+                }
+                PathSegment::HorizontalLineTo { abs, x } => {
+                    let p = point2(if abs { x } else { cursor.x + x }, cursor.y);
+                    path.do_line_to(p);
+                    ctrl = ControlPoint::None;
+                    cursor = p;
+                }
+                PathSegment::VerticalLineTo { abs, y } => {
+                    let p = point2(cursor.x, if abs { y } else { cursor.y + y });
+                    path.do_line_to(p);
+                    ctrl = ControlPoint::None;
+                    cursor = p;
+                }
+                PathSegment::CurveTo {
+                    abs,
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    x,
+                    y,
+                } => {
+                    let c1 = if abs {
+                        point2(x1, y1)
+                    } else {
+                        cursor + vec2(x1, y1)
+                    };
+                    let c2 = if abs {
+                        point2(x2, y2)
+                    } else {
+                        cursor + vec2(x2, y2)
+                    };
+                    let p = if abs {
+                        point2(x, y)
+                    } else {
+                        cursor + vec2(x, y)
+                    };
+                    path.do_cubic_to(c1, c2, p);
+                    ctrl = ControlPoint::Cubic(c2);
+                    cursor = p;
+                }
+                PathSegment::SmoothCurveTo { abs, x2, y2, x, y } => {
+                    let c1 = match ctrl {
+                        ControlPoint::Cubic(ctrl) => cursor.lerp(ctrl, -1.0),
+                        _ => cursor,
+                    };
+                    let c2 = if abs {
+                        point2(x2, y2)
+                    } else {
+                        cursor + vec2(x2, y2)
+                    };
+                    let p = if abs {
+                        point2(x, y)
+                    } else {
+                        cursor + vec2(x, y)
+                    };
+                    path.do_cubic_to(c1, c2, p);
+                    ctrl = ControlPoint::Cubic(c2);
+                    cursor = p;
+                }
+                PathSegment::Quadratic { abs, x1, y1, x, y } => {
+                    let c = if abs {
+                        point2(x1, y1)
+                    } else {
+                        cursor + vec2(x1, y1)
+                    };
+                    let p = if abs {
+                        point2(x, y)
+                    } else {
+                        cursor + vec2(x, y)
+                    };
+                    path.do_quad_to(c, p);
+                    ctrl = ControlPoint::Quad(c);
+                    cursor = p;
+                }
+                PathSegment::SmoothQuadratic { abs, x, y } => {
+                    let c = match ctrl {
+                        ControlPoint::Quad(ctrl) => cursor.lerp(ctrl, -1.0),
+                        _ => cursor,
+                    };
+                    let p = if abs {
+                        point2(x, y)
+                    } else {
+                        cursor + vec2(x, y)
+                    };
+                    path.do_quad_to(c, p);
+                    ctrl = ControlPoint::Quad(c);
+                    cursor = p;
+                }
+                PathSegment::EllipticalArc {
+                    abs,
+                    rx,
+                    ry,
+                    x_axis_rotation,
+                    large_arc,
+                    sweep,
+                    x,
+                    y,
+                } => {
+                    let arc = SvgArc {
+                        from: cursor,
+                        to: if abs {
+                            point2(x, y)
+                        } else {
+                            cursor + vec2(x, y)
+                        },
+                        radii: vec2(rx, ry),
+                        x_rotation: Angle::degrees(x_axis_rotation),
+                        flags: ArcFlags { large_arc, sweep },
+                    };
+                    path.do_svg_arc(&arc);
+                    ctrl = ControlPoint::None;
+                    cursor = arc.to;
+                }
+                PathSegment::ClosePath { abs: _ } => {
+                    path.do_close();
+                    ctrl = ControlPoint::None;
+                    cursor = path.first_point_in_subpath;
+                }
+            }
+        }
+        if !path.ops.is_empty() {
+            path.do_move_to(cursor);
+        }
+        path
+    }
+
     pub fn clear(&mut self) {
         self.ops.clear();
     }
@@ -114,7 +276,11 @@ impl Path {
         self.ops.push(PathOp::CubicTo { c1, c2, p });
     }
 
-    fn do_arc(&mut self, arc: Arc<f64>) {
+    fn do_arc(&mut self, arc: &Arc<f64>) {
+        arc.for_each_quadratic_bezier(&mut |s| self.do_quad_to(s.ctrl, s.to));
+    }
+
+    fn do_svg_arc(&mut self, arc: &SvgArc<f64>) {
         arc.for_each_quadratic_bezier(&mut |s| self.do_quad_to(s.ctrl, s.to));
     }
 
@@ -188,7 +354,7 @@ impl Path {
             x_rotation: Angle::zero(),
         };
         self.do_line_to(arc.from());
-        self.do_arc(arc);
+        self.do_arc(&arc);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -225,7 +391,7 @@ impl Path {
         } else {
             self.do_line_to(arc.from());
         }
-        self.do_arc(arc);
+        self.do_arc(&arc);
     }
 
     pub fn rect(&mut self, x: f64, y: f64, w: f64, h: f64) {
@@ -255,7 +421,7 @@ impl Path {
     ) {
         let r = Box2D::from_origin_and_size(point2(x, y), size2(w, h));
         self.do_move_to(point2(r.min.x, r.min.y + r1y));
-        self.do_arc(Arc {
+        self.do_arc(&Arc {
             center: point2(r.min.x + r1x, r.min.y + r1y),
             radii: vec2(-r1x, -r1y),
             start_angle: Angle::zero(),
@@ -263,7 +429,7 @@ impl Path {
             x_rotation: Angle::zero(),
         });
         self.do_line_to(point2(r.max.x - r2x, r.min.y));
-        self.do_arc(Arc {
+        self.do_arc(&Arc {
             center: point2(r.max.x - r2x, r.min.y + r2y),
             radii: vec2(-r2x, -r2y),
             start_angle: Angle::frac_pi_2(),
@@ -271,7 +437,7 @@ impl Path {
             x_rotation: Angle::zero(),
         });
         self.do_line_to(point2(r.max.x, r.max.y - r3y));
-        self.do_arc(Arc {
+        self.do_arc(&Arc {
             center: point2(r.max.x - r3x, r.max.y - r3y),
             radii: vec2(r3x, r3y),
             start_angle: Angle::zero(),
@@ -279,7 +445,7 @@ impl Path {
             x_rotation: Angle::zero(),
         });
         self.do_line_to(point2(r.min.x + r4x, r.max.y));
-        self.do_arc(Arc {
+        self.do_arc(&Arc {
             center: point2(r.min.x + r4x, r.max.y - r4y),
             radii: vec2(r4x, r4y),
             start_angle: Angle::frac_pi_2(),
@@ -325,6 +491,16 @@ pub fn op_canvas_2d_path_new<'a>(
     state: &OpState,
 ) -> v8::Local<'a, v8::External> {
     let result = Path::new();
+    into_v8(state, scope, result)
+}
+
+#[op2]
+pub fn op_canvas_2d_path_from_svg<'a>(
+    scope: &mut v8::HandleScope<'a>,
+    state: &OpState,
+    #[string] path_data: &str,
+) -> v8::Local<'a, v8::External> {
+    let result = Path::from_svg(path_data);
     into_v8(state, scope, result)
 }
 

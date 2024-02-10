@@ -215,6 +215,7 @@ deno_core::extension!(
         pattern::op_canvas_2d_pattern_new,
         pattern::op_canvas_2d_pattern_set_transform,
         path::op_canvas_2d_path_new,
+        path::op_canvas_2d_path_from_svg,
         path::op_canvas_2d_path_clone,
         path::op_canvas_2d_path_clear,
         path::op_canvas_2d_path_extend,

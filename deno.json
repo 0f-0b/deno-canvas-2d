@@ -1,0 +1,15 @@
+{
+  "exclude": [
+    "target"
+  ],
+  "lint": {
+    "rules": {
+      "include": [
+        "prefer-primordials"
+      ]
+    }
+  },
+  "tasks": {
+    "lint": "deno fmt --check && deno lint"
+  }
+}

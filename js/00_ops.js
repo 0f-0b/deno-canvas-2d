@@ -61,6 +61,7 @@ export {
   op_canvas_2d_path_ellipse,
   op_canvas_2d_path_ensure_subpath,
   op_canvas_2d_path_extend,
+  op_canvas_2d_path_from_svg,
   op_canvas_2d_path_line_to,
   op_canvas_2d_path_move_to,
   op_canvas_2d_path_new,
