@@ -620,20 +620,15 @@ const convertDOMQuadInit = createDictionaryConverter(readDOMQuadInitMembers);
 
 function createDOMQuadFromDOMRectInitDictionary(other) {
   return new DOMQuad(
-    new DOMPoint(other.x, other.y),
-    new DOMPoint(other.x + other.width, other.y),
-    new DOMPoint(other.x + other.width, other.y + other.height),
-    new DOMPoint(other.x, other.y + other.height),
+    { __proto__: null, x: other.x, y: other.y },
+    { __proto__: null, x: other.x + other.width, y: other.y },
+    { __proto__: null, x: other.x + other.width, y: other.y + other.height },
+    { __proto__: null, x: other.x, y: other.y + other.height },
   );
 }
 
 function createDOMQuadFromDOMQuadInitDictionary(other) {
-  return new DOMQuad(
-    other.p1 === undefined ? undefined : createDOMPointFromDictionary(other.p1),
-    other.p2 === undefined ? undefined : createDOMPointFromDictionary(other.p2),
-    other.p3 === undefined ? undefined : createDOMPointFromDictionary(other.p3),
-    other.p4 === undefined ? undefined : createDOMPointFromDictionary(other.p4),
-  );
+  return new DOMQuad(other.p1, other.p2, other.p3, other.p4);
 }
 
 const convertDOMStringOrSequenceOfUnrestrictedDouble = (value) => {
