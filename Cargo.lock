@@ -910,7 +910,6 @@ dependencies = [
  "approx",
  "fast-srgb8",
  "palette_derive",
- "phf",
 ]
 
 [[package]]

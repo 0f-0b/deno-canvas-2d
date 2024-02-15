@@ -5,12 +5,15 @@ use std::convert::Infallible;
 use cssparser::color::PredefinedColorSpace;
 use cssparser::{ParseError, Parser};
 use cssparser_color::{parse_color_with, ColorParser, FromParsedColor};
-use palette::chromatic_adaptation::AdaptFrom as _;
+use palette::chromatic_adaptation::AdaptInto as _;
+use palette::color_difference::EuclideanDistance as _;
+use palette::convert::{FromColorUnclamped, IntoColorUnclamped as _};
 use palette::encoding::Linear;
 use palette::rgb::Rgb;
 use palette::white_point::{D50, D65};
 use palette::{
-    Clamp, FromColor as _, Hsl, Hwb, IntoColor, Lab, Lch, LinSrgb, Oklab, Oklch, Srgb, Xyz,
+    Clamp as _, FromColor as _, Hsl, Hwb, IntoColor as _, IsWithinBounds as _, Lab, Lch, LinSrgb,
+    Oklab, Oklch, Srgb, Xyz,
 };
 
 use super::FromCss;
@@ -20,6 +23,52 @@ pub type A98Rgb<T = f32> = Rgb<encoding::A98Rgb, T>;
 pub type ProphotoRgb<T = f32> = Rgb<encoding::ProphotoRgb, T>;
 pub type Rec2020<T = f32> = Rgb<encoding::Rec2020, T>;
 pub type LinDisplayP3<T = f32> = Rgb<Linear<encoding::DisplayP3>, T>;
+
+fn gamut_map_oklch_to_rgb<S>(oklch: Oklch) -> Rgb<S>
+where
+    Rgb<S>: FromColorUnclamped<Oklch>,
+    Oklab: FromColorUnclamped<Rgb<S>>,
+{
+    const JND_SQ: f32 = 0.0004;
+    const EPSILON: f32 = 0.0001;
+    if oklch.l >= 1.0 {
+        return Rgb::new(1.0, 1.0, 1.0);
+    }
+    if oklch.l <= 0.0 {
+        return Rgb::new(0.0, 0.0, 0.0);
+    }
+    let rgb = Rgb::from_color_unclamped(oklch);
+    if rgb.is_within_bounds() {
+        return rgb;
+    }
+    let rgb_clipped = rgb.clamp();
+    let dist_sq = Oklab::distance_squared(
+        oklch.into_color_unclamped(),
+        rgb_clipped.into_color_unclamped(),
+    );
+    if dist_sq < JND_SQ {
+        return rgb_clipped;
+    }
+    let mut result = rgb_clipped;
+    let mut min_chroma = 0.0;
+    let mut max_chroma = oklch.chroma;
+    while max_chroma - min_chroma > EPSILON {
+        let chroma = (min_chroma + max_chroma) * 0.5;
+        let oklch = Oklch { chroma, ..oklch };
+        let rgb_clipped = Rgb::from_color(oklch);
+        let dist_sq = Oklab::distance_squared(
+            oklch.into_color_unclamped(),
+            rgb_clipped.into_color_unclamped(),
+        );
+        if dist_sq < JND_SQ {
+            min_chroma = chroma;
+        } else {
+            max_chroma = chroma;
+            result = rgb_clipped;
+        }
+    }
+    result
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AbsoluteColorValue {
@@ -39,57 +88,44 @@ pub enum AbsoluteColorValue {
 }
 
 impl AbsoluteColorValue {
+    pub const BLACK: Self = Self::LegacyRgb(Rgb::new(0.0, 0.0, 0.0));
+
+    pub fn into_oklch(self) -> Oklch {
+        match self {
+            Self::LegacyRgb(c) => c.into_color_unclamped(),
+            Self::Lab(c) => c.adapt_into(),
+            Self::Lch(c) => c.adapt_into(),
+            Self::Oklab(c) => c.into_color_unclamped(),
+            Self::Oklch(c) => c,
+            Self::Srgb(c) => c.into_color_unclamped(),
+            Self::SrgbLinear(c) => c.into_color_unclamped(),
+            Self::DisplayP3(c) => c.into_color_unclamped(),
+            Self::A98Rgb(c) => c.into_color_unclamped(),
+            Self::ProphotoRgb(c) => c.adapt_into(),
+            Self::Rec2020(c) => c.into_color_unclamped(),
+            Self::XyzD50(c) => c.adapt_into(),
+            Self::XyzD65(c) => c.into_color_unclamped(),
+        }
+    }
+
     pub fn into_srgb(self) -> Srgb {
         match self {
-            AbsoluteColorValue::LegacyRgb(c) => c,
-            AbsoluteColorValue::Lab(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Lch(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Oklab(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Oklch(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Srgb(c) => c,
-            AbsoluteColorValue::SrgbLinear(c) => Rgb::from_color(c),
-            AbsoluteColorValue::DisplayP3(c) => Rgb::from_color(c),
-            AbsoluteColorValue::A98Rgb(c) => Rgb::from_color(c),
-            AbsoluteColorValue::ProphotoRgb(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Rec2020(c) => Rgb::from_color(c),
-            AbsoluteColorValue::XyzD50(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::XyzD65(c) => Rgb::from_color(c),
+            Self::LegacyRgb(c) => c,
+            _ => gamut_map_oklch_to_rgb(self.into_oklch()),
         }
     }
 
     pub fn into_linear_srgb(self) -> LinSrgb {
         match self {
-            AbsoluteColorValue::LegacyRgb(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Lab(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Lch(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Oklab(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Oklch(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Srgb(c) => Rgb::from_color(c),
-            AbsoluteColorValue::SrgbLinear(c) => c,
-            AbsoluteColorValue::DisplayP3(c) => Rgb::from_color(c),
-            AbsoluteColorValue::A98Rgb(c) => Rgb::from_color(c),
-            AbsoluteColorValue::ProphotoRgb(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Rec2020(c) => Rgb::from_color(c),
-            AbsoluteColorValue::XyzD50(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::XyzD65(c) => Rgb::from_color(c),
+            Self::LegacyRgb(c) => c.into_linear(),
+            _ => gamut_map_oklch_to_rgb(self.into_oklch()),
         }
     }
 
     pub fn into_linear_display_p3(self) -> LinDisplayP3 {
         match self {
-            AbsoluteColorValue::LegacyRgb(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Lab(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Lch(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Oklab(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Oklch(c) => Rgb::from_color(c),
-            AbsoluteColorValue::Srgb(c) => Rgb::from_color(c),
-            AbsoluteColorValue::SrgbLinear(c) => Rgb::from_color(c),
-            AbsoluteColorValue::DisplayP3(c) => Rgb::from_color(c),
-            AbsoluteColorValue::A98Rgb(c) => Rgb::from_color(c),
-            AbsoluteColorValue::ProphotoRgb(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::Rec2020(c) => Rgb::from_color(c),
-            AbsoluteColorValue::XyzD50(c) => Rgb::adapt_from(c).clamp(),
-            AbsoluteColorValue::XyzD65(c) => Rgb::from_color(c),
+            Self::LegacyRgb(c) => c.into_color_unclamped(),
+            _ => gamut_map_oklch_to_rgb(self.into_oklch()),
         }
     }
 }
@@ -102,11 +138,11 @@ pub struct AbsoluteColor {
 
 impl AbsoluteColor {
     pub const OPAQUE_BLACK: Self = Self {
-        value: AbsoluteColorValue::LegacyRgb(Rgb::new(0.0, 0.0, 0.0)),
+        value: AbsoluteColorValue::BLACK,
         alpha: 1.0,
     };
     pub const TRANSPARENT_BLACK: Self = Self {
-        value: AbsoluteColorValue::LegacyRgb(Rgb::new(0.0, 0.0, 0.0)),
+        value: AbsoluteColorValue::BLACK,
         alpha: 0.0,
     };
 }
