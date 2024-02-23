@@ -2012,12 +2012,8 @@ const convertDOMMatrixInit = createDictionaryConverter(
 function validateAndFixup(other) {
   validateAndFixup2D(other);
   const { m13, m14, m23, m24, m31, m32, m33, m34, m43, m44 } = other;
-  const mayBe2D = (m13 === undefined || m13 === 0) &&
-    (m14 === undefined || m14 === 0) && (m23 === undefined || m23 === 0) &&
-    (m24 === undefined || m24 === 0) && (m31 === undefined || m31 === 0) &&
-    (m32 === undefined || m32 === 0) && (m33 === undefined || m33 === 1) &&
-    (m34 === undefined || m34 === 0) && (m43 === undefined || m43 === 0) &&
-    (m44 === undefined || m44 === 1);
+  const mayBe2D = m13 === 0 && m14 === 0 && m23 === 0 && m24 === 0 &&
+    m31 === 0 && m32 === 0 && m33 === 1 && m34 === 0 && m43 === 0 && m44 === 1;
   if (other.is2D === undefined) {
     other.is2D = mayBe2D;
   } else if (other.is2D && !mayBe2D) {
