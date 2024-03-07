@@ -133,7 +133,7 @@ registerCanvasContextMode("none", {
   },
 });
 
-function getOffscreenCanvasContextMode(ctx) {
+export function getOffscreenCanvasContextMode(ctx) {
   // deno-lint-ignore prefer-primordials
   for (const mode of contextModes.values()) {
     if (mode.hasInstance(ctx)) {
