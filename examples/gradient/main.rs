@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     });
     let url = {
         let promise = runtime
-            .execute_script_static("script.js", include_str!("script.js"))
+            .execute_script("script.js", include_str!("script.js"))
             .unwrap();
         let future = runtime.resolve(promise);
         let result = runtime
