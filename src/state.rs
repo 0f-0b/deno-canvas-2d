@@ -1,4 +1,3 @@
-use std::array;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::convert::Infallible;
@@ -12,7 +11,6 @@ use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2, Angle};
 use strum_macros::FromRepr;
 
-use super::blur::GaussianBlur;
 use super::convert::{
     display_p3_to_premultiplied_linear_srgb, pack_rgba8_to_argb32,
     premultiplied_linear_display_p3_to_srgb, premultiplied_linear_srgb_to_display_p3,
@@ -28,6 +26,7 @@ use super::css::font::{
 };
 use super::css::length::{ComputedLength, SpecifiedAbsoluteLength};
 use super::css::FromCss as _;
+use super::filter::{compile_filter, Filter};
 use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
@@ -36,7 +35,7 @@ use super::path::{CanvasFillRule, Path};
 use super::pattern::CanvasPattern;
 use super::text::{prepare_text, FontFaceSet, TextMetrics};
 use super::{
-    premultiply, raqote_ext, resolve_color_for_canvas, serialize_color_for_canvas, to_raqote_color,
+    raqote_ext, resolve_color_for_canvas, serialize_color_for_canvas, to_raqote_color,
     to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace, ARGB32_ALPHA_MASK,
 };
 
@@ -817,74 +816,32 @@ impl CanvasState {
         );
     }
 
-    fn draw_shadow<RF>(&mut self, render: RF)
+    fn draw_with_filter<RF>(&mut self, render: RF, filter: &Filter, offset: Vector2D<f64>)
     where
         RF: FnOnce(&mut raqote::DrawTarget, raqote::DrawOptions),
     {
-        let offset = self.current_drawing_state.shadow_offset;
-        let blur = GaussianBlur::new((self.current_drawing_state.shadow_blur * 0.5) as f32);
-        if offset.x == 0.0 && offset.y == 0.0 && blur.is_none() {
-            return;
-        }
-        let colors: [u32; 256] = {
-            let c = to_raqote_color(self.current_drawing_state.shadow_color, self.color_space);
-            if c.a() == 0 {
-                return;
-            }
-            array::from_fn(|a| {
-                let a = a as u8;
-                u32::from_be_bytes([
-                    a,
-                    premultiply(c.r(), a),
-                    premultiply(c.g(), a),
-                    premultiply(c.b(), a),
-                ])
-            })
-        };
-        let width = self.draw_target.width();
-        let height = self.draw_target.height();
-        let extend_len = match blur {
-            Some(ref blur) => blur.extend_len().try_into().unwrap(),
-            None => 0,
-        };
-        let shadow_width = width.checked_add(extend_len).unwrap();
-        let shadow_height = height.checked_add(extend_len).unwrap();
-        let mut shadow_target = raqote::DrawTarget::new(shadow_width, shadow_height);
-        shadow_target.set_transform(&self.draw_target.get_transform().then_translate(vec2(
-            offset.x as f32 + (extend_len / 2) as f32,
-            offset.y as f32 + (extend_len / 2) as f32,
+        let overflow = filter.overflow();
+        let width = self.draw_target.width() as usize;
+        let height = self.draw_target.height() as usize;
+        let transform = *self.draw_target.get_transform();
+        let mut layer = raqote::DrawTarget::new(
+            (width + overflow.horizontal()) as i32,
+            (height + overflow.vertical()) as i32,
+        );
+        layer.set_transform(&transform.then_translate(vec2(
+            overflow.left as f32 + offset.x as f32,
+            overflow.top as f32 + offset.y as f32,
         )));
         render(
-            &mut shadow_target,
+            &mut layer,
             raqote::DrawOptions {
                 blend_mode: raqote::BlendMode::Src,
-                alpha: self.current_drawing_state.global_alpha as f32
-                    * self.current_drawing_state.shadow_color.alpha,
+                alpha: self.current_drawing_state.global_alpha as f32,
                 ..Default::default()
             },
         );
-        match blur {
-            Some(blur) => {
-                let mut data = shadow_target
-                    .into_inner()
-                    .into_iter()
-                    .map(|pixel| (pixel >> 24) as f32)
-                    .collect::<Vec<_>>();
-                blur.apply(&mut data, shadow_width as usize);
-                shadow_target = raqote::DrawTarget::from_backing(
-                    shadow_width,
-                    shadow_height,
-                    data.into_iter()
-                        .map(|a| colors[a.round() as u8 as usize])
-                        .collect::<Vec<_>>(),
-                );
-            }
-            None => {
-                for pixel in shadow_target.get_data_mut() {
-                    *pixel = colors[(*pixel >> 24) as usize];
-                }
-            }
-        }
+        filter.apply(&mut layer);
+        self.draw_target.set_transform(&Transform2D::identity());
         self.draw_target.fill_rect(
             0.0,
             0.0,
@@ -892,9 +849,9 @@ impl CanvasState {
             height as f32,
             &raqote::Source::Image(
                 raqote::Image {
-                    width: shadow_width,
-                    height: shadow_height,
-                    data: shadow_target.get_data(),
+                    width: layer.width(),
+                    height: layer.height(),
+                    data: layer.get_data(),
                 },
                 raqote::ExtendMode::Pad,
                 raqote::FilterMode::Nearest,
@@ -910,6 +867,27 @@ impl CanvasState {
                 ..Default::default()
             },
         );
+        self.draw_target.set_transform(&transform);
+    }
+
+    fn draw_shadow<RF>(&mut self, render: RF, mut filter: Filter)
+    where
+        RF: FnOnce(&mut raqote::DrawTarget, raqote::DrawOptions),
+    {
+        let color = self.current_drawing_state.shadow_color;
+        if self.current_drawing_state.shadow_color.alpha == 0.0 {
+            return;
+        }
+        let offset = self.current_drawing_state.shadow_offset;
+        let blur = self.current_drawing_state.shadow_blur;
+        if offset.x == 0.0 && offset.y == 0.0 && blur == 0.0 {
+            return;
+        }
+        filter.make_shadow(
+            to_raqote_color(color, self.color_space),
+            (blur * 0.5) as f32,
+        );
+        self.draw_with_filter(render, &filter, offset);
     }
 
     fn paint<RF>(&mut self, prepare: impl FnOnce(&Self) -> RF)
@@ -924,7 +902,7 @@ impl CanvasState {
     where
         RF: Fn(&mut raqote::DrawTarget, raqote::DrawOptions),
     {
-        // TODO apply filter
+        let filter = compile_filter(&self.current_drawing_state.filter, self.color_space);
         match self.current_drawing_state.compositing_and_blending_operator {
             BlendOrCompositeMode::Clear => {
                 if self.alpha {
@@ -933,7 +911,7 @@ impl CanvasState {
                     self.draw_target.clear(OPAQUE_BLACK_SOLID_SOURCE);
                 }
             }
-            BlendOrCompositeMode::Copy => {
+            BlendOrCompositeMode::Copy if filter.is_empty() => {
                 let render = prepare(self)?;
                 if self.alpha {
                     self.draw_target.clear(TRANSPARENT_SOLID_SOURCE);
@@ -952,31 +930,34 @@ impl CanvasState {
                     },
                 );
             }
-            BlendOrCompositeMode::SourceIn
-            | BlendOrCompositeMode::DestinationIn
-            | BlendOrCompositeMode::SourceOut
-            | BlendOrCompositeMode::DestinationAtop => {
+            BlendOrCompositeMode::Normal
+            | BlendOrCompositeMode::Multiply
+            | BlendOrCompositeMode::Screen
+            | BlendOrCompositeMode::Overlay
+            | BlendOrCompositeMode::Darken
+            | BlendOrCompositeMode::Lighten
+            | BlendOrCompositeMode::ColorDodge
+            | BlendOrCompositeMode::ColorBurn
+            | BlendOrCompositeMode::HardLight
+            | BlendOrCompositeMode::SoftLight
+            | BlendOrCompositeMode::Difference
+            | BlendOrCompositeMode::Exclusion
+            | BlendOrCompositeMode::Hue
+            | BlendOrCompositeMode::Saturation
+            | BlendOrCompositeMode::Color
+            | BlendOrCompositeMode::Luminosity
+            | BlendOrCompositeMode::SourceOver
+            | BlendOrCompositeMode::DestinationOver
+            | BlendOrCompositeMode::DestinationOut
+            | BlendOrCompositeMode::SourceAtop
+            | BlendOrCompositeMode::Xor
+            | BlendOrCompositeMode::Lighter
+            | BlendOrCompositeMode::PlusDarker
+            | BlendOrCompositeMode::PlusLighter
+                if filter.is_empty() =>
+            {
                 let render = prepare(self)?;
-                self.draw_shadow(&render);
-                self.draw_target.push_layer_with_blend(
-                    1.0,
-                    self.current_drawing_state
-                        .compositing_and_blending_operator
-                        .to_raqote(self.alpha),
-                );
-                render(
-                    &mut self.draw_target,
-                    raqote::DrawOptions {
-                        blend_mode: raqote::BlendMode::Src,
-                        alpha: self.current_drawing_state.global_alpha as f32,
-                        ..Default::default()
-                    },
-                );
-                self.draw_target.pop_layer();
-            }
-            _ => {
-                let render = prepare(self)?;
-                self.draw_shadow(&render);
+                self.draw_shadow(&render, Filter::default());
                 render(
                     &mut self.draw_target,
                     raqote::DrawOptions {
@@ -988,6 +969,11 @@ impl CanvasState {
                         ..Default::default()
                     },
                 );
+            }
+            _ => {
+                let render = prepare(self)?;
+                self.draw_shadow(&render, filter.clone());
+                self.draw_with_filter(render, &filter, Vector2D::zero());
             }
         }
         Ok(())

@@ -1,7 +1,7 @@
-mod blur;
 mod codec;
 mod convert;
 mod css;
+mod filter;
 mod gc;
 mod gradient;
 mod harfbuzz_ext;
