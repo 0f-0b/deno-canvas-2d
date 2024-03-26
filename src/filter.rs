@@ -345,8 +345,8 @@ impl FilterInstruction {
                 let (shadow, overflow) = make_shadow(draw_target, color, blur);
                 let mut result = raqote::DrawTarget::new(shadow.width(), shadow.height());
                 result.fill_rect(
-                    0.0,
-                    0.0,
+                    offset_x,
+                    offset_y,
                     result.width() as f32,
                     result.height() as f32,
                     &raqote::Source::Image(
