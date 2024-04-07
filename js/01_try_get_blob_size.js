@@ -1,4 +1,4 @@
-import { BlobPrototypeGetSize } from "ext:canvas_2d/00_blob_primordials.js";
+import { BlobPrototypeGetSize } from "./00_blob_primordials.js";
 
 export function tryGetBlobSize(o) {
   try {

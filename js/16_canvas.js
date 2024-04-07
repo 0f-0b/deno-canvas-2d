@@ -1,39 +1,3 @@
-import {
-  BlobPrototypeArrayBuffer,
-  BlobPrototypeGetType,
-} from "ext:canvas_2d/00_blob_primordials.js";
-import {
-  ImageDataPrototypeGetColorSpace,
-  ImageDataPrototypeGetData,
-  ImageDataPrototypeGetHeight,
-  ImageDataPrototypeGetWidth,
-} from "ext:canvas_2d/00_image_data_primordials.js";
-import {
-  op_canvas_2d_decode_image,
-  op_canvas_2d_encode_png,
-  op_canvas_2d_image_bitmap_clone,
-  op_canvas_2d_image_bitmap_close,
-  op_canvas_2d_image_bitmap_crop,
-  op_canvas_2d_image_bitmap_empty,
-  op_canvas_2d_image_bitmap_empty_resize,
-  op_canvas_2d_image_bitmap_from_image_data_crop_and_resize,
-  op_canvas_2d_image_bitmap_height,
-  op_canvas_2d_image_bitmap_resize,
-  op_canvas_2d_image_bitmap_width,
-} from "ext:canvas_2d/00_ops.js";
-import { IdentityConstructor } from "ext:canvas_2d/01_identity_constructor.js";
-import { makeSafePromise } from "ext:canvas_2d/01_promise.js";
-import { isBlob } from "ext:canvas_2d/02_is_blob.js";
-import { isImageData } from "ext:canvas_2d/02_is_image_data.js";
-import { createDictionaryConverter } from "ext:canvas_2d/04_create_dictionary_converter.js";
-import { createEnumConverter } from "ext:canvas_2d/04_create_enum_converter.js";
-import { convertDOMString } from "ext:canvas_2d/05_convert_dom_string.js";
-import { convertEnforceRangeUnsignedLong } from "ext:canvas_2d/05_convert_enforce_range_unsigned_long.js";
-import { convertEnforceRangeUnsignedLongLong } from "ext:canvas_2d/05_convert_enforce_range_unsigned_long_long.js";
-import { convertEventHandler } from "ext:canvas_2d/05_convert_event_handler.js";
-import { convertLong } from "ext:canvas_2d/05_convert_long.js";
-import { convertUnrestrictedDouble } from "ext:canvas_2d/05_convert_unrestricted_double.js";
-import { EventHandler } from "ext:canvas_2d/15_event.js";
 import { primordials } from "ext:core/mod.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
@@ -46,6 +10,42 @@ import {
   requiredArguments,
   type,
 } from "ext:deno_webidl/00_webidl.js";
+import {
+  BlobPrototypeArrayBuffer,
+  BlobPrototypeGetType,
+} from "./00_blob_primordials.js";
+import {
+  ImageDataPrototypeGetColorSpace,
+  ImageDataPrototypeGetData,
+  ImageDataPrototypeGetHeight,
+  ImageDataPrototypeGetWidth,
+} from "./00_image_data_primordials.js";
+import {
+  op_canvas_2d_decode_image,
+  op_canvas_2d_encode_png,
+  op_canvas_2d_image_bitmap_clone,
+  op_canvas_2d_image_bitmap_close,
+  op_canvas_2d_image_bitmap_crop,
+  op_canvas_2d_image_bitmap_empty,
+  op_canvas_2d_image_bitmap_empty_resize,
+  op_canvas_2d_image_bitmap_from_image_data_crop_and_resize,
+  op_canvas_2d_image_bitmap_height,
+  op_canvas_2d_image_bitmap_resize,
+  op_canvas_2d_image_bitmap_width,
+} from "./00_ops.js";
+import { IdentityConstructor } from "./01_identity_constructor.js";
+import { makeSafePromise } from "./01_promise.js";
+import { isBlob } from "./02_is_blob.js";
+import { isImageData } from "./02_is_image_data.js";
+import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
+import { createEnumConverter } from "./04_create_enum_converter.js";
+import { convertDOMString } from "./05_convert_dom_string.js";
+import { convertEnforceRangeUnsignedLong } from "./05_convert_enforce_range_unsigned_long.js";
+import { convertEnforceRangeUnsignedLongLong } from "./05_convert_enforce_range_unsigned_long_long.js";
+import { convertEventHandler } from "./05_convert_event_handler.js";
+import { convertLong } from "./05_convert_long.js";
+import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
+import { EventHandler } from "./15_event.js";
 
 const {
   ObjectFreeze,

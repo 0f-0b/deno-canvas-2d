@@ -1,3 +1,12 @@
+import { primordials } from "ext:core/mod.js";
+import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
+import { DOMException } from "ext:deno_web/01_dom_exception.js";
+import {
+  configureInterface,
+  illegalConstructor,
+  requiredArguments,
+  type,
+} from "ext:deno_webidl/00_webidl.js";
 import {
   op_canvas_2d_image_bitmap_clone,
   op_canvas_2d_image_bitmap_close,
@@ -8,25 +17,16 @@ import {
   op_canvas_2d_image_bitmap_height,
   op_canvas_2d_image_bitmap_remove_alpha,
   op_canvas_2d_image_bitmap_width,
-} from "ext:canvas_2d/00_ops.js";
-import { createDictionaryConverter } from "ext:canvas_2d/04_create_dictionary_converter.js";
-import { convertBoolean } from "ext:canvas_2d/05_convert_boolean.js";
+} from "./00_ops.js";
+import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
+import { convertBoolean } from "./05_convert_boolean.js";
 import {
   colorSpaceFromRepr,
   colorSpaceToRepr,
   objectIsImageBitmap,
   registerCanvasContextMode,
   transferImageBitmap,
-} from "ext:canvas_2d/16_canvas.js";
-import { primordials } from "ext:core/mod.js";
-import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
-import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import {
-  configureInterface,
-  illegalConstructor,
-  requiredArguments,
-  type,
-} from "ext:deno_webidl/00_webidl.js";
+} from "./16_canvas.js";
 
 const {
   RangeError,

@@ -1,3 +1,20 @@
+import { primordials } from "ext:core/mod.js";
+import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
+import { DOMException } from "ext:deno_web/01_dom_exception.js";
+import {
+  dispatch,
+  Event,
+  EventTarget,
+  setIsTrusted,
+} from "ext:deno_web/02_event.js";
+import { defer } from "ext:deno_web/02_timers.js";
+import { Deferred } from "ext:deno_web/06_streams.js";
+import {
+  configureInterface,
+  illegalConstructor,
+  requiredArguments,
+  type,
+} from "ext:deno_webidl/00_webidl.js";
 import {
   op_canvas_2d_font_face_ascent_override,
   op_canvas_2d_font_face_descent_override,
@@ -32,42 +49,25 @@ import {
   op_canvas_2d_font_face_variation_settings,
   op_canvas_2d_font_face_weight,
   op_canvas_2d_font_source,
-} from "ext:canvas_2d/00_ops.js";
-import { IdentityConstructor } from "ext:canvas_2d/01_identity_constructor.js";
+} from "./00_ops.js";
+import { IdentityConstructor } from "./01_identity_constructor.js";
 import {
   makeSpeciesSafePromise,
   newFromSpeciesSafePromise,
   safePromiseAll,
-} from "ext:canvas_2d/01_promise.js";
-import { requireObject } from "ext:canvas_2d/01_require_object.js";
-import { isArrayBuffer } from "ext:canvas_2d/02_is_array_buffer.js";
-import { isDataView } from "ext:canvas_2d/02_is_data_view.js";
-import { isTypedArray } from "ext:canvas_2d/02_is_typed_array.js";
-import { createDictionaryConverter } from "ext:canvas_2d/04_create_dictionary_converter.js";
-import { createSequenceFromIterable } from "ext:canvas_2d/04_create_sequence_from_iterable.js";
-import { convertArrayBuffer } from "ext:canvas_2d/05_convert_array_buffer.js";
-import { convertDataView } from "ext:canvas_2d/05_convert_data_view.js";
-import { convertDOMString } from "ext:canvas_2d/05_convert_dom_string.js";
-import { convertEventHandler } from "ext:canvas_2d/05_convert_event_handler.js";
-import { convertTypedArray } from "ext:canvas_2d/05_convert_typed_array.js";
-import { EventHandler, readEventInitMembers } from "ext:canvas_2d/15_event.js";
-import { primordials } from "ext:core/mod.js";
-import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
-import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import {
-  dispatch,
-  Event,
-  EventTarget,
-  setIsTrusted,
-} from "ext:deno_web/02_event.js";
-import { defer } from "ext:deno_web/02_timers.js";
-import { Deferred } from "ext:deno_web/06_streams.js";
-import {
-  configureInterface,
-  illegalConstructor,
-  requiredArguments,
-  type,
-} from "ext:deno_webidl/00_webidl.js";
+} from "./01_promise.js";
+import { requireObject } from "./01_require_object.js";
+import { isArrayBuffer } from "./02_is_array_buffer.js";
+import { isDataView } from "./02_is_data_view.js";
+import { isTypedArray } from "./02_is_typed_array.js";
+import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
+import { createSequenceFromIterable } from "./04_create_sequence_from_iterable.js";
+import { convertArrayBuffer } from "./05_convert_array_buffer.js";
+import { convertDataView } from "./05_convert_data_view.js";
+import { convertDOMString } from "./05_convert_dom_string.js";
+import { convertEventHandler } from "./05_convert_event_handler.js";
+import { convertTypedArray } from "./05_convert_typed_array.js";
+import { EventHandler, readEventInitMembers } from "./15_event.js";
 
 const {
   ArrayPrototypeEvery,

@@ -1,13 +1,3 @@
-import { op_canvas_2d_parse_matrix } from "ext:canvas_2d/00_ops.js";
-import { IdentityConstructor } from "ext:canvas_2d/01_identity_constructor.js";
-import { sameValueZero } from "ext:canvas_2d/01_same_value_zero.js";
-import { createDictionaryConverter } from "ext:canvas_2d/04_create_dictionary_converter.js";
-import { createSequenceFromIterable } from "ext:canvas_2d/04_create_sequence_from_iterable.js";
-import { convertBoolean } from "ext:canvas_2d/05_convert_boolean.js";
-import { convertDOMString } from "ext:canvas_2d/05_convert_dom_string.js";
-import { convertFloat32Array } from "ext:canvas_2d/05_convert_float32_array.js";
-import { convertFloat64Array } from "ext:canvas_2d/05_convert_float64_array.js";
-import { convertUnrestrictedDouble } from "ext:canvas_2d/05_convert_unrestricted_double.js";
 import { primordials } from "ext:core/mod.js";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import {
@@ -15,6 +5,16 @@ import {
   requiredArguments,
   type,
 } from "ext:deno_webidl/00_webidl.js";
+import { op_canvas_2d_parse_matrix } from "./00_ops.js";
+import { IdentityConstructor } from "./01_identity_constructor.js";
+import { sameValueZero } from "./01_same_value_zero.js";
+import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
+import { createSequenceFromIterable } from "./04_create_sequence_from_iterable.js";
+import { convertBoolean } from "./05_convert_boolean.js";
+import { convertDOMString } from "./05_convert_dom_string.js";
+import { convertFloat32Array } from "./05_convert_float32_array.js";
+import { convertFloat64Array } from "./05_convert_float64_array.js";
+import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
 
 const {
   Float32Array,

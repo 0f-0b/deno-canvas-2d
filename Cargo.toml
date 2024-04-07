@@ -23,7 +23,7 @@ palette = { version = "0.7.5", default-features = false, features = ["std"] }
 png = "0.17.13"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "fd8b16d063a3605da6a6e72079bd0672f85514cf", default-features = false }
 strum_macros = "0.26.2"
-svgtypes = "0.14.0"
+svgtypes = "0.15.0"
 unicase = { git = "https://github.com/seanmonstar/unicase.git", rev = "07f81c14cd6a146f4b86e033999919a5159255c7" }
 unicode-bidi = "0.3.15"
 

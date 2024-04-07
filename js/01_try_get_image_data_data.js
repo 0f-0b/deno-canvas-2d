@@ -1,4 +1,4 @@
-import { ImageDataPrototypeGetData } from "ext:canvas_2d/00_image_data_primordials.js";
+import { ImageDataPrototypeGetData } from "./00_image_data_primordials.js";
 
 export function tryGetImageDataData(o) {
   try {

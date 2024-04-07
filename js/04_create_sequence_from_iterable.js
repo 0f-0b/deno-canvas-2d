@@ -1,5 +1,5 @@
-import { requireObject } from "ext:canvas_2d/01_require_object.js";
 import { primordials } from "ext:core/mod.js";
+import { requireObject } from "./01_require_object.js";
 
 const { ArrayPrototypePush, FunctionPrototypeCall } = primordials;
 

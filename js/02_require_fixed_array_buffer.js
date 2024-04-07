@@ -1,5 +1,5 @@
-import { tryGetArrayBufferResizable } from "ext:canvas_2d/01_try_get_array_buffer_resizable.js";
 import { primordials } from "ext:core/mod.js";
+import { tryGetArrayBufferResizable } from "./01_try_get_array_buffer_resizable.js";
 
 const { TypeError } = primordials;
 
