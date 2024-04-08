@@ -1,0 +1,34 @@
+{
+  "scopes": {
+    "./examples/gradient/": {
+      "ext:canvas_2d/00_array_buffer_primordials.js": "./js/00_array_buffer_primordials.js",
+      "ext:canvas_2d/15_geometry.js": "./js/15_geometry.js",
+      "ext:canvas_2d/16_canvas.js": "./js/16_canvas.js",
+      "ext:canvas_2d/16_font_loading.js": "./js/16_font_loading.js",
+      "ext:canvas_2d/17_context_2d.js": "./js/17_context_2d.js",
+      "ext:canvas_2d/17_context_bitmaprenderer.js": "./js/17_context_bitmaprenderer.js",
+      "ext:core/mod.js": "../deno_core/core/mod.js",
+      "ext:deno_url/00_url.js": "../deno/ext/url/00_url.js",
+      "ext:deno_url/01_urlpattern.js": "../deno/ext/url/01_urlpattern.js",
+      "ext:deno_web/04_global_interfaces.js": "../deno/ext/web/04_global_interfaces.js",
+      "ext:deno_web/05_base64.js": "../deno/ext/web/05_base64.js",
+      "ext:deno_web/10_filereader.js": "../deno/ext/web/10_filereader.js",
+      "ext:deno_web/12_location.js": "../deno/ext/web/12_location.js",
+      "ext:deno_web/13_message_port.js": "../deno/ext/web/13_message_port.js",
+      "ext:deno_web/14_compression.js": "../deno/ext/web/14_compression.js",
+      "ext:deno_web/15_performance.js": "../deno/ext/web/15_performance.js"
+    },
+    "./js/": {
+      "ext:core/mod.js": "../deno_core/core/mod.js",
+      "ext:core/ops": "data:text/javascript,",
+      "ext:deno_console/01_console.js": "../deno/ext/console/01_console.js",
+      "ext:deno_web/01_dom_exception.js": "../deno/ext/web/01_dom_exception.js",
+      "ext:deno_web/02_event.js": "../deno/ext/web/02_event.js",
+      "ext:deno_web/02_timers.js": "../deno/ext/web/02_timers.js",
+      "ext:deno_web/06_streams.js": "../deno/ext/web/06_streams.js",
+      "ext:deno_web/09_file.js": "../deno/ext/web/09_file.js",
+      "ext:deno_web/16_image_data.js": "../deno/ext/web/16_image_data.js",
+      "ext:deno_webidl/00_webidl.js": "../deno/ext/webidl/00_webidl.js"
+    }
+  }
+}
