@@ -46,9 +46,9 @@ checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 
 [[package]]
 name = "anyhow"
-version = "1.0.81"
+version = "1.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0952808a6c2afd1aa8947271f3a60f1a6763c7b912d210184c5149b5cf147247"
+checksum = "f538837af36e6f6a9be0faa67f9a314f8119e4e4b5867c6ab40ed60360142519"
 
 [[package]]
 name = "approx"
@@ -291,9 +291,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.144.0"
+version = "0.145.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "372a00d0d0c42c3f5a451037e0ce327fa284144112c3109d32b50b40a2ef9532"
+checksum = "abe8a3be18acd391ff1ef26c13fb045e43ae55196f8daeb3ce8486b781cfe507"
 dependencies = [
  "deno_core",
 ]
@@ -362,9 +362,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.144.0"
+version = "0.145.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e172f44cffc771f0050d1befb12523d0420b6a44983d0c74d572609f4d3e02e3"
+checksum = "d48c277c4aeb3f4c6e9dbf9928f24422f01c70054aa472cd1d783aa2b8c35e10"
 dependencies = [
  "deno_core",
  "serde",
@@ -373,9 +373,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.175.0"
+version = "0.176.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6f547fd5cbcaf22f302bf16d050f365519834f5ffbb1b623b48d64ce2b72f47"
+checksum = "8a000e91f8e464257af371e1abd5997b104cae4eb38a82e632621a929f8358e1"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -392,9 +392,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.144.0"
+version = "0.145.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c0484ffd8b436e926538fc0db4bc588832800b6681e554cebb3ae21f346c84e"
+checksum = "12bc261ceea6cf4faf9919d21bc598843a808f9f820c379e5ea578795afb6263"
 dependencies = [
  "deno_core",
 ]
@@ -762,9 +762,9 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "jobserver"
-version = "0.1.28"
+version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab46a6e9526ddef3ae7f787c06f0f2600639ba80ea3eade3d8e670a2230f51d6"
+checksum = "f08474e32172238f2827bd160c67871cdb2801430f65c3979184dc362e3ca118"
 dependencies = [
  "libc",
 ]
@@ -1116,9 +1116,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.35"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
+checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
 dependencies = [
  "proc-macro2",
 ]
