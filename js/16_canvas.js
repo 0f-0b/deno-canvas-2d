@@ -51,6 +51,7 @@ const {
   ObjectFreeze,
   ObjectGetPrototypeOf,
   Promise,
+  PromiseReject,
   ReflectConstruct,
   RangeError,
   SafeArrayIterator,
@@ -244,6 +245,15 @@ export const OffscreenCanvasInternals = class OffscreenCanvas
     }
   }
 
+  static async convertToBlob(o, options) {
+    try {
+      const { data, type } = OffscreenCanvasInternals.encode(o, options.type);
+      return new Blob(new SafeArrayIterator([data]), { __proto__: null, type });
+    } finally {
+      await makeSafePromise(new Promise(defer));
+    }
+  }
+
   static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
@@ -327,15 +337,13 @@ export class OffscreenCanvas extends EventTarget {
     return new ImageBitmap(illegalConstructor, mode.transferToImageBitmap(ctx));
   }
 
-  async convertToBlob(options = undefined) {
-    OffscreenCanvasInternals.checkInstance(this);
-    options = convertImageEncodeOptions(options);
+  convertToBlob(options = undefined) {
     try {
-      const { data, type } = OffscreenCanvasInternals
-        .encode(this, options.type);
-      return new Blob(new SafeArrayIterator([data]), { __proto__: null, type });
-    } finally {
-      await makeSafePromise(new Promise(defer));
+      OffscreenCanvasInternals.checkInstance(this);
+      options = convertImageEncodeOptions(options);
+      return OffscreenCanvasInternals.convertToBlob(this, options);
+    } catch (e) {
+      return PromiseReject(e);
     }
   }
 
@@ -644,70 +652,79 @@ async function checkUsabilityAndCropWithFormatting(
   );
 }
 
-export const makeCreateImageBitmap = (prefix) =>
-  async function createImageBitmap(image, sx = undefined, sy, sw, sh, options) {
-    if (this !== null && this !== undefined && this !== globalThis) {
-      throw new TypeError("Illegal invocation");
-    }
-    const nArgs = arguments.length;
-    requiredArguments(nArgs, 1, prefix);
-    if (nArgs <= 2) {
-      image = convertImageBitmapSource(image);
-      options = convertImageBitmapOptions(sx);
-      sx = 0;
-      sy = 0;
-    } else if (nArgs >= 5) {
-      image = convertImageBitmapSource(image);
-      sx = convertLong(sx);
-      sy = convertLong(sy);
-      sw = convertLong(sw);
-      sh = convertLong(sh);
-      options = convertImageBitmapOptions(options);
-      if (sw === 0) {
-        throw new RangeError("Source width must be non-zero");
+async function createImageBitmapInner(image, sx, sy, sw, sh, options) {
+  const {
+    resizeWidth,
+    resizeHeight,
+    resizeQuality,
+    imageOrientation,
+  } = options;
+  if (resizeWidth === 0) {
+    throw new DOMException(
+      "Output width must be non-zero",
+      "InvalidStateError",
+    );
+  }
+  if (resizeHeight === 0) {
+    throw new DOMException(
+      "Output height must be non-zero",
+      "InvalidStateError",
+    );
+  }
+  const bitmap = await makeSafePromise(checkUsabilityAndCropWithFormatting(
+    image,
+    sx,
+    sy,
+    sw,
+    sh,
+    resizeWidth,
+    resizeHeight,
+    resizeQuality,
+    imageOrientation,
+  ));
+  return new ImageBitmap(illegalConstructor, bitmap);
+}
+
+export const makeCreateImageBitmap = (prefix) => ({
+  createImageBitmap(image, sx = undefined, sy, sw, sh, options) {
+    try {
+      if (this !== null && this !== undefined && this !== globalThis) {
+        throw new TypeError("Illegal invocation");
       }
-      if (sh === 0) {
-        throw new RangeError("Source height must be non-zero");
+      const nArgs = arguments.length;
+      requiredArguments(nArgs, 1, prefix);
+      if (nArgs <= 2) {
+        image = convertImageBitmapSource(image);
+        options = convertImageBitmapOptions(sx);
+        sx = 0;
+        sy = 0;
+      } else if (nArgs >= 5) {
+        image = convertImageBitmapSource(image);
+        sx = convertLong(sx);
+        sy = convertLong(sy);
+        sw = convertLong(sw);
+        sh = convertLong(sh);
+        options = convertImageBitmapOptions(options);
+        if (sw === 0) {
+          throw new RangeError("Source width must be non-zero");
+        }
+        if (sh === 0) {
+          throw new RangeError("Source height must be non-zero");
+        }
+        if (sw < 0) {
+          sx += sw;
+          sw = -sw;
+        }
+        if (sh < 0) {
+          sy += sh;
+          sh = -sh;
+        }
+      } else {
+        throw new TypeError("Overload resolution failed");
       }
-      if (sw < 0) {
-        sx += sw;
-        sw = -sw;
-      }
-      if (sh < 0) {
-        sy += sh;
-        sh = -sh;
-      }
-    } else {
-      throw new TypeError("Overload resolution failed");
+      return createImageBitmapInner(image, sx, sy, sw, sh, options);
+    } catch (e) {
+      return PromiseReject(e);
     }
-    const {
-      resizeWidth,
-      resizeHeight,
-      resizeQuality,
-      imageOrientation,
-    } = options;
-    if (resizeWidth === 0) {
-      throw new DOMException(
-        "Output width must be non-zero",
-        "InvalidStateError",
-      );
-    }
-    if (resizeHeight === 0) {
-      throw new DOMException(
-        "Output height must be non-zero",
-        "InvalidStateError",
-      );
-    }
-    const bitmap = await makeSafePromise(checkUsabilityAndCropWithFormatting(
-      image,
-      sx,
-      sy,
-      sw,
-      sh,
-      resizeWidth,
-      resizeHeight,
-      resizeQuality,
-      imageOrientation,
-    ));
-    return new ImageBitmap(illegalConstructor, bitmap);
-  };
+  },
+}.createImageBitmap);

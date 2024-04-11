@@ -956,7 +956,7 @@ export function setFetchFont(fn) {
 }
 
 let fonts;
-export const getFonts = ({
+export const getFonts = {
   "get fonts"() {
     if (this !== null && this !== undefined && this !== globalThis) {
       throw new TypeError("Illegal invocation");
@@ -964,4 +964,4 @@ export const getFonts = ({
     fonts ??= new FontFaceSet(illegalConstructor);
     return fonts;
   },
-})["get fonts"];
+}["get fonts"];
