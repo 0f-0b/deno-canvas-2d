@@ -117,11 +117,13 @@ impl ImageBitmap {
         src: &CanvasState,
         x: i64,
         y: i64,
-        width: u32,
-        height: u32,
+        width: Option<u32>,
+        height: Option<u32>,
     ) -> anyhow::Result<Self> {
         let image = src.as_raqote_image();
         let color_space = src.color_space();
+        let width = width.unwrap_or(image.width as u32);
+        let height = height.unwrap_or(image.height as u32);
         if out_of_bounds(image.width as u32, image.height as u32, x, y, width, height) {
             return Ok(Self {
                 width,
@@ -504,7 +506,13 @@ pub fn op_canvas_2d_image_bitmap_from_canvas_state_crop<'a>(
     height: u32,
 ) -> anyhow::Result<v8::Local<'a, v8::External>> {
     let canvas_state = borrow_v8::<CanvasState>(state, canvas_state);
-    let result = ImageBitmap::from_canvas_state_crop(&canvas_state, x, y, width, height)?;
+    let result = ImageBitmap::from_canvas_state_crop(
+        &canvas_state,
+        x,
+        y,
+        non_zero_u32(width),
+        non_zero_u32(height),
+    )?;
     Ok(into_v8(state, scope, result))
 }
 

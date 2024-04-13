@@ -11,7 +11,6 @@ import { defer } from "ext:deno_web/02_timers.js";
 import { Deferred } from "ext:deno_web/06_streams.js";
 import {
   configureInterface,
-  illegalConstructor,
   requiredArguments,
   type,
 } from "ext:deno_webidl/00_webidl.js";
@@ -50,6 +49,7 @@ import {
   op_canvas_2d_font_face_weight,
   op_canvas_2d_font_source,
 } from "./00_ops.js";
+import { capturePrototype } from "./01_capture_prototype.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
 import {
   makeSpeciesSafePromise,
@@ -72,6 +72,8 @@ import { EventHandler, readEventInitMembers } from "./15_event.js";
 const {
   ArrayPrototypeEvery,
   ArrayPrototypePush,
+  Object,
+  ObjectCreate,
   ObjectDefineProperties,
   ObjectGetOwnPropertyDescriptors,
   ObjectFreeze,
@@ -135,13 +137,7 @@ const readFontFaceDescriptorsMembers = (value) => {
 const convertFontFaceDescriptors = createDictionaryConverter(
   readFontFaceDescriptorsMembers,
 );
-let objectIsFontFace;
-let getFontFaceRaw;
-let getFontFaceStatus;
-let addFontFaceToSet;
-let loadFontFace;
-
-export class FontFace {
+const FontFaceInternals = class FontFace extends IdentityConstructor {
   #brand() {}
 
   #raw;
@@ -164,29 +160,41 @@ export class FontFace {
   #cachedDescentOverride = null;
   #cachedLineGapOverride = null;
 
-  constructor(family, source, descriptors = undefined) {
-    family = convertDOMString(family);
-    source = convertDOMStringOrBinaryData(source);
-    descriptors = convertFontFaceDescriptors(descriptors);
+  constructor(
+    o,
+    source,
+    family,
+    style,
+    weight,
+    stretch,
+    unicodeRange,
+    featureSettings,
+    variationSettings,
+    display,
+    ascentOverride,
+    descentOverride,
+    lineGapOverride,
+  ) {
+    super(o);
     try {
       this.#url = typeof source === "string"
         ? op_canvas_2d_font_face_select_source(source)
         : null;
       this.#raw = op_canvas_2d_font_face_new(
         family,
-        descriptors.style,
-        descriptors.weight,
-        descriptors.stretch,
-        descriptors.unicodeRange,
-        descriptors.featureSettings,
-        descriptors.variationSettings,
-        descriptors.display,
-        descriptors.ascentOverride,
-        descriptors.descentOverride,
-        descriptors.lineGapOverride,
+        style,
+        weight,
+        stretch,
+        unicodeRange,
+        featureSettings,
+        variationSettings,
+        display,
+        ascentOverride,
+        descentOverride,
+        lineGapOverride,
       );
     } catch (e) {
-      this.#setError(e);
+      FontFaceInternals.setError(this, e);
       this.#url = null;
       this.#raw = op_canvas_2d_font_face_errored();
       return;
@@ -195,268 +203,209 @@ export class FontFace {
       return;
     }
     defer(() => {
-      this.#setLoading();
+      FontFaceInternals.setLoading(this);
       defer(() => {
         try {
           op_canvas_2d_font_face_load(this.#raw, source, false);
         } catch (e) {
-          this.#setError(e);
+          FontFaceInternals.setError(this, e);
           return;
         }
-        this.#setLoaded();
+        FontFaceInternals.setLoaded(this);
       });
     });
   }
 
-  get family() {
-    this.#brand;
-    this.#cachedFamily ??= op_canvas_2d_font_face_family(this.#raw);
-    return this.#cachedFamily;
-  }
-
-  set family(value) {
-    this.#brand;
-    const prefix = "Failed to set 'family' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_family(this.#raw, value);
-    this.#cachedFamily = null;
-  }
-
-  get style() {
-    this.#brand;
-    this.#cachedStyle ??= op_canvas_2d_font_face_style(this.#raw);
-    return this.#cachedStyle;
-  }
-
-  set style(value) {
-    this.#brand;
-    const prefix = "Failed to set 'style' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_style(this.#raw, value);
-    this.#cachedStyle = null;
-  }
-
-  get weight() {
-    this.#brand;
-    this.#cachedWeight ??= op_canvas_2d_font_face_weight(this.#raw);
-    return this.#cachedWeight;
-  }
-
-  set weight(value) {
-    this.#brand;
-    const prefix = "Failed to set 'weight' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_weight(this.#raw, value);
-    this.#cachedWeight = null;
-  }
-
-  get stretch() {
-    this.#brand;
-    this.#cachedStretch ??= op_canvas_2d_font_face_stretch(this.#raw);
-    return this.#cachedStretch;
-  }
-
-  set stretch(value) {
-    this.#brand;
-    const prefix = "Failed to set 'stretch' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_stretch(this.#raw, value);
-    this.#cachedStretch = null;
-  }
-
-  get unicodeRange() {
-    this.#brand;
-    this.#cachedUnicodeRange ??= op_canvas_2d_font_face_unicode_range(
-      this.#raw,
-    );
-    return this.#cachedUnicodeRange;
-  }
-
-  set unicodeRange(value) {
-    this.#brand;
-    const prefix = "Failed to set 'unicodeRange' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_unicode_range(this.#raw, value);
-    this.#cachedUnicodeRange = null;
-  }
-
-  get featureSettings() {
-    this.#brand;
-    this.#cachedFeatureSettings ??= op_canvas_2d_font_face_feature_settings(
-      this.#raw,
-    );
-    return this.#cachedFeatureSettings;
-  }
-
-  set featureSettings(value) {
-    this.#brand;
-    const prefix = "Failed to set 'featureSettings' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_feature_settings(this.#raw, value);
-    this.#cachedFeatureSettings = null;
-  }
-
-  get variationSettings() {
-    this.#brand;
-    this.#cachedVariationSettings = op_canvas_2d_font_face_variation_settings(
-      this.#raw,
-    );
-    return this.#cachedVariationSettings;
-  }
-
-  set variationSettings(value) {
-    this.#brand;
-    const prefix = "Failed to set 'variationSettings' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_variation_settings(this.#raw, value);
-    this.#cachedVariationSettings = null;
-  }
-
-  get display() {
-    this.#brand;
-    this.#cachedDisplay = op_canvas_2d_font_face_display(this.#raw);
-    return this.#cachedDisplay;
-  }
-
-  set display(value) {
-    this.#brand;
-    const prefix = "Failed to set 'display' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_display(this.#raw, value);
-    this.#cachedDisplay = null;
-  }
-
-  get ascentOverride() {
-    this.#brand;
-    this.#cachedAscentOverride = op_canvas_2d_font_face_ascent_override(
-      this.#raw,
-    );
-    return this.#cachedAscentOverride;
-  }
-
-  set ascentOverride(value) {
-    this.#brand;
-    const prefix = "Failed to set 'ascentOverride' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_ascent_override(this.#raw, value);
-    this.#cachedAscentOverride = null;
-  }
-
-  get descentOverride() {
-    this.#brand;
-    this.#cachedDescentOverride = op_canvas_2d_font_face_descent_override(
-      this.#raw,
-    );
-    return this.#cachedDescentOverride;
-  }
-
-  set descentOverride(value) {
-    this.#brand;
-    const prefix = "Failed to set 'descentOverride' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_descent_override(this.#raw, value);
-    this.#cachedDescentOverride = null;
-  }
-
-  get lineGapOverride() {
-    this.#brand;
-    this.#cachedLineGapOverride = op_canvas_2d_font_face_line_gap_override(
-      this.#raw,
-    );
-    return this.#cachedLineGapOverride;
-  }
-
-  set lineGapOverride(value) {
-    this.#brand;
-    const prefix = "Failed to set 'lineGapOverride' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
-    value = convertDOMString(value);
-    op_canvas_2d_font_face_set_line_gap_override(this.#raw, value);
-    this.#cachedLineGapOverride = null;
-  }
-
-  #setLoading() {
-    this.#status = "loading";
+  static hasInstance(o) {
     // deno-lint-ignore prefer-primordials
-    for (const set of this.#fontFaceSets) {
-      FontFaceSetInternals.addLoading(set, this);
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+
+  static getRaw(o) {
+    return o.#raw;
+  }
+
+  static getStatus(o) {
+    return o.#status;
+  }
+
+  static getLoaded(o) {
+    return o.#loaded;
+  }
+
+  static addToSet(o, set) {
+    o.#fontFaceSets?.add(set);
+  }
+
+  static getFamily(o) {
+    o.#cachedFamily ??= op_canvas_2d_font_face_family(o.#raw);
+    return o.#cachedFamily;
+  }
+
+  static setFamily(o, value) {
+    op_canvas_2d_font_face_set_family(o.#raw, value);
+    o.#cachedFamily = null;
+  }
+
+  static getStyle(o) {
+    o.#cachedStyle ??= op_canvas_2d_font_face_style(o.#raw);
+    return o.#cachedStyle;
+  }
+
+  static setStyle(o, value) {
+    op_canvas_2d_font_face_set_style(o.#raw, value);
+    o.#cachedStyle = null;
+  }
+
+  static getWeight(o) {
+    o.#cachedWeight ??= op_canvas_2d_font_face_weight(o.#raw);
+    return o.#cachedWeight;
+  }
+
+  static setWeight(o, value) {
+    op_canvas_2d_font_face_set_weight(o.#raw, value);
+    o.#cachedWeight = null;
+  }
+
+  static getStretch(o) {
+    o.#cachedStretch ??= op_canvas_2d_font_face_stretch(o.#raw);
+    return o.#cachedStretch;
+  }
+
+  static setStretch(o, value) {
+    op_canvas_2d_font_face_set_stretch(o.#raw, value);
+    o.#cachedStretch = null;
+  }
+
+  static getUnicodeRange(o) {
+    o.#cachedUnicodeRange ??= op_canvas_2d_font_face_unicode_range(o.#raw);
+    return o.#cachedUnicodeRange;
+  }
+
+  static setUnicodeRange(o, value) {
+    op_canvas_2d_font_face_set_unicode_range(o.#raw, value);
+    o.#cachedUnicodeRange = null;
+  }
+
+  static getFeatureSettings(o) {
+    o.#cachedFeatureSettings ??= op_canvas_2d_font_face_feature_settings(
+      o.#raw,
+    );
+    return o.#cachedFeatureSettings;
+  }
+
+  static setFeatureSettings(o, value) {
+    op_canvas_2d_font_face_set_feature_settings(o.#raw, value);
+    o.#cachedFeatureSettings = null;
+  }
+
+  static getVariationSettings(o) {
+    o.#cachedVariationSettings = op_canvas_2d_font_face_variation_settings(
+      o.#raw,
+    );
+    return o.#cachedVariationSettings;
+  }
+
+  static setVariationSettings(o, value) {
+    op_canvas_2d_font_face_set_variation_settings(o.#raw, value);
+    o.#cachedVariationSettings = null;
+  }
+
+  static getDisplay(o) {
+    o.#cachedDisplay = op_canvas_2d_font_face_display(o.#raw);
+    return o.#cachedDisplay;
+  }
+
+  static setDisplay(o, value) {
+    op_canvas_2d_font_face_set_display(o.#raw, value);
+    o.#cachedDisplay = null;
+  }
+
+  static getAscentOverride(o) {
+    o.#cachedAscentOverride = op_canvas_2d_font_face_ascent_override(o.#raw);
+    return o.#cachedAscentOverride;
+  }
+
+  static setAscentOverride(o, value) {
+    op_canvas_2d_font_face_set_ascent_override(o.#raw, value);
+    o.#cachedAscentOverride = null;
+  }
+
+  static getDescentOverride(o) {
+    o.#cachedDescentOverride = op_canvas_2d_font_face_descent_override(o.#raw);
+    return o.#cachedDescentOverride;
+  }
+
+  static setDescentOverride(o, value) {
+    op_canvas_2d_font_face_set_descent_override(o.#raw, value);
+    o.#cachedDescentOverride = null;
+  }
+
+  static getLineGapOverride(o) {
+    o.#cachedLineGapOverride = op_canvas_2d_font_face_line_gap_override(o.#raw);
+    return o.#cachedLineGapOverride;
+  }
+
+  static setLineGapOverride(o, value) {
+    op_canvas_2d_font_face_set_line_gap_override(o.#raw, value);
+    o.#cachedLineGapOverride = null;
+  }
+
+  static setLoading(o) {
+    o.#status = "loading";
+    // deno-lint-ignore prefer-primordials
+    for (const set of o.#fontFaceSets) {
+      FontFaceSetInternals.addLoading(set, o);
     }
   }
 
-  #setLoaded() {
-    this.#innerLoaded.resolve(this);
-    this.#status = "loaded";
+  static setLoaded(o) {
+    o.#innerLoaded.resolve(o);
+    o.#status = "loaded";
     // deno-lint-ignore prefer-primordials
-    for (const set of this.#fontFaceSets) {
-      FontFaceSetInternals.addLoaded(set, this);
+    for (const set of o.#fontFaceSets) {
+      FontFaceSetInternals.addLoaded(set, o);
     }
-    this.#fontFaceSets = null;
+    o.#fontFaceSets = null;
   }
 
-  #setError(reason) {
-    this.#innerLoaded.reject(reason);
-    this.#status = "error";
+  static setError(o, reason) {
+    o.#innerLoaded.reject(reason);
+    o.#status = "error";
     // deno-lint-ignore prefer-primordials
-    for (const set of this.#fontFaceSets) {
-      FontFaceSetInternals.addFailed(set, this);
+    for (const set of o.#fontFaceSets) {
+      FontFaceSetInternals.addFailed(set, o);
     }
-    this.#fontFaceSets = null;
+    o.#fontFaceSets = null;
   }
 
-  get status() {
-    return this.#status;
-  }
-
-  #load() {
-    const url = this.#url;
+  static load(o) {
+    const url = o.#url;
     if (url !== null) {
-      this.#url = null;
-      this.#setLoading();
+      o.#url = null;
+      FontFaceInternals.setLoading(o);
       fetchFont(url, (result) => {
         if (!result.success) {
-          this.#setError(result.reason);
+          FontFaceInternals.setError(o, result.reason);
           return;
         }
         try {
-          op_canvas_2d_font_face_load(this.#raw, result.data, true);
+          op_canvas_2d_font_face_load(o.#raw, result.data, true);
         } catch (e) {
-          this.#setError(e);
+          FontFaceInternals.setError(o, e);
           return;
         }
-        this.#setLoaded();
+        FontFaceInternals.setLoaded(o);
       });
     }
-    return this.#innerLoaded.promise;
+    return o.#innerLoaded.promise;
   }
 
-  load() {
-    try {
-      this.#load();
-      return this.#loaded;
-    } catch (e) {
-      return PromiseReject(e);
-    }
-  }
-
-  get loaded() {
-    try {
-      return this.#loaded;
-    } catch (e) {
-      return PromiseReject(e);
-    }
-  }
-
-  #inspect(inspect, options) {
+  static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
         object: this,
@@ -480,28 +429,211 @@ export class FontFace {
       options,
     );
   }
+};
+
+export class FontFace extends Object {
+  constructor(family, source, descriptors = undefined) {
+    family = convertDOMString(family);
+    source = convertDOMStringOrBinaryData(source);
+    descriptors = convertFontFaceDescriptors(descriptors);
+    const newTarget = capturePrototype(new.target, FontFace);
+    const o = ObjectCreate(newTarget.prototype);
+    new FontFaceInternals(
+      o,
+      source,
+      family,
+      descriptors.style,
+      descriptors.weight,
+      descriptors.stretch,
+      descriptors.unicodeRange,
+      descriptors.featureSettings,
+      descriptors.variationSettings,
+      descriptors.display,
+      descriptors.ascentOverride,
+      descriptors.descentOverride,
+      descriptors.lineGapOverride,
+    );
+    return o;
+  }
+
+  get family() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getFamily(this);
+  }
+
+  set family(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'family' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setFamily(this, value);
+  }
+
+  get style() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getStyle(this);
+  }
+
+  set style(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'style' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setStyle(this, value);
+  }
+
+  get weight() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getWeight(this);
+  }
+
+  set weight(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'weight' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setWeight(this, value);
+  }
+
+  get stretch() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getStretch(this);
+  }
+
+  set stretch(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'stretch' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setStretch(this, value);
+  }
+
+  get unicodeRange() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getUnicodeRange(this);
+  }
+
+  set unicodeRange(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'unicodeRange' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setUnicodeRange(this, value);
+  }
+
+  get featureSettings() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getFeatureSettings(this);
+  }
+
+  set featureSettings(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'featureSettings' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setFeatureSettings(this, value);
+  }
+
+  get variationSettings() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getVariationSettings(this);
+  }
+
+  set variationSettings(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'variationSettings' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setVariationSettings(this, value);
+  }
+
+  get display() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getDisplay(this);
+  }
+
+  set display(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'display' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setDisplay(this, value);
+  }
+
+  get ascentOverride() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getAscentOverride(this);
+  }
+
+  set ascentOverride(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'ascentOverride' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setAscentOverride(this, value);
+  }
+
+  get descentOverride() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getDescentOverride(this);
+  }
+
+  set descentOverride(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'descentOverride' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setDescentOverride(this, value);
+  }
+
+  get lineGapOverride() {
+    FontFaceInternals.checkInstance(this);
+    return FontFaceInternals.getLineGapOverride(this);
+  }
+
+  set lineGapOverride(value) {
+    FontFaceInternals.checkInstance(this);
+    const prefix = "Failed to set 'lineGapOverride' on 'FontFace'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    FontFaceInternals.setLineGapOverride(this, value);
+  }
+
+  get status() {
+    return FontFaceInternals.getStatus(this);
+  }
+
+  load() {
+    try {
+      FontFaceInternals.checkInstance(this);
+      FontFaceInternals.load(this);
+      return FontFaceInternals.getLoaded(this);
+    } catch (e) {
+      return PromiseReject(e);
+    }
+  }
+
+  get loaded() {
+    try {
+      return FontFaceInternals.getLoaded(this);
+    } catch (e) {
+      return PromiseReject(e);
+    }
+  }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return FontFaceInternals.hasInstance(this)
+      ? FontFaceInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsFontFace = (o) => #brand in o;
-    getFontFaceRaw = (o) => o.#raw;
-    getFontFaceStatus = (o) => o.#status;
-    addFontFaceToSet = (o, set) => void o.#fontFaceSets?.add(set);
-    loadFontFace = (o) => o.#load();
   }
 }
 
 const convertFontFace = (value) => {
-  if (!(type(value) === "Object" && objectIsFontFace(value))) {
+  if (!(type(value) === "Object" && FontFaceInternals.hasInstance(value))) {
     throw new TypeError("Expected FontFace");
   }
   return value;
@@ -520,7 +652,7 @@ const convertFontFaceSetLoadEventInit = createDictionaryConverter(
   readFontFaceSetLoadEventInitMembers,
 );
 
-export const FontFaceSetLoadEventInternals = class FontFaceSetLoadEvent
+const FontFaceSetLoadEventInternals = class FontFaceSetLoadEvent
   extends IdentityConstructor {
   #brand() {}
 
@@ -576,10 +708,10 @@ export class FontFaceSetLoadEvent extends Event {
   constructor(type, eventInitDict = undefined) {
     type = convertDOMString(type);
     eventInitDict = convertFontFaceSetLoadEventInit(eventInitDict);
-    return new FontFaceSetLoadEventInternals(
-      ReflectConstruct(Event, [type, eventInitDict], new.target),
-      ObjectFreeze(eventInitDict.fontfaces),
-    );
+    const newTarget = capturePrototype(new.target, FontFaceSetLoadEvent);
+    const o = ReflectConstruct(Event, [type, eventInitDict], newTarget);
+    new FontFaceSetLoadEventInternals(o, ObjectFreeze(eventInitDict.fontfaces));
+    return o;
   }
 
   get fontfaces() {
@@ -598,8 +730,7 @@ export class FontFaceSetLoadEvent extends Event {
   }
 }
 
-export const FontFaceSetInternals = class FontFaceSet
-  extends IdentityConstructor {
+const FontFaceSetInternals = class FontFaceSet extends IdentityConstructor {
   #brand() {}
 
   #raw;
@@ -656,9 +787,9 @@ export const FontFaceSetInternals = class FontFaceSet
       return;
     }
     o.#setEntries.add(font);
-    op_canvas_2d_font_face_set_insert(o.#raw, getFontFaceRaw(font));
-    addFontFaceToSet(font, o);
-    if (getFontFaceStatus(font) === "loading") {
+    op_canvas_2d_font_face_set_insert(o.#raw, FontFaceInternals.getRaw(font));
+    FontFaceInternals.addToSet(font, o);
+    if (FontFaceInternals.getStatus(font) === "loading") {
       FontFaceSetInternals.addLoading(o, font);
     }
   }
@@ -667,7 +798,7 @@ export const FontFaceSetInternals = class FontFaceSet
     if (!o.#setEntries.delete(font)) {
       return false;
     }
-    op_canvas_2d_font_face_set_remove(o.#raw, getFontFaceRaw(font));
+    op_canvas_2d_font_face_set_remove(o.#raw, FontFaceInternals.getRaw(font));
     o.#loadedFonts.delete(font);
     o.#failedFonts.delete(font);
     o.#loadingFonts.delete(font);
@@ -746,7 +877,7 @@ export const FontFaceSetInternals = class FontFaceSet
     const matches = [];
     // deno-lint-ignore prefer-primordials
     for (const font of o.#setEntries) {
-      const id = op_canvas_2d_font_face_id(getFontFaceRaw(font));
+      const id = op_canvas_2d_font_face_id(FontFaceInternals.getRaw(font));
       if (SetPrototypeHas(matchIds, id)) {
         ArrayPrototypePush(matches, font);
       }
@@ -812,17 +943,10 @@ function makeSetlike(prototype, getSetEntries) {
 
 export class FontFaceSet extends EventTarget {
   constructor(initialFaces) {
-    if (initialFaces === illegalConstructor) {
-      return new FontFaceSetInternals(
-        ReflectConstruct(EventTarget, [], new.target),
-        op_canvas_2d_font_source(),
-      );
-    }
     initialFaces = convertSequenceOfFontFace(initialFaces);
-    const o = new FontFaceSetInternals(
-      ReflectConstruct(EventTarget, [], new.target),
-      op_canvas_2d_font_face_set_new(),
-    );
+    const newTarget = capturePrototype(new.target, FontFaceSet);
+    const o = ReflectConstruct(EventTarget, [], newTarget);
+    new FontFaceSetInternals(o, op_canvas_2d_font_face_set_new());
     for (const font of new SafeArrayIterator(initialFaces)) {
       FontFaceSetInternals.add(o, font);
     }
@@ -898,7 +1022,7 @@ export class FontFaceSet extends EventTarget {
         .findMatchingFontFaces(this, font, text);
       const promises = [];
       for (const font of new SafeArrayIterator(fonts)) {
-        ArrayPrototypePush(promises, loadFontFace(font));
+        ArrayPrototypePush(promises, FontFaceInternals.load(font));
       }
       return safePromiseAll(promises);
     } catch (e) {
@@ -915,7 +1039,7 @@ export class FontFaceSet extends EventTarget {
     const fonts = FontFaceSetInternals.findMatchingFontFaces(this, font, text);
     return ArrayPrototypeEvery(
       fonts,
-      (font) => getFontFaceStatus(font) === "loaded",
+      (font) => FontFaceInternals.getStatus(font) === "loaded",
     );
   }
 
@@ -943,6 +1067,12 @@ export class FontFaceSet extends EventTarget {
   }
 }
 
+function createFontFaceSetFromRaw(raw) {
+  const o = ReflectConstruct(EventTarget, [], FontFaceSet);
+  new FontFaceSetInternals(o, raw);
+  return o;
+}
+
 let fetchFont = (_url, cb) =>
   defer(() =>
     cb({
@@ -961,7 +1091,7 @@ export const getFonts = {
     if (this !== null && this !== undefined && this !== globalThis) {
       throw new TypeError("Illegal invocation");
     }
-    fonts ??= new FontFaceSet(illegalConstructor);
+    fonts ??= createFontFaceSetFromRaw(op_canvas_2d_font_source());
     return fonts;
   },
 }["get fonts"];

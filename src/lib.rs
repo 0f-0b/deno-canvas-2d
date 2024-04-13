@@ -285,6 +285,7 @@ deno_core::extension!(
         "00_event_target_primordials.js",
         "00_image_data_primordials.js",
         "00_ops.js",
+        "01_capture_prototype.js",
         "01_default_to.js",
         "01_identity_constructor.js",
         "01_promise.js",

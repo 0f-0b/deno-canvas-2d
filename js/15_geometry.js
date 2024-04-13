@@ -6,6 +6,7 @@ import {
   type,
 } from "ext:deno_webidl/00_webidl.js";
 import { op_canvas_2d_parse_matrix } from "./00_ops.js";
+import { capturePrototype } from "./01_capture_prototype.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
 import { sameValueZero } from "./01_same_value_zero.js";
 import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
@@ -27,9 +28,9 @@ const {
   MathSin,
   MathTan,
   NumberIsFinite,
+  Object,
+  ObjectCreate,
   ObjectFreeze,
-  ReflectConstruct,
-  Symbol,
   SymbolFor,
   SymbolIterator,
   TypeError,
@@ -42,16 +43,8 @@ function radians(degrees) {
   return degrees * RAD_PER_DEG;
 }
 
-let getDOMPointX;
-let setDOMPointX;
-let getDOMPointY;
-let setDOMPointY;
-let getDOMPointZ;
-let setDOMPointZ;
-let getDOMPointW;
-let setDOMPointW;
-
-export class DOMPointReadOnly {
+const DOMPointReadOnlyInternals = class DOMPointReadOnly
+  extends IdentityConstructor {
   #brand() {}
 
   #x;
@@ -59,51 +52,56 @@ export class DOMPointReadOnly {
   #z;
   #w;
 
-  constructor(x = 0, y = 0, z = 0, w = 1) {
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    z = convertUnrestrictedDouble(z);
-    w = convertUnrestrictedDouble(w);
+  constructor(o, x, y, z, w) {
+    super(o);
     this.#x = x;
     this.#y = y;
     this.#z = z;
     this.#w = w;
   }
 
-  static fromPoint(other = undefined) {
-    other = convertDOMPointInit(other);
-    return createDOMPointReadOnlyFromDictionary(other);
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
   }
 
-  get x() {
-    return this.#x;
+  static checkInstance(o) {
+    o.#brand;
   }
 
-  get y() {
-    return this.#y;
+  static getX(o) {
+    return o.#x;
   }
 
-  get z() {
-    return this.#z;
+  static setX(o, v) {
+    o.#x = v;
   }
 
-  get w() {
-    return this.#w;
+  static getY(o) {
+    return o.#y;
   }
 
-  matrixTransform(matrix = undefined) {
-    this.#brand;
-    matrix = convertDOMMatrixInit(matrix);
-    const matrixObject = createDOMMatrixReadOnlyFromDictionary(matrix);
-    return transformPointWithMatrix(this, matrixObject);
+  static setY(o, v) {
+    o.#y = v;
   }
 
-  toJSON() {
-    this.#brand;
-    return { x: this.#x, y: this.#y, z: this.#z, w: this.#w };
+  static getZ(o) {
+    return o.#z;
   }
 
-  #inspect(inspect, options) {
+  static setZ(o, v) {
+    o.#z = v;
+  }
+
+  static getW(o) {
+    return o.#w;
+  }
+
+  static setW(o, v) {
+    o.#w = v;
+  }
+
+  static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
         object: this,
@@ -113,29 +111,70 @@ export class DOMPointReadOnly {
       options,
     );
   }
+};
+
+export class DOMPointReadOnly extends Object {
+  constructor(x = 0, y = 0, z = 0, w = 1) {
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    z = convertUnrestrictedDouble(z);
+    w = convertUnrestrictedDouble(w);
+    const newTarget = capturePrototype(new.target, DOMPointReadOnly);
+    const o = ObjectCreate(newTarget.prototype);
+    new DOMPointReadOnlyInternals(o, x, y, z, w);
+    return o;
+  }
+
+  static fromPoint(other = undefined) {
+    other = convertDOMPointInit(other);
+    return createDOMPointReadOnlyFromDictionary(other);
+  }
+
+  get x() {
+    return DOMPointReadOnlyInternals.getX(this);
+  }
+
+  get y() {
+    return DOMPointReadOnlyInternals.getY(this);
+  }
+
+  get z() {
+    return DOMPointReadOnlyInternals.getZ(this);
+  }
+
+  get w() {
+    return DOMPointReadOnlyInternals.getW(this);
+  }
+
+  matrixTransform(matrix = undefined) {
+    DOMPointReadOnlyInternals.checkInstance(this);
+    matrix = convertDOMMatrixInit(matrix);
+    const matrixObject = createDOMMatrixReadOnlyFromDictionary(matrix);
+    return transformPointWithMatrix(this, matrixObject);
+  }
+
+  toJSON() {
+    DOMPointReadOnlyInternals.checkInstance(this);
+    return {
+      x: DOMPointReadOnlyInternals.getX(this),
+      y: DOMPointReadOnlyInternals.getY(this),
+      z: DOMPointReadOnlyInternals.getZ(this),
+      w: DOMPointReadOnlyInternals.getW(this),
+    };
+  }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return DOMPointReadOnlyInternals.hasInstance(this)
+      ? DOMPointReadOnlyInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
-    getDOMPointX = (o) => o.#x;
-    setDOMPointX = (o, v) => o.#x = v;
-    getDOMPointY = (o) => o.#y;
-    setDOMPointY = (o, v) => o.#y = v;
-    getDOMPointZ = (o) => o.#z;
-    setDOMPointZ = (o, v) => o.#z = v;
-    getDOMPointW = (o) => o.#w;
-    setDOMPointW = (o, v) => o.#w = v;
   }
 }
 
-export const DOMPointInternals = class DOMPoint extends IdentityConstructor {
+const DOMPointInternals = class DOMPoint extends DOMPointReadOnlyInternals {
   #brand() {}
 
   static hasInstance(o) {
@@ -149,10 +188,15 @@ export const DOMPointInternals = class DOMPoint extends IdentityConstructor {
 };
 
 export class DOMPoint extends DOMPointReadOnly {
-  constructor() {
-    return new DOMPointInternals(
-      ReflectConstruct(DOMPointReadOnly, arguments, new.target),
-    );
+  constructor(x = 0, y = 0, z = 0, w = 1) {
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    z = convertUnrestrictedDouble(z);
+    w = convertUnrestrictedDouble(w);
+    const newTarget = capturePrototype(new.target, DOMPoint);
+    const o = ObjectCreate(newTarget.prototype);
+    new DOMPointInternals(o, x, y, z, w);
+    return o;
   }
 
   static fromPoint(other = undefined) {
@@ -162,7 +206,7 @@ export class DOMPoint extends DOMPointReadOnly {
 
   get x() {
     DOMPointInternals.checkInstance(this);
-    return getDOMPointX(this);
+    return DOMPointReadOnlyInternals.getX(this);
   }
 
   set x(value) {
@@ -170,12 +214,12 @@ export class DOMPoint extends DOMPointReadOnly {
     const prefix = "Failed to set 'x' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMPointX(this, value);
+    DOMPointReadOnlyInternals.setX(this, value);
   }
 
   get y() {
     DOMPointInternals.checkInstance(this);
-    return getDOMPointY(this);
+    return DOMPointReadOnlyInternals.getY(this);
   }
 
   set y(value) {
@@ -183,12 +227,12 @@ export class DOMPoint extends DOMPointReadOnly {
     const prefix = "Failed to set 'y' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMPointY(this, value);
+    DOMPointReadOnlyInternals.setY(this, value);
   }
 
   get z() {
     DOMPointInternals.checkInstance(this);
-    return getDOMPointZ(this);
+    return DOMPointReadOnlyInternals.getZ(this);
   }
 
   set z(value) {
@@ -196,12 +240,12 @@ export class DOMPoint extends DOMPointReadOnly {
     const prefix = "Failed to set 'z' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMPointZ(this, value);
+    DOMPointReadOnlyInternals.setZ(this, value);
   }
 
   get w() {
     DOMPointInternals.checkInstance(this);
-    return getDOMPointW(this);
+    return DOMPointReadOnlyInternals.getW(this);
   }
 
   set w(value) {
@@ -209,7 +253,7 @@ export class DOMPoint extends DOMPointReadOnly {
     const prefix = "Failed to set 'w' on 'DOMPoint'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMPointW(this, value);
+    DOMPointReadOnlyInternals.setW(this, value);
   }
 
   static {
@@ -233,36 +277,48 @@ export const convertDOMPointInit = createDictionaryConverter(
   readDOMPointInitMembers,
 );
 
+export function createDOMPointReadOnly(x = 0, y = 0, z = 0, w = 1) {
+  const o = ObjectCreate(DOMPointReadOnly.prototype);
+  new DOMPointReadOnlyInternals(o, x, y, z, w);
+  return o;
+}
+
+export function createDOMPoint(x = 0, y = 0, z = 0, w = 1) {
+  const o = ObjectCreate(DOMPoint.prototype);
+  new DOMPointInternals(o, x, y, z, w);
+  return o;
+}
+
 function createDOMPointReadOnlyFromDictionary(other) {
-  return new DOMPointReadOnly(other.x, other.y, other.z, other.w);
+  return createDOMPointReadOnly(other.x, other.y, other.z, other.w);
 }
 
 function createDOMPointFromDictionary(other) {
-  return new DOMPoint(other.x, other.y, other.z, other.w);
+  return createDOMPoint(other.x, other.y, other.z, other.w);
 }
 
 function transformPointWithMatrix(point, matrix) {
-  const x = getDOMPointX(point);
-  const y = getDOMPointY(point);
-  const z = getDOMPointZ(point);
-  const w = getDOMPointW(point);
-  const m11 = getDOMMatrixM11(matrix);
-  const m12 = getDOMMatrixM12(matrix);
-  const m13 = getDOMMatrixM13(matrix);
-  const m14 = getDOMMatrixM14(matrix);
-  const m21 = getDOMMatrixM21(matrix);
-  const m22 = getDOMMatrixM22(matrix);
-  const m23 = getDOMMatrixM23(matrix);
-  const m24 = getDOMMatrixM24(matrix);
-  const m31 = getDOMMatrixM31(matrix);
-  const m32 = getDOMMatrixM32(matrix);
-  const m33 = getDOMMatrixM33(matrix);
-  const m34 = getDOMMatrixM34(matrix);
-  const m41 = getDOMMatrixM41(matrix);
-  const m42 = getDOMMatrixM42(matrix);
-  const m43 = getDOMMatrixM43(matrix);
-  const m44 = getDOMMatrixM44(matrix);
-  return new DOMPoint(
+  const x = DOMPointReadOnlyInternals.getX(point);
+  const y = DOMPointReadOnlyInternals.getY(point);
+  const z = DOMPointReadOnlyInternals.getZ(point);
+  const w = DOMPointReadOnlyInternals.getW(point);
+  const m11 = DOMMatrixReadOnlyInternals.getM11(matrix);
+  const m12 = DOMMatrixReadOnlyInternals.getM12(matrix);
+  const m13 = DOMMatrixReadOnlyInternals.getM13(matrix);
+  const m14 = DOMMatrixReadOnlyInternals.getM14(matrix);
+  const m21 = DOMMatrixReadOnlyInternals.getM21(matrix);
+  const m22 = DOMMatrixReadOnlyInternals.getM22(matrix);
+  const m23 = DOMMatrixReadOnlyInternals.getM23(matrix);
+  const m24 = DOMMatrixReadOnlyInternals.getM24(matrix);
+  const m31 = DOMMatrixReadOnlyInternals.getM31(matrix);
+  const m32 = DOMMatrixReadOnlyInternals.getM32(matrix);
+  const m33 = DOMMatrixReadOnlyInternals.getM33(matrix);
+  const m34 = DOMMatrixReadOnlyInternals.getM34(matrix);
+  const m41 = DOMMatrixReadOnlyInternals.getM41(matrix);
+  const m42 = DOMMatrixReadOnlyInternals.getM42(matrix);
+  const m43 = DOMMatrixReadOnlyInternals.getM43(matrix);
+  const m44 = DOMMatrixReadOnlyInternals.getM44(matrix);
+  return createDOMPoint(
     m11 * x + m21 * y + m31 * z + m41 * w,
     m12 * x + m22 * y + m32 * z + m42 * w,
     m13 * x + m23 * y + m33 * z + m43 * w,
@@ -270,16 +326,8 @@ function transformPointWithMatrix(point, matrix) {
   );
 }
 
-let getDOMRectX;
-let setDOMRectX;
-let getDOMRectY;
-let setDOMRectY;
-let getDOMRectWidth;
-let setDOMRectWidth;
-let getDOMRectHeight;
-let setDOMRectHeight;
-
-export class DOMRectReadOnly {
+const DOMRectReadOnlyInternals = class DOMRectReadOnly
+  extends IdentityConstructor {
   #brand() {}
 
   #x;
@@ -287,85 +335,76 @@ export class DOMRectReadOnly {
   #width;
   #height;
 
-  constructor(x = 0, y = 0, width = 0, height = 0) {
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    width = convertUnrestrictedDouble(width);
-    height = convertUnrestrictedDouble(height);
+  constructor(o, x, y, width, height) {
+    super(o);
     this.#x = x;
     this.#y = y;
     this.#width = width;
     this.#height = height;
   }
 
-  static fromRect(other = undefined) {
-    other = convertDOMRectInit(other);
-    return createDOMRectReadOnlyFromDictionary(other);
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
   }
 
-  get x() {
-    return this.#x;
+  static checkInstance(o) {
+    o.#brand;
   }
 
-  get y() {
-    return this.#y;
+  static getX(o) {
+    return o.#x;
   }
 
-  get width() {
-    return this.#width;
+  static setX(o, v) {
+    o.#x = v;
   }
 
-  get height() {
-    return this.#height;
+  static getY(o) {
+    return o.#y;
   }
 
-  get #top() {
-    return MathMin(this.#y, this.#y + this.#height);
+  static setY(o, v) {
+    o.#y = v;
   }
 
-  get top() {
-    return this.#top;
+  static getWidth(o) {
+    return o.#width;
   }
 
-  get #right() {
-    return MathMax(this.#x, this.#x + this.#width);
+  static setWidth(o, v) {
+    o.#width = v;
   }
 
-  get right() {
-    return this.#right;
+  static getHeight(o) {
+    return o.#height;
   }
 
-  get #bottom() {
-    return MathMax(this.#y, this.#y + this.#height);
+  static setHeight(o, v) {
+    o.#height = v;
   }
 
-  get bottom() {
-    return this.#bottom;
+  static getTop(o) {
+    o.#brand;
+    return MathMin(o.#y, o.#y + o.#height);
   }
 
-  get #left() {
-    return MathMin(this.#x, this.#x + this.#width);
+  static getRight(o) {
+    o.#brand;
+    return MathMax(o.#x, o.#x + o.#width);
   }
 
-  get left() {
-    return this.#left;
+  static getBottom(o) {
+    o.#brand;
+    return MathMax(o.#y, o.#y + o.#height);
   }
 
-  toJSON() {
-    this.#brand;
-    return {
-      x: this.#x,
-      y: this.#y,
-      width: this.#width,
-      height: this.#height,
-      top: this.#top,
-      right: this.#right,
-      bottom: this.#bottom,
-      left: this.#left,
-    };
+  static getLeft(o) {
+    o.#brand;
+    return MathMin(o.#x, o.#x + o.#width);
   }
 
-  #inspect(inspect, options) {
+  static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
         object: this,
@@ -375,29 +414,83 @@ export class DOMRectReadOnly {
       options,
     );
   }
+};
+
+export class DOMRectReadOnly extends Object {
+  constructor(x = 0, y = 0, width = 0, height = 0) {
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    width = convertUnrestrictedDouble(width);
+    height = convertUnrestrictedDouble(height);
+    const newTarget = capturePrototype(new.target, DOMRectReadOnly);
+    const o = ObjectCreate(newTarget.prototype);
+    new DOMRectReadOnlyInternals(o, x, y, width, height);
+    return o;
+  }
+
+  static fromRect(other = undefined) {
+    other = convertDOMRectInit(other);
+    return createDOMRectReadOnlyFromDictionary(other);
+  }
+
+  get x() {
+    return DOMRectReadOnlyInternals.getX(this);
+  }
+
+  get y() {
+    return DOMRectReadOnlyInternals.getY(this);
+  }
+
+  get width() {
+    return DOMRectReadOnlyInternals.getWidth(this);
+  }
+
+  get height() {
+    return DOMRectReadOnlyInternals.getHeight(this);
+  }
+
+  get top() {
+    return DOMRectReadOnlyInternals.getTop(this);
+  }
+
+  get right() {
+    return DOMRectReadOnlyInternals.getRight(this);
+  }
+
+  get bottom() {
+    return DOMRectReadOnlyInternals.getBottom(this);
+  }
+
+  get left() {
+    return DOMRectReadOnlyInternals.getLeft(this);
+  }
+
+  toJSON() {
+    DOMRectReadOnlyInternals.checkInstance(this);
+    return {
+      x: DOMRectReadOnlyInternals.getX(this),
+      y: DOMRectReadOnlyInternals.getY(this),
+      width: DOMRectReadOnlyInternals.getWidth(this),
+      height: DOMRectReadOnlyInternals.getHeight(this),
+      top: DOMRectReadOnlyInternals.getTop(this),
+      right: DOMRectReadOnlyInternals.getRight(this),
+      bottom: DOMRectReadOnlyInternals.getBottom(this),
+      left: DOMRectReadOnlyInternals.getLeft(this),
+    };
+  }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return DOMRectReadOnlyInternals.hasInstance(this)
+      ? DOMRectReadOnlyInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
-    getDOMRectX = (o) => o.#x;
-    setDOMRectX = (o, v) => o.#x = v;
-    getDOMRectY = (o) => o.#y;
-    setDOMRectY = (o, v) => o.#y = v;
-    getDOMRectWidth = (o) => o.#width;
-    setDOMRectWidth = (o, v) => o.#width = v;
-    getDOMRectHeight = (o) => o.#height;
-    setDOMRectHeight = (o, v) => o.#height = v;
   }
 }
 
-export const DOMRectInternals = class DOMRect extends IdentityConstructor {
+const DOMRectInternals = class DOMRect extends DOMRectReadOnlyInternals {
   #brand() {}
 
   static hasInstance(o) {
@@ -411,10 +504,15 @@ export const DOMRectInternals = class DOMRect extends IdentityConstructor {
 };
 
 export class DOMRect extends DOMRectReadOnly {
-  constructor() {
-    return new DOMRectInternals(
-      ReflectConstruct(DOMRectReadOnly, arguments, new.target),
-    );
+  constructor(x = 0, y = 0, width = 0, height = 0) {
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    width = convertUnrestrictedDouble(width);
+    height = convertUnrestrictedDouble(height);
+    const newTarget = capturePrototype(new.target, DOMRectReadOnly);
+    const o = ObjectCreate(newTarget.prototype);
+    new DOMRectInternals(o, x, y, width, height);
+    return o;
   }
 
   static fromRect(other = undefined) {
@@ -424,7 +522,7 @@ export class DOMRect extends DOMRectReadOnly {
 
   get x() {
     DOMRectInternals.checkInstance(this);
-    return getDOMRectX(this);
+    return DOMRectReadOnlyInternals.getX(this);
   }
 
   set x(value) {
@@ -432,12 +530,12 @@ export class DOMRect extends DOMRectReadOnly {
     const prefix = "Failed to set 'x' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMRectX(this, value);
+    DOMRectReadOnlyInternals.setX(this, value);
   }
 
   get y() {
     DOMRectInternals.checkInstance(this);
-    return getDOMRectY(this);
+    return DOMRectReadOnlyInternals.getY(this);
   }
 
   set y(value) {
@@ -445,12 +543,12 @@ export class DOMRect extends DOMRectReadOnly {
     const prefix = "Failed to set 'y' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMRectY(this, value);
+    DOMRectReadOnlyInternals.setY(this, value);
   }
 
   get width() {
     DOMRectInternals.checkInstance(this);
-    return getDOMRectWidth(this);
+    return DOMRectReadOnlyInternals.getWidth(this);
   }
 
   set width(value) {
@@ -458,12 +556,12 @@ export class DOMRect extends DOMRectReadOnly {
     const prefix = "Failed to set 'width' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMRectWidth(this, value);
+    DOMRectReadOnlyInternals.setWidth(this, value);
   }
 
   get height() {
     DOMRectInternals.checkInstance(this);
-    return getDOMRectHeight(this);
+    return DOMRectReadOnlyInternals.getHeight(this);
   }
 
   set height(value) {
@@ -471,7 +569,7 @@ export class DOMRect extends DOMRectReadOnly {
     const prefix = "Failed to set 'height' on 'DOMRect'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMRectHeight(this, value);
+    DOMRectReadOnlyInternals.setHeight(this, value);
   }
 
   static {
@@ -493,15 +591,27 @@ const readDOMRectInitMembers = (value) => {
 };
 const convertDOMRectInit = createDictionaryConverter(readDOMRectInitMembers);
 
+export function createDOMRectReadOnly(x = 0, y = 0, width = 0, height = 0) {
+  const o = ObjectCreate(DOMRectReadOnly.prototype);
+  new DOMRectReadOnlyInternals(o, x, y, width, height);
+  return o;
+}
+
+export function createDOMRect(x = 0, y = 0, width = 0, height = 0) {
+  const o = ObjectCreate(DOMRect.prototype);
+  new DOMRectInternals(o, x, y, width, height);
+  return o;
+}
+
 function createDOMRectReadOnlyFromDictionary(other) {
-  return new DOMRectReadOnly(other.x, other.y, other.width, other.height);
+  return createDOMRectReadOnly(other.x, other.y, other.width, other.height);
 }
 
 function createDOMRectFromDictionary(other) {
-  return new DOMRect(other.x, other.y, other.width, other.height);
+  return createDOMRect(other.x, other.y, other.width, other.height);
 }
 
-export class DOMQuad {
+const DOMQuadInternals = class DOMQuad extends IdentityConstructor {
   #brand() {}
 
   #p1;
@@ -509,15 +619,67 @@ export class DOMQuad {
   #p3;
   #p4;
 
+  constructor(o, p1, p2, p3, p4) {
+    super(o);
+    this.#p1 = p1;
+    this.#p2 = p2;
+    this.#p3 = p3;
+    this.#p4 = p4;
+  }
+
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+
+  static getP1(o) {
+    return o.#p1;
+  }
+
+  static getP2(o) {
+    return o.#p2;
+  }
+
+  static getP3(o) {
+    return o.#p3;
+  }
+
+  static getP4(o) {
+    return o.#p4;
+  }
+
+  static inspect(inspect, options) {
+    return inspect(
+      createFilteredInspectProxy({
+        object: this,
+        evaluate: true,
+        keys: ["p1", "p2", "p3", "p4"],
+      }),
+      options,
+    );
+  }
+};
+
+export class DOMQuad extends Object {
   constructor(p1 = undefined, p2, p3, p4) {
     p1 = convertDOMPointInit(p1);
     p2 = convertDOMPointInit(p2);
     p3 = convertDOMPointInit(p3);
     p4 = convertDOMPointInit(p4);
-    this.#p1 = createDOMPointFromDictionary(p1);
-    this.#p2 = createDOMPointFromDictionary(p2);
-    this.#p3 = createDOMPointFromDictionary(p3);
-    this.#p4 = createDOMPointFromDictionary(p4);
+    const newTarget = capturePrototype(new.target, DOMQuad);
+    const o = ObjectCreate(newTarget.prototype);
+    new DOMQuadInternals(
+      o,
+      createDOMPointFromDictionary(p1),
+      createDOMPointFromDictionary(p2),
+      createDOMPointFromDictionary(p3),
+      createDOMPointFromDictionary(p4),
+    );
+    return o;
   }
 
   static fromRect(other = undefined) {
@@ -531,64 +693,56 @@ export class DOMQuad {
   }
 
   get p1() {
-    return this.#p1;
+    return DOMQuadInternals.getP1(this);
   }
 
   get p2() {
-    return this.#p2;
+    return DOMQuadInternals.getP2(this);
   }
 
   get p3() {
-    return this.#p3;
+    return DOMQuadInternals.getP3(this);
   }
 
   get p4() {
-    return this.#p4;
+    return DOMQuadInternals.getP4(this);
   }
 
   getBounds() {
-    this.#brand;
-    const p1 = this.#p1;
-    const p2 = this.#p2;
-    const p3 = this.#p3;
-    const p4 = this.#p4;
-    const p1x = getDOMPointX(p1);
-    const p2x = getDOMPointX(p2);
-    const p3x = getDOMPointX(p3);
-    const p4x = getDOMPointX(p4);
-    const p1y = getDOMPointY(p1);
-    const p2y = getDOMPointY(p2);
-    const p3y = getDOMPointY(p3);
-    const p4y = getDOMPointY(p4);
+    DOMQuadInternals.checkInstance(this);
+    const p1 = DOMQuadInternals.getP1(this);
+    const p2 = DOMQuadInternals.getP2(this);
+    const p3 = DOMQuadInternals.getP3(this);
+    const p4 = DOMQuadInternals.getP4(this);
+    const p1x = DOMPointReadOnlyInternals.getX(p1);
+    const p2x = DOMPointReadOnlyInternals.getX(p2);
+    const p3x = DOMPointReadOnlyInternals.getX(p3);
+    const p4x = DOMPointReadOnlyInternals.getX(p4);
+    const p1y = DOMPointReadOnlyInternals.getY(p1);
+    const p2y = DOMPointReadOnlyInternals.getY(p2);
+    const p3y = DOMPointReadOnlyInternals.getY(p3);
+    const p4y = DOMPointReadOnlyInternals.getY(p4);
     const left = MathMin(p1x, p2x, p3x, p4x);
     const top = MathMin(p1y, p2y, p3y, p4y);
     const right = MathMax(p1x, p2x, p3x, p4x);
     const bottom = MathMax(p1y, p2y, p3y, p4y);
-    return new DOMRect(left, top, right - left, bottom - top);
+    return createDOMRect(left, top, right - left, bottom - top);
   }
 
   toJSON() {
-    this.#brand;
-    return { p1: this.#p1, p2: this.#p2, p3: this.#p3, p4: this.#p4 };
-  }
-
-  #inspect(inspect, options) {
-    return inspect(
-      createFilteredInspectProxy({
-        object: this,
-        evaluate: true,
-        keys: ["p1", "p2", "p3", "p4"],
-      }),
-      options,
-    );
+    DOMQuadInternals.checkInstance(this);
+    return {
+      p1: DOMQuadInternals.getP1(this),
+      p2: DOMQuadInternals.getP2(this),
+      p3: DOMQuadInternals.getP3(this),
+      p4: DOMQuadInternals.getP4(this),
+    };
   }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return DOMQuadInternals.hasInstance(this)
+      ? DOMQuadInternals.inspect
+      : undefined;
   }
 
   static {
@@ -618,17 +772,33 @@ const readDOMQuadInitMembers = (value) => {
 };
 const convertDOMQuadInit = createDictionaryConverter(readDOMQuadInitMembers);
 
+export function createDOMQuad(
+  p1 = createDOMPoint(),
+  p2 = createDOMPoint(),
+  p3 = createDOMPoint(),
+  p4 = createDOMPoint(),
+) {
+  const o = ObjectCreate(DOMQuad.prototype);
+  new DOMQuadInternals(o, p1, p2, p3, p4);
+  return o;
+}
+
 function createDOMQuadFromDOMRectInitDictionary(other) {
-  return new DOMQuad(
-    { __proto__: null, x: other.x, y: other.y },
-    { __proto__: null, x: other.x + other.width, y: other.y },
-    { __proto__: null, x: other.x + other.width, y: other.y + other.height },
-    { __proto__: null, x: other.x, y: other.y + other.height },
+  return createDOMQuad(
+    createDOMPoint(other.x, other.y),
+    createDOMPoint(other.x + other.width, other.y),
+    createDOMPoint(other.x + other.width, other.y + other.height),
+    createDOMPoint(other.x, other.y + other.height),
   );
 }
 
 function createDOMQuadFromDOMQuadInitDictionary(other) {
-  return new DOMQuad(other.p1, other.p2, other.p3, other.p4);
+  return createDOMQuad(
+    other.p1 === undefined ? undefined : createDOMPointFromDictionary(other.p1),
+    other.p2 === undefined ? undefined : createDOMPointFromDictionary(other.p2),
+    other.p3 === undefined ? undefined : createDOMPointFromDictionary(other.p3),
+    other.p4 === undefined ? undefined : createDOMPointFromDictionary(other.p4),
+  );
 }
 
 const convertDOMStringOrSequenceOfUnrestrictedDouble = (value) => {
@@ -644,46 +814,8 @@ const convertDOMStringOrSequenceOfUnrestrictedDouble = (value) => {
   }
   return convertDOMString(value);
 };
-let getDOMMatrixM11;
-let setDOMMatrixM11;
-let getDOMMatrixM12;
-let setDOMMatrixM12;
-let getDOMMatrixM13;
-let setDOMMatrixM13;
-let getDOMMatrixM14;
-let setDOMMatrixM14;
-let getDOMMatrixM21;
-let setDOMMatrixM21;
-let getDOMMatrixM22;
-let setDOMMatrixM22;
-let getDOMMatrixM23;
-let setDOMMatrixM23;
-let getDOMMatrixM24;
-let setDOMMatrixM24;
-let getDOMMatrixM31;
-let setDOMMatrixM31;
-let getDOMMatrixM32;
-let setDOMMatrixM32;
-let getDOMMatrixM33;
-let setDOMMatrixM33;
-let getDOMMatrixM34;
-let setDOMMatrixM34;
-let getDOMMatrixM41;
-let setDOMMatrixM41;
-let getDOMMatrixM42;
-let setDOMMatrixM42;
-let getDOMMatrixM43;
-let setDOMMatrixM43;
-let getDOMMatrixM44;
-let setDOMMatrixM44;
-let getDOMMatrixIs2D;
-let setDOMMatrixIs2D;
-let initDOMMatrix;
-export const directConstruct = Symbol();
-const identityMatrix2DValues = ObjectFreeze([1, 0, 0, 1, 0, 0]);
-const parseMatrixBuffer = new Float64Array(16);
-
-export class DOMMatrixReadOnly {
+const DOMMatrixReadOnlyInternals = class DOMMatrixReadOnly
+  extends IdentityConstructor {
   #brand() {}
 
   #m11;
@@ -704,38 +836,9 @@ export class DOMMatrixReadOnly {
   #m44;
   #is2D;
 
-  constructor(
-    initOrKey = undefined,
-    values = identityMatrix2DValues,
-    is2D = true,
-  ) {
-    if (initOrKey === undefined) {
-      this.#init(identityMatrix2DValues, true);
-      return;
-    }
-    if (initOrKey === directConstruct) {
-      this.#init(values, is2D);
-      return;
-    }
-    const init = convertDOMStringOrSequenceOfUnrestrictedDouble(initOrKey);
-    if (typeof init === "string") {
-      if (inWorker) {
-        throw new TypeError("Cannot construct matrix from string in workers");
-      }
-      const is2D = op_canvas_2d_parse_matrix(init, parseMatrixBuffer);
-      this.#init(parseMatrixBuffer, is2D);
-      return;
-    }
-    switch (init.length) {
-      case 6:
-        this.#init(init, true);
-        break;
-      case 16:
-        this.#init(init, false);
-        break;
-      default:
-        throw new TypeError("Length of matrix init sequence must be 6 or 16");
-    }
+  constructor(o, values, is2D) {
+    super(o);
+    this.#init(values, is2D);
   }
 
   #init(values, is2D) {
@@ -778,436 +881,164 @@ export class DOMMatrixReadOnly {
     }
   }
 
-  static fromMatrix(other = undefined) {
-    other = convertDOMMatrixInit(other);
-    return createDOMMatrixReadOnlyFromDictionary(other);
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
   }
 
-  static fromFloat32Array(array32) {
-    const prefix =
-      "Failed to execute 'fromFloat32Array' on 'DOMMatrixReadOnly'";
-    requiredArguments(arguments.length, 1, prefix);
-    array32 = convertFloat32Array(array32);
-    switch (TypedArrayPrototypeGetLength(array32)) {
-      case 6:
-        return new DOMMatrixReadOnly(directConstruct, array32, true);
-      case 16:
-        return new DOMMatrixReadOnly(directConstruct, array32, false);
-      default:
-        throw new TypeError("Length of matrix init sequence must be 6 or 16");
-    }
+  static checkInstance(o) {
+    o.#brand;
   }
 
-  static fromFloat64Array(array64) {
-    const prefix =
-      "Failed to execute 'fromFloat64Array' on 'DOMMatrixReadOnly'";
-    requiredArguments(arguments.length, 1, prefix);
-    array64 = convertFloat64Array(array64);
-    switch (TypedArrayPrototypeGetLength(array64)) {
-      case 6:
-        return new DOMMatrixReadOnly(directConstruct, array64, true);
-      case 16:
-        return new DOMMatrixReadOnly(directConstruct, array64, false);
-      default:
-        throw new TypeError("Length of matrix init sequence must be 6 or 16");
-    }
+  static init(o, values, is2D) {
+    o.#init(values, is2D);
   }
 
-  get a() {
-    return this.#m11;
+  static getM11(o) {
+    return o.#m11;
   }
 
-  get b() {
-    return this.#m12;
+  static setM11(o, v) {
+    o.#m11 = v;
   }
 
-  get c() {
-    return this.#m21;
+  static getM12(o) {
+    return o.#m12;
   }
 
-  get d() {
-    return this.#m22;
+  static setM12(o, v) {
+    o.#m12 = v;
   }
 
-  get e() {
-    return this.#m41;
+  static getM13(o) {
+    return o.#m13;
   }
 
-  get f() {
-    return this.#m42;
+  static setM13(o, v) {
+    o.#m13 = v;
   }
 
-  get m11() {
-    return this.#m11;
+  static getM14(o) {
+    return o.#m14;
   }
 
-  get m12() {
-    return this.#m12;
+  static setM14(o, v) {
+    o.#m14 = v;
   }
 
-  get m13() {
-    return this.#m13;
+  static getM21(o) {
+    return o.#m21;
   }
 
-  get m14() {
-    return this.#m14;
+  static setM21(o, v) {
+    o.#m21 = v;
   }
 
-  get m21() {
-    return this.#m21;
+  static getM22(o) {
+    return o.#m22;
   }
 
-  get m22() {
-    return this.#m22;
+  static setM22(o, v) {
+    o.#m22 = v;
   }
 
-  get m23() {
-    return this.#m23;
+  static getM23(o) {
+    return o.#m23;
   }
 
-  get m24() {
-    return this.#m24;
+  static setM23(o, v) {
+    o.#m23 = v;
   }
 
-  get m31() {
-    return this.#m31;
+  static getM24(o) {
+    return o.#m24;
   }
 
-  get m32() {
-    return this.#m32;
+  static setM24(o, v) {
+    o.#m24 = v;
   }
 
-  get m33() {
-    return this.#m33;
+  static getM31(o) {
+    return o.#m31;
   }
 
-  get m34() {
-    return this.#m34;
+  static setM31(o, v) {
+    o.#m31 = v;
   }
 
-  get m41() {
-    return this.#m41;
+  static getM32(o) {
+    return o.#m32;
   }
 
-  get m42() {
-    return this.#m42;
+  static setM32(o, v) {
+    o.#m32 = v;
   }
 
-  get m43() {
-    return this.#m43;
+  static getM33(o) {
+    return o.#m33;
   }
 
-  get m44() {
-    return this.#m44;
+  static setM33(o, v) {
+    o.#m33 = v;
   }
 
-  get is2D() {
-    return this.#is2D;
+  static getM34(o) {
+    return o.#m34;
   }
 
-  get #isIdentity() {
-    return this.#m12 === 0 && this.#m13 === 0 && this.#m14 === 0 &&
-      this.#m21 === 0 && this.#m23 === 0 && this.#m24 === 0 &&
-      this.#m31 === 0 && this.#m32 === 0 && this.#m34 === 0 &&
-      this.#m41 === 0 && this.#m42 === 0 && this.#m43 === 0 &&
-      this.#m11 === 1 && this.#m22 === 1 && this.#m33 === 1 && this.#m44 === 1;
+  static setM34(o, v) {
+    o.#m34 = v;
   }
 
-  get isIdentity() {
-    return this.#isIdentity;
+  static getM41(o) {
+    return o.#m41;
   }
 
-  translate(tx = 0, ty = 0, tz = 0) {
-    this.#brand;
-    tx = convertUnrestrictedDouble(tx);
-    ty = convertUnrestrictedDouble(ty);
-    tz = convertUnrestrictedDouble(tz);
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, translateTransform(tx, ty, tz));
-    return result;
+  static setM41(o, v) {
+    o.#m41 = v;
   }
 
-  scale(scaleX = 1, scaleY, scaleZ = 1, originX = 0, originY = 0, originZ = 0) {
-    this.#brand;
-    scaleX = convertUnrestrictedDouble(scaleX);
-    if (scaleY !== undefined) {
-      scaleY = convertUnrestrictedDouble(scaleY);
-    }
-    scaleZ = convertUnrestrictedDouble(scaleZ);
-    originX = convertUnrestrictedDouble(originX);
-    originY = convertUnrestrictedDouble(originY);
-    originZ = convertUnrestrictedDouble(originZ);
-    const result = new DOMMatrix();
-    multiplyMatrices(
-      result,
-      this,
-      translateTransform(originX, originY, originZ),
-    );
-    multiplyMatrices(
-      result,
-      result,
-      scaleTransform(scaleX, scaleY ?? scaleX, scaleZ),
-    );
-    multiplyMatrices(
-      result,
-      result,
-      translateTransform(-originX, -originY, -originZ),
-    );
-    return result;
+  static getM42(o) {
+    return o.#m42;
   }
 
-  scaleNonUniform(scaleX = 1, scaleY = 1) {
-    this.#brand;
-    scaleX = convertUnrestrictedDouble(scaleX);
-    scaleY = convertUnrestrictedDouble(scaleY);
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, scaleTransform(scaleX, scaleY, 1));
-    return result;
+  static setM42(o, v) {
+    o.#m42 = v;
   }
 
-  scale3d(scale = 1, originX = 0, originY = 0, originZ = 0) {
-    this.#brand;
-    scale = convertUnrestrictedDouble(scale);
-    originX = convertUnrestrictedDouble(originX);
-    originY = convertUnrestrictedDouble(originY);
-    originZ = convertUnrestrictedDouble(originZ);
-    const result = new DOMMatrix();
-    multiplyMatrices(
-      result,
-      this,
-      translateTransform(originX, originY, originZ),
-    );
-    multiplyMatrices(result, result, scaleTransform(scale, scale, scale));
-    multiplyMatrices(
-      result,
-      result,
-      translateTransform(-originX, -originY, -originZ),
-    );
-    return result;
+  static getM43(o) {
+    return o.#m43;
   }
 
-  rotate(rotX = 0, rotY, rotZ) {
-    this.#brand;
-    rotX = convertUnrestrictedDouble(rotX);
-    if (rotY !== undefined) {
-      rotY = convertUnrestrictedDouble(rotY);
-    }
-    if (rotZ !== undefined) {
-      rotZ = convertUnrestrictedDouble(rotZ);
-    }
-    if (rotY === undefined && rotZ === undefined) {
-      rotZ = rotX;
-      rotX = rotY = 0;
-    } else {
-      rotY ??= 0;
-      rotZ ??= 0;
-    }
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, rotateTransform(0, 0, 1, radians(rotZ)));
-    if (rotY !== 0) {
-      multiplyMatrices(result, result, rotateTransform(0, 1, 0, radians(rotY)));
-    }
-    if (rotX !== 0) {
-      multiplyMatrices(result, result, rotateTransform(1, 0, 0, radians(rotX)));
-    }
-    return result;
+  static setM43(o, v) {
+    o.#m43 = v;
   }
 
-  rotateFromVector(x = 0, y = 0) {
-    this.#brand;
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    const result = new DOMMatrix();
-    multiplyMatrices(
-      result,
-      this,
-      rotateTransform(0, 0, 1, x === 0 && y === 0 ? 0 : MathAtan2(y, x)),
-    );
-    return result;
+  static getM44(o) {
+    return o.#m44;
   }
 
-  rotateAxisAngle(x = 0, y = 0, z = 0, angle = 0) {
-    this.#brand;
-    x = convertUnrestrictedDouble(x);
-    y = convertUnrestrictedDouble(y);
-    z = convertUnrestrictedDouble(z);
-    angle = convertUnrestrictedDouble(angle);
-    const length = MathHypot(x, y, z);
-    if (length !== 0) {
-      x /= length;
-      y /= length;
-      z /= length;
-    }
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, rotateTransform(x, y, z, radians(angle)));
-    return result;
+  static setM44(o, v) {
+    o.#m44 = v;
   }
 
-  skewX(sx = 0) {
-    this.#brand;
-    sx = convertUnrestrictedDouble(sx);
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, skewXTransform(radians(sx)));
-    return result;
+  static getIs2D(o) {
+    return o.#is2D;
   }
 
-  skewY(sy = 0) {
-    this.#brand;
-    sy = convertUnrestrictedDouble(sy);
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, skewYTransform(radians(sy)));
-    return result;
+  static setIs2D(o, v) {
+    o.#is2D = v;
   }
 
-  multiply(other = undefined) {
-    this.#brand;
-    other = convertDOMMatrixInit(other);
-    const result = new DOMMatrix();
-    const otherObject = createDOMMatrixReadOnlyFromDictionary(other);
-    multiplyMatrices(result, this, otherObject);
-    return result;
+  static getIsIdentity(o) {
+    o.#brand;
+    return o.#m12 === 0 && o.#m13 === 0 && o.#m14 === 0 && o.#m21 === 0 &&
+      o.#m23 === 0 && o.#m24 === 0 && o.#m31 === 0 && o.#m32 === 0 &&
+      o.#m34 === 0 && o.#m41 === 0 && o.#m42 === 0 && o.#m43 === 0 &&
+      o.#m11 === 1 && o.#m22 === 1 && o.#m33 === 1 && o.#m44 === 1;
   }
 
-  flipX() {
-    this.#brand;
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, flipXTransform);
-    return result;
-  }
-
-  flipY() {
-    this.#brand;
-    const result = new DOMMatrix();
-    multiplyMatrices(result, this, flipYTransform);
-    return result;
-  }
-
-  inverse() {
-    this.#brand;
-    const result = new DOMMatrix();
-    invertMatrix(result, this);
-    return result;
-  }
-
-  transformPoint(point = undefined) {
-    this.#brand;
-    point = convertDOMPointInit(point);
-    const pointObject = createDOMPointFromDictionary(point);
-    return transformPointWithMatrix(pointObject, this);
-  }
-
-  toFloat32Array() {
-    this.#brand;
-    const array = new Float32Array(16);
-    array[0] = this.#m11;
-    array[1] = this.#m12;
-    array[2] = this.#m13;
-    array[3] = this.#m14;
-    array[4] = this.#m21;
-    array[5] = this.#m22;
-    array[6] = this.#m23;
-    array[7] = this.#m24;
-    array[8] = this.#m31;
-    array[9] = this.#m32;
-    array[10] = this.#m33;
-    array[11] = this.#m34;
-    array[12] = this.#m41;
-    array[13] = this.#m42;
-    array[14] = this.#m43;
-    array[15] = this.#m44;
-    return array;
-  }
-
-  toFloat64Array() {
-    this.#brand;
-    const array = new Float64Array(16);
-    array[0] = this.#m11;
-    array[1] = this.#m12;
-    array[2] = this.#m13;
-    array[3] = this.#m14;
-    array[4] = this.#m21;
-    array[5] = this.#m22;
-    array[6] = this.#m23;
-    array[7] = this.#m24;
-    array[8] = this.#m31;
-    array[9] = this.#m32;
-    array[10] = this.#m33;
-    array[11] = this.#m34;
-    array[12] = this.#m41;
-    array[13] = this.#m42;
-    array[14] = this.#m43;
-    array[15] = this.#m44;
-    return array;
-  }
-
-  toString() {
-    const m11 = this.#m11;
-    const m12 = this.#m12;
-    const m13 = this.#m13;
-    const m14 = this.#m14;
-    const m21 = this.#m21;
-    const m22 = this.#m22;
-    const m23 = this.#m23;
-    const m24 = this.#m24;
-    const m31 = this.#m31;
-    const m32 = this.#m32;
-    const m33 = this.#m33;
-    const m34 = this.#m34;
-    const m41 = this.#m41;
-    const m42 = this.#m42;
-    const m43 = this.#m43;
-    const m44 = this.#m44;
-    if (
-      !(NumberIsFinite(m11) && NumberIsFinite(m12) &&
-        NumberIsFinite(m13) && NumberIsFinite(m14) &&
-        NumberIsFinite(m21) && NumberIsFinite(m22) &&
-        NumberIsFinite(m23) && NumberIsFinite(m24) &&
-        NumberIsFinite(m31) && NumberIsFinite(m32) &&
-        NumberIsFinite(m33) && NumberIsFinite(m34) &&
-        NumberIsFinite(m41) && NumberIsFinite(m42) &&
-        NumberIsFinite(m43) && NumberIsFinite(m44))
-    ) {
-      throw new DOMException(
-        "Matrix contains non-finite values",
-        "InvalidStateError",
-      );
-    }
-    return this.#is2D
-      ? `matrix(${m11}, ${m12}, ${m21}, ${m22}, ${m41}, ${m42})`
-      : `matrix3d(${m11}, ${m12}, ${m13}, ${m14}, ${m21}, ${m22}, ${m23}, ${m24}, ${m31}, ${m32}, ${m33}, ${m34}, ${m41}, ${m42}, ${m43}, ${m44})`;
-  }
-
-  toJSON() {
-    this.#brand;
-    return {
-      a: this.#m11,
-      b: this.#m12,
-      c: this.#m21,
-      d: this.#m22,
-      e: this.#m41,
-      f: this.#m42,
-      m11: this.#m11,
-      m12: this.#m12,
-      m13: this.#m13,
-      m14: this.#m14,
-      m21: this.#m21,
-      m22: this.#m22,
-      m23: this.#m23,
-      m24: this.#m24,
-      m31: this.#m31,
-      m32: this.#m32,
-      m33: this.#m33,
-      m34: this.#m34,
-      m41: this.#m41,
-      m42: this.#m42,
-      m43: this.#m43,
-      m44: this.#m44,
-      is2D: this.#is2D,
-      isIdentity: this.#isIdentity,
-    };
-  }
-
-  #inspect(inspect, options) {
+  static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
         object: this,
@@ -1242,76 +1073,490 @@ export class DOMMatrixReadOnly {
       options,
     );
   }
+};
+const identityMatrix2DValues = ObjectFreeze([1, 0, 0, 1, 0, 0]);
+const parseMatrixBuffer = new Float64Array(16);
+
+export class DOMMatrixReadOnly extends Object {
+  constructor(arg = undefined) {
+    const init = arg === undefined
+      ? undefined
+      : convertDOMStringOrSequenceOfUnrestrictedDouble(arg);
+    const newTarget = capturePrototype(new.target, DOMMatrixReadOnly);
+    const o = ObjectCreate(newTarget.prototype);
+    let values = identityMatrix2DValues;
+    let is2D = true;
+    if (init !== undefined) {
+      if (typeof init === "string") {
+        if (inWorker) {
+          throw new TypeError("Cannot construct matrix from string in workers");
+        }
+        values = parseMatrixBuffer;
+        is2D = op_canvas_2d_parse_matrix(init, parseMatrixBuffer);
+      } else {
+        switch (init.length) {
+          case 6:
+            values = init;
+            is2D = true;
+            break;
+          case 16:
+            values = init;
+            is2D = false;
+            break;
+          default:
+            throw new TypeError(
+              "Length of matrix init sequence must be 6 or 16",
+            );
+        }
+      }
+    }
+    new DOMMatrixReadOnlyInternals(o, values, is2D);
+    return o;
+  }
+
+  static fromMatrix(other = undefined) {
+    other = convertDOMMatrixInit(other);
+    return createDOMMatrixReadOnlyFromDictionary(other);
+  }
+
+  static fromFloat32Array(array32) {
+    const prefix =
+      "Failed to execute 'fromFloat32Array' on 'DOMMatrixReadOnly'";
+    requiredArguments(arguments.length, 1, prefix);
+    array32 = convertFloat32Array(array32);
+    switch (TypedArrayPrototypeGetLength(array32)) {
+      case 6:
+        return createDOMMatrixReadOnly(array32, true);
+      case 16:
+        return createDOMMatrixReadOnly(array32, false);
+      default:
+        throw new TypeError("Length of matrix init sequence must be 6 or 16");
+    }
+  }
+
+  static fromFloat64Array(array64) {
+    const prefix =
+      "Failed to execute 'fromFloat64Array' on 'DOMMatrixReadOnly'";
+    requiredArguments(arguments.length, 1, prefix);
+    array64 = convertFloat64Array(array64);
+    switch (TypedArrayPrototypeGetLength(array64)) {
+      case 6:
+        return createDOMMatrixReadOnly(array64, true);
+      case 16:
+        return createDOMMatrixReadOnly(array64, false);
+      default:
+        throw new TypeError("Length of matrix init sequence must be 6 or 16");
+    }
+  }
+
+  get a() {
+    return DOMMatrixReadOnlyInternals.getM11(this);
+  }
+
+  get b() {
+    return DOMMatrixReadOnlyInternals.getM12(this);
+  }
+
+  get c() {
+    return DOMMatrixReadOnlyInternals.getM21(this);
+  }
+
+  get d() {
+    return DOMMatrixReadOnlyInternals.getM22(this);
+  }
+
+  get e() {
+    return DOMMatrixReadOnlyInternals.getM41(this);
+  }
+
+  get f() {
+    return DOMMatrixReadOnlyInternals.getM42(this);
+  }
+
+  get m11() {
+    return DOMMatrixReadOnlyInternals.getM11(this);
+  }
+
+  get m12() {
+    return DOMMatrixReadOnlyInternals.getM12(this);
+  }
+
+  get m13() {
+    return DOMMatrixReadOnlyInternals.getM13(this);
+  }
+
+  get m14() {
+    return DOMMatrixReadOnlyInternals.getM14(this);
+  }
+
+  get m21() {
+    return DOMMatrixReadOnlyInternals.getM21(this);
+  }
+
+  get m22() {
+    return DOMMatrixReadOnlyInternals.getM22(this);
+  }
+
+  get m23() {
+    return DOMMatrixReadOnlyInternals.getM23(this);
+  }
+
+  get m24() {
+    return DOMMatrixReadOnlyInternals.getM24(this);
+  }
+
+  get m31() {
+    return DOMMatrixReadOnlyInternals.getM31(this);
+  }
+
+  get m32() {
+    return DOMMatrixReadOnlyInternals.getM32(this);
+  }
+
+  get m33() {
+    return DOMMatrixReadOnlyInternals.getM33(this);
+  }
+
+  get m34() {
+    return DOMMatrixReadOnlyInternals.getM34(this);
+  }
+
+  get m41() {
+    return DOMMatrixReadOnlyInternals.getM41(this);
+  }
+
+  get m42() {
+    return DOMMatrixReadOnlyInternals.getM42(this);
+  }
+
+  get m43() {
+    return DOMMatrixReadOnlyInternals.getM43(this);
+  }
+
+  get m44() {
+    return DOMMatrixReadOnlyInternals.getM44(this);
+  }
+
+  get is2D() {
+    return DOMMatrixReadOnlyInternals.getIs2D(this);
+  }
+
+  get isIdentity() {
+    return DOMMatrixReadOnlyInternals.getIsIdentity(this);
+  }
+
+  translate(tx = 0, ty = 0, tz = 0) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    tx = convertUnrestrictedDouble(tx);
+    ty = convertUnrestrictedDouble(ty);
+    tz = convertUnrestrictedDouble(tz);
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, translateTransform(tx, ty, tz));
+    return result;
+  }
+
+  scale(scaleX = 1, scaleY, scaleZ = 1, originX = 0, originY = 0, originZ = 0) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    scaleX = convertUnrestrictedDouble(scaleX);
+    if (scaleY !== undefined) {
+      scaleY = convertUnrestrictedDouble(scaleY);
+    }
+    scaleZ = convertUnrestrictedDouble(scaleZ);
+    originX = convertUnrestrictedDouble(originX);
+    originY = convertUnrestrictedDouble(originY);
+    originZ = convertUnrestrictedDouble(originZ);
+    const result = createDOMMatrix();
+    multiplyMatrices(
+      result,
+      this,
+      translateTransform(originX, originY, originZ),
+    );
+    multiplyMatrices(
+      result,
+      result,
+      scaleTransform(scaleX, scaleY ?? scaleX, scaleZ),
+    );
+    multiplyMatrices(
+      result,
+      result,
+      translateTransform(-originX, -originY, -originZ),
+    );
+    return result;
+  }
+
+  scaleNonUniform(scaleX = 1, scaleY = 1) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    scaleX = convertUnrestrictedDouble(scaleX);
+    scaleY = convertUnrestrictedDouble(scaleY);
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, scaleTransform(scaleX, scaleY, 1));
+    return result;
+  }
+
+  scale3d(scale = 1, originX = 0, originY = 0, originZ = 0) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    scale = convertUnrestrictedDouble(scale);
+    originX = convertUnrestrictedDouble(originX);
+    originY = convertUnrestrictedDouble(originY);
+    originZ = convertUnrestrictedDouble(originZ);
+    const result = createDOMMatrix();
+    multiplyMatrices(
+      result,
+      this,
+      translateTransform(originX, originY, originZ),
+    );
+    multiplyMatrices(result, result, scaleTransform(scale, scale, scale));
+    multiplyMatrices(
+      result,
+      result,
+      translateTransform(-originX, -originY, -originZ),
+    );
+    return result;
+  }
+
+  rotate(rotX = 0, rotY, rotZ) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    rotX = convertUnrestrictedDouble(rotX);
+    if (rotY !== undefined) {
+      rotY = convertUnrestrictedDouble(rotY);
+    }
+    if (rotZ !== undefined) {
+      rotZ = convertUnrestrictedDouble(rotZ);
+    }
+    if (rotY === undefined && rotZ === undefined) {
+      rotZ = rotX;
+      rotX = rotY = 0;
+    } else {
+      rotY ??= 0;
+      rotZ ??= 0;
+    }
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, rotateTransform(0, 0, 1, radians(rotZ)));
+    if (rotY !== 0) {
+      multiplyMatrices(result, result, rotateTransform(0, 1, 0, radians(rotY)));
+    }
+    if (rotX !== 0) {
+      multiplyMatrices(result, result, rotateTransform(1, 0, 0, radians(rotX)));
+    }
+    return result;
+  }
+
+  rotateFromVector(x = 0, y = 0) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    const result = createDOMMatrix();
+    multiplyMatrices(
+      result,
+      this,
+      rotateTransform(0, 0, 1, x === 0 && y === 0 ? 0 : MathAtan2(y, x)),
+    );
+    return result;
+  }
+
+  rotateAxisAngle(x = 0, y = 0, z = 0, angle = 0) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    x = convertUnrestrictedDouble(x);
+    y = convertUnrestrictedDouble(y);
+    z = convertUnrestrictedDouble(z);
+    angle = convertUnrestrictedDouble(angle);
+    const length = MathHypot(x, y, z);
+    if (length !== 0) {
+      x /= length;
+      y /= length;
+      z /= length;
+    }
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, rotateTransform(x, y, z, radians(angle)));
+    return result;
+  }
+
+  skewX(sx = 0) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    sx = convertUnrestrictedDouble(sx);
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, skewXTransform(radians(sx)));
+    return result;
+  }
+
+  skewY(sy = 0) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    sy = convertUnrestrictedDouble(sy);
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, skewYTransform(radians(sy)));
+    return result;
+  }
+
+  multiply(other = undefined) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    other = convertDOMMatrixInit(other);
+    const result = createDOMMatrix();
+    const otherObject = createDOMMatrixReadOnlyFromDictionary(other);
+    multiplyMatrices(result, this, otherObject);
+    return result;
+  }
+
+  flipX() {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, flipXTransform);
+    return result;
+  }
+
+  flipY() {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    const result = createDOMMatrix();
+    multiplyMatrices(result, this, flipYTransform);
+    return result;
+  }
+
+  inverse() {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    const result = createDOMMatrix();
+    invertMatrix(result, this);
+    return result;
+  }
+
+  transformPoint(point = undefined) {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    point = convertDOMPointInit(point);
+    const pointObject = createDOMPointFromDictionary(point);
+    return transformPointWithMatrix(pointObject, this);
+  }
+
+  toFloat32Array() {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    const array = new Float32Array(16);
+    array[0] = DOMMatrixReadOnlyInternals.getM11(this);
+    array[1] = DOMMatrixReadOnlyInternals.getM12(this);
+    array[2] = DOMMatrixReadOnlyInternals.getM13(this);
+    array[3] = DOMMatrixReadOnlyInternals.getM14(this);
+    array[4] = DOMMatrixReadOnlyInternals.getM21(this);
+    array[5] = DOMMatrixReadOnlyInternals.getM22(this);
+    array[6] = DOMMatrixReadOnlyInternals.getM23(this);
+    array[7] = DOMMatrixReadOnlyInternals.getM24(this);
+    array[8] = DOMMatrixReadOnlyInternals.getM31(this);
+    array[9] = DOMMatrixReadOnlyInternals.getM32(this);
+    array[10] = DOMMatrixReadOnlyInternals.getM33(this);
+    array[11] = DOMMatrixReadOnlyInternals.getM34(this);
+    array[12] = DOMMatrixReadOnlyInternals.getM41(this);
+    array[13] = DOMMatrixReadOnlyInternals.getM42(this);
+    array[14] = DOMMatrixReadOnlyInternals.getM43(this);
+    array[15] = DOMMatrixReadOnlyInternals.getM44(this);
+    return array;
+  }
+
+  toFloat64Array() {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    const array = new Float64Array(16);
+    array[0] = DOMMatrixReadOnlyInternals.getM11(this);
+    array[1] = DOMMatrixReadOnlyInternals.getM12(this);
+    array[2] = DOMMatrixReadOnlyInternals.getM13(this);
+    array[3] = DOMMatrixReadOnlyInternals.getM14(this);
+    array[4] = DOMMatrixReadOnlyInternals.getM21(this);
+    array[5] = DOMMatrixReadOnlyInternals.getM22(this);
+    array[6] = DOMMatrixReadOnlyInternals.getM23(this);
+    array[7] = DOMMatrixReadOnlyInternals.getM24(this);
+    array[8] = DOMMatrixReadOnlyInternals.getM31(this);
+    array[9] = DOMMatrixReadOnlyInternals.getM32(this);
+    array[10] = DOMMatrixReadOnlyInternals.getM33(this);
+    array[11] = DOMMatrixReadOnlyInternals.getM34(this);
+    array[12] = DOMMatrixReadOnlyInternals.getM41(this);
+    array[13] = DOMMatrixReadOnlyInternals.getM42(this);
+    array[14] = DOMMatrixReadOnlyInternals.getM43(this);
+    array[15] = DOMMatrixReadOnlyInternals.getM44(this);
+    return array;
+  }
+
+  toString() {
+    const m11 = DOMMatrixReadOnlyInternals.getM11(this);
+    const m12 = DOMMatrixReadOnlyInternals.getM12(this);
+    const m13 = DOMMatrixReadOnlyInternals.getM13(this);
+    const m14 = DOMMatrixReadOnlyInternals.getM14(this);
+    const m21 = DOMMatrixReadOnlyInternals.getM21(this);
+    const m22 = DOMMatrixReadOnlyInternals.getM22(this);
+    const m23 = DOMMatrixReadOnlyInternals.getM23(this);
+    const m24 = DOMMatrixReadOnlyInternals.getM24(this);
+    const m31 = DOMMatrixReadOnlyInternals.getM31(this);
+    const m32 = DOMMatrixReadOnlyInternals.getM32(this);
+    const m33 = DOMMatrixReadOnlyInternals.getM33(this);
+    const m34 = DOMMatrixReadOnlyInternals.getM34(this);
+    const m41 = DOMMatrixReadOnlyInternals.getM41(this);
+    const m42 = DOMMatrixReadOnlyInternals.getM42(this);
+    const m43 = DOMMatrixReadOnlyInternals.getM43(this);
+    const m44 = DOMMatrixReadOnlyInternals.getM44(this);
+    if (
+      !(NumberIsFinite(m11) && NumberIsFinite(m12) &&
+        NumberIsFinite(m13) && NumberIsFinite(m14) &&
+        NumberIsFinite(m21) && NumberIsFinite(m22) &&
+        NumberIsFinite(m23) && NumberIsFinite(m24) &&
+        NumberIsFinite(m31) && NumberIsFinite(m32) &&
+        NumberIsFinite(m33) && NumberIsFinite(m34) &&
+        NumberIsFinite(m41) && NumberIsFinite(m42) &&
+        NumberIsFinite(m43) && NumberIsFinite(m44))
+    ) {
+      throw new DOMException(
+        "Matrix contains non-finite values",
+        "InvalidStateError",
+      );
+    }
+    return DOMMatrixReadOnlyInternals.getIs2D(this)
+      ? `matrix(${m11}, ${m12}, ${m21}, ${m22}, ${m41}, ${m42})`
+      : `matrix3d(${m11}, ${m12}, ${m13}, ${m14}, ${m21}, ${m22}, ${m23}, ${m24}, ${m31}, ${m32}, ${m33}, ${m34}, ${m41}, ${m42}, ${m43}, ${m44})`;
+  }
+
+  toJSON() {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
+    return {
+      a: DOMMatrixReadOnlyInternals.getM11(this),
+      b: DOMMatrixReadOnlyInternals.getM12(this),
+      c: DOMMatrixReadOnlyInternals.getM21(this),
+      d: DOMMatrixReadOnlyInternals.getM22(this),
+      e: DOMMatrixReadOnlyInternals.getM41(this),
+      f: DOMMatrixReadOnlyInternals.getM42(this),
+      m11: DOMMatrixReadOnlyInternals.getM11(this),
+      m12: DOMMatrixReadOnlyInternals.getM12(this),
+      m13: DOMMatrixReadOnlyInternals.getM13(this),
+      m14: DOMMatrixReadOnlyInternals.getM14(this),
+      m21: DOMMatrixReadOnlyInternals.getM21(this),
+      m22: DOMMatrixReadOnlyInternals.getM22(this),
+      m23: DOMMatrixReadOnlyInternals.getM23(this),
+      m24: DOMMatrixReadOnlyInternals.getM24(this),
+      m31: DOMMatrixReadOnlyInternals.getM31(this),
+      m32: DOMMatrixReadOnlyInternals.getM32(this),
+      m33: DOMMatrixReadOnlyInternals.getM33(this),
+      m34: DOMMatrixReadOnlyInternals.getM34(this),
+      m41: DOMMatrixReadOnlyInternals.getM41(this),
+      m42: DOMMatrixReadOnlyInternals.getM42(this),
+      m43: DOMMatrixReadOnlyInternals.getM43(this),
+      m44: DOMMatrixReadOnlyInternals.getM44(this),
+      is2D: DOMMatrixReadOnlyInternals.getIs2D(this),
+      isIdentity: DOMMatrixReadOnlyInternals.getIsIdentity(this),
+    };
+  }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return DOMMatrixReadOnlyInternals.hasInstance(this)
+      ? DOMMatrixReadOnlyInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
-    getDOMMatrixM11 = (o) => o.#m11;
-    setDOMMatrixM11 = (o, v) => o.#m11 = v;
-    getDOMMatrixM12 = (o) => o.#m12;
-    setDOMMatrixM12 = (o, v) => o.#m12 = v;
-    getDOMMatrixM13 = (o) => o.#m13;
-    setDOMMatrixM13 = (o, v) => o.#m13 = v;
-    getDOMMatrixM14 = (o) => o.#m14;
-    setDOMMatrixM14 = (o, v) => o.#m14 = v;
-    getDOMMatrixM21 = (o) => o.#m21;
-    setDOMMatrixM21 = (o, v) => o.#m21 = v;
-    getDOMMatrixM22 = (o) => o.#m22;
-    setDOMMatrixM22 = (o, v) => o.#m22 = v;
-    getDOMMatrixM23 = (o) => o.#m23;
-    setDOMMatrixM23 = (o, v) => o.#m23 = v;
-    getDOMMatrixM24 = (o) => o.#m24;
-    setDOMMatrixM24 = (o, v) => o.#m24 = v;
-    getDOMMatrixM31 = (o) => o.#m31;
-    setDOMMatrixM31 = (o, v) => o.#m31 = v;
-    getDOMMatrixM32 = (o) => o.#m32;
-    setDOMMatrixM32 = (o, v) => o.#m32 = v;
-    getDOMMatrixM33 = (o) => o.#m33;
-    setDOMMatrixM33 = (o, v) => o.#m33 = v;
-    getDOMMatrixM34 = (o) => o.#m34;
-    setDOMMatrixM34 = (o, v) => o.#m34 = v;
-    getDOMMatrixM41 = (o) => o.#m41;
-    setDOMMatrixM41 = (o, v) => o.#m41 = v;
-    getDOMMatrixM42 = (o) => o.#m42;
-    setDOMMatrixM42 = (o, v) => o.#m42 = v;
-    getDOMMatrixM43 = (o) => o.#m43;
-    setDOMMatrixM43 = (o, v) => o.#m43 = v;
-    getDOMMatrixM44 = (o) => o.#m44;
-    setDOMMatrixM44 = (o, v) => o.#m44 = v;
-    getDOMMatrixIs2D = (o) => o.#is2D;
-    setDOMMatrixIs2D = (o, v) => o.#is2D = v;
-    initDOMMatrix = (o, values, is2D) => o.#init(values, is2D);
   }
 }
 
 const translateTransform = (tx, ty, tz) =>
   tz === 0
-    ? new DOMMatrixReadOnly(
-      directConstruct,
-      [1, 0, 0, 1, tx, ty],
-      true,
-    )
-    : new DOMMatrixReadOnly(
-      directConstruct,
+    ? createDOMMatrixReadOnly([1, 0, 0, 1, tx, ty], true)
+    : createDOMMatrixReadOnly(
       [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, ty, tz, 1],
       false,
     );
 const scaleTransform = (sx, sy, sz) =>
   sz === 1
-    ? new DOMMatrixReadOnly(
-      directConstruct,
-      [sx, 0, 0, sy, 0, 0],
-      true,
-    )
-    : new DOMMatrixReadOnly(
-      directConstruct,
+    ? createDOMMatrixReadOnly([sx, 0, 0, sy, 0, 0], true)
+    : createDOMMatrixReadOnly(
       [sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1],
       false,
     );
@@ -1321,13 +1566,11 @@ const rotateTransform = (x, y, z, alpha) => {
   const sc = s * c;
   const sq = s * s;
   return x === 0 && y === 0
-    ? new DOMMatrixReadOnly(
-      directConstruct,
+    ? createDOMMatrixReadOnly(
       [1 - 2 * z * z * sq, 2 * z * sc, -2 * z * sc, 1 - 2 * z * z * sq, 0, 0],
       true,
     )
-    : new DOMMatrixReadOnly(
-      directConstruct,
+    : createDOMMatrixReadOnly(
       [
         1 - 2 * (y * y + z * z) * sq,
         2 * (x * y * sq + z * sc),
@@ -1350,29 +1593,13 @@ const rotateTransform = (x, y, z, alpha) => {
     );
 };
 const skewXTransform = (alpha) =>
-  new DOMMatrixReadOnly(
-    directConstruct,
-    [1, 0, MathTan(alpha), 1, 0, 0],
-    true,
-  );
+  createDOMMatrixReadOnly([1, 0, MathTan(alpha), 1, 0, 0], true);
 const skewYTransform = (beta) =>
-  new DOMMatrixReadOnly(
-    directConstruct,
-    [1, MathTan(beta), 0, 1, 0, 0],
-    true,
-  );
-const flipXTransform = new DOMMatrixReadOnly(
-  directConstruct,
-  [-1, 0, 0, 1, 0, 0],
-  true,
-);
-const flipYTransform = new DOMMatrixReadOnly(
-  directConstruct,
-  [1, 0, 0, -1, 0, 0],
-  true,
-);
+  createDOMMatrixReadOnly([1, MathTan(beta), 0, 1, 0, 0], true);
+const flipXTransform = createDOMMatrixReadOnly([-1, 0, 0, 1, 0, 0], true);
+const flipYTransform = createDOMMatrixReadOnly([1, 0, 0, -1, 0, 0], true);
 
-export const DOMMatrixInternals = class DOMMatrix extends IdentityConstructor {
+const DOMMatrixInternals = class DOMMatrix extends DOMMatrixReadOnlyInternals {
   #brand() {}
 
   static hasInstance(o) {
@@ -1386,10 +1613,40 @@ export const DOMMatrixInternals = class DOMMatrix extends IdentityConstructor {
 };
 
 export class DOMMatrix extends DOMMatrixReadOnly {
-  constructor() {
-    return new DOMMatrixInternals(
-      ReflectConstruct(DOMMatrixReadOnly, arguments, new.target),
-    );
+  constructor(arg = undefined) {
+    const init = arg === undefined
+      ? undefined
+      : convertDOMStringOrSequenceOfUnrestrictedDouble(arg);
+    const newTarget = capturePrototype(new.target, DOMMatrix);
+    const o = ObjectCreate(newTarget.prototype);
+    let values = identityMatrix2DValues;
+    let is2D = true;
+    if (init !== undefined) {
+      if (typeof init === "string") {
+        if (inWorker) {
+          throw new TypeError("Cannot construct matrix from string in workers");
+        }
+        values = parseMatrixBuffer;
+        is2D = op_canvas_2d_parse_matrix(init, parseMatrixBuffer);
+      } else {
+        switch (init.length) {
+          case 6:
+            values = init;
+            is2D = true;
+            break;
+          case 16:
+            values = init;
+            is2D = false;
+            break;
+          default:
+            throw new TypeError(
+              "Length of matrix init sequence must be 6 or 16",
+            );
+        }
+      }
+    }
+    new DOMMatrixInternals(o, values, is2D);
+    return o;
   }
 
   static fromMatrix(other = undefined) {
@@ -1403,9 +1660,9 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     array32 = convertFloat32Array(array32);
     switch (TypedArrayPrototypeGetLength(array32)) {
       case 6:
-        return new DOMMatrix(directConstruct, array32, true);
+        return createDOMMatrix(array32, true);
       case 16:
-        return new DOMMatrix(directConstruct, array32, false);
+        return createDOMMatrix(array32, false);
       default:
         throw new TypeError("Length of matrix init sequence must be 6 or 16");
     }
@@ -1417,9 +1674,9 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     array64 = convertFloat64Array(array64);
     switch (TypedArrayPrototypeGetLength(array64)) {
       case 6:
-        return new DOMMatrix(directConstruct, array64, true);
+        return createDOMMatrix(array64, true);
       case 16:
-        return new DOMMatrix(directConstruct, array64, false);
+        return createDOMMatrix(array64, false);
       default:
         throw new TypeError("Length of matrix init sequence must be 6 or 16");
     }
@@ -1427,7 +1684,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   get a() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM11(this);
+    return DOMMatrixReadOnlyInternals.getM11(this);
   }
 
   set a(value) {
@@ -1435,12 +1692,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'a' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM11(this, value);
+    DOMMatrixReadOnlyInternals.setM11(this, value);
   }
 
   get b() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM12(this);
+    return DOMMatrixReadOnlyInternals.getM12(this);
   }
 
   set b(value) {
@@ -1448,12 +1705,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'b' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM12(this, value);
+    DOMMatrixReadOnlyInternals.setM12(this, value);
   }
 
   get c() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM21(this);
+    return DOMMatrixReadOnlyInternals.getM21(this);
   }
 
   set c(value) {
@@ -1461,12 +1718,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'c' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM21(this, value);
+    DOMMatrixReadOnlyInternals.setM21(this, value);
   }
 
   get d() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM22(this);
+    return DOMMatrixReadOnlyInternals.getM22(this);
   }
 
   set d(value) {
@@ -1474,12 +1731,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'd' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM22(this, value);
+    DOMMatrixReadOnlyInternals.setM22(this, value);
   }
 
   get e() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM41(this);
+    return DOMMatrixReadOnlyInternals.getM41(this);
   }
 
   set e(value) {
@@ -1487,12 +1744,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'e' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM41(this, value);
+    DOMMatrixReadOnlyInternals.setM41(this, value);
   }
 
   get f() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM42(this);
+    return DOMMatrixReadOnlyInternals.getM42(this);
   }
 
   set f(value) {
@@ -1500,12 +1757,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'f' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM42(this, value);
+    DOMMatrixReadOnlyInternals.setM42(this, value);
   }
 
   get m11() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM11(this);
+    return DOMMatrixReadOnlyInternals.getM11(this);
   }
 
   set m11(value) {
@@ -1513,12 +1770,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm11' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM11(this, value);
+    DOMMatrixReadOnlyInternals.setM11(this, value);
   }
 
   get m12() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM12(this);
+    return DOMMatrixReadOnlyInternals.getM12(this);
   }
 
   set m12(value) {
@@ -1526,12 +1783,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm12' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM12(this, value);
+    DOMMatrixReadOnlyInternals.setM12(this, value);
   }
 
   get m13() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM13(this);
+    return DOMMatrixReadOnlyInternals.getM13(this);
   }
 
   set m13(value) {
@@ -1539,15 +1796,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm13' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM13(this, value);
+    DOMMatrixReadOnlyInternals.setM13(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m14() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM14(this);
+    return DOMMatrixReadOnlyInternals.getM14(this);
   }
 
   set m14(value) {
@@ -1555,15 +1812,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm14' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM14(this, value);
+    DOMMatrixReadOnlyInternals.setM14(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m21() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM21(this);
+    return DOMMatrixReadOnlyInternals.getM21(this);
   }
 
   set m21(value) {
@@ -1571,12 +1828,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm21' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM21(this, value);
+    DOMMatrixReadOnlyInternals.setM21(this, value);
   }
 
   get m22() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM22(this);
+    return DOMMatrixReadOnlyInternals.getM22(this);
   }
 
   set m22(value) {
@@ -1584,12 +1841,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm22' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM22(this, value);
+    DOMMatrixReadOnlyInternals.setM22(this, value);
   }
 
   get m23() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM23(this);
+    return DOMMatrixReadOnlyInternals.getM23(this);
   }
 
   set m23(value) {
@@ -1597,15 +1854,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm23' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM23(this, value);
+    DOMMatrixReadOnlyInternals.setM23(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m24() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM24(this);
+    return DOMMatrixReadOnlyInternals.getM24(this);
   }
 
   set m24(value) {
@@ -1613,15 +1870,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm24' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM24(this, value);
+    DOMMatrixReadOnlyInternals.setM24(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m31() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM31(this);
+    return DOMMatrixReadOnlyInternals.getM31(this);
   }
 
   set m31(value) {
@@ -1629,15 +1886,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm31' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM31(this, value);
+    DOMMatrixReadOnlyInternals.setM31(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m32() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM32(this);
+    return DOMMatrixReadOnlyInternals.getM32(this);
   }
 
   set m32(value) {
@@ -1645,15 +1902,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm32' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM32(this, value);
+    DOMMatrixReadOnlyInternals.setM32(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m33() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM33(this);
+    return DOMMatrixReadOnlyInternals.getM33(this);
   }
 
   set m33(value) {
@@ -1661,15 +1918,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm33' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM33(this, value);
+    DOMMatrixReadOnlyInternals.setM33(this, value);
     if (value !== 1) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m34() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM34(this);
+    return DOMMatrixReadOnlyInternals.getM34(this);
   }
 
   set m34(value) {
@@ -1677,15 +1934,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm34' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM34(this, value);
+    DOMMatrixReadOnlyInternals.setM34(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m41() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM41(this);
+    return DOMMatrixReadOnlyInternals.getM41(this);
   }
 
   set m41(value) {
@@ -1693,12 +1950,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm41' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM41(this, value);
+    DOMMatrixReadOnlyInternals.setM41(this, value);
   }
 
   get m42() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM42(this);
+    return DOMMatrixReadOnlyInternals.getM42(this);
   }
 
   set m42(value) {
@@ -1706,12 +1963,12 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm42' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM42(this, value);
+    DOMMatrixReadOnlyInternals.setM42(this, value);
   }
 
   get m43() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM43(this);
+    return DOMMatrixReadOnlyInternals.getM43(this);
   }
 
   set m43(value) {
@@ -1719,15 +1976,15 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm43' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM43(this, value);
+    DOMMatrixReadOnlyInternals.setM43(this, value);
     if (value !== 0) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
   get m44() {
     DOMMatrixInternals.checkInstance(this);
-    return getDOMMatrixM44(this);
+    return DOMMatrixReadOnlyInternals.getM44(this);
   }
 
   set m44(value) {
@@ -1735,9 +1992,9 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     const prefix = "Failed to set 'm44' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    setDOMMatrixM44(this, value);
+    DOMMatrixReadOnlyInternals.setM44(this, value);
     if (value !== 1) {
-      setDOMMatrixIs2D(this, false);
+      DOMMatrixReadOnlyInternals.setIs2D(this, false);
     }
   }
 
@@ -1892,7 +2149,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
     requiredArguments(arguments.length, 1, prefix);
     transformList = convertDOMString(transformList);
     const is2D = op_canvas_2d_parse_matrix(transformList, parseMatrixBuffer);
-    initDOMMatrix(this, parseMatrixBuffer, is2D);
+    DOMMatrixReadOnlyInternals.init(this, parseMatrixBuffer, is2D);
     return this;
   }
 
@@ -2052,87 +2309,150 @@ function getMatrixValues(other) {
     ];
 }
 
+export function createDOMMatrixReadOnly(
+  values = identityMatrix2DValues,
+  is2D = true,
+) {
+  const o = ObjectCreate(DOMMatrixReadOnly.prototype);
+  new DOMMatrixReadOnlyInternals(o, values, is2D);
+  return o;
+}
+
+export function createDOMMatrix(values = identityMatrix2DValues, is2D = true) {
+  const o = ObjectCreate(DOMMatrix.prototype);
+  new DOMMatrixInternals(o, values, is2D);
+  return o;
+}
+
 function createDOMMatrixReadOnlyFromDictionary(other) {
   const values = getMatrixValues(other);
-  return new DOMMatrixReadOnly(directConstruct, values, other.is2D);
+  return createDOMMatrixReadOnly(values, other.is2D);
 }
 
 function createDOMMatrixFromDictionary(other) {
   const values = getMatrixValues(other);
-  return new DOMMatrix(directConstruct, values, other.is2D);
+  return createDOMMatrix(values, other.is2D);
 }
 
 function multiplyMatrices(out, a, b) {
-  const a11 = getDOMMatrixM11(a);
-  const a12 = getDOMMatrixM12(a);
-  const a13 = getDOMMatrixM13(a);
-  const a14 = getDOMMatrixM14(a);
-  const a21 = getDOMMatrixM21(a);
-  const a22 = getDOMMatrixM22(a);
-  const a23 = getDOMMatrixM23(a);
-  const a24 = getDOMMatrixM24(a);
-  const a31 = getDOMMatrixM31(a);
-  const a32 = getDOMMatrixM32(a);
-  const a33 = getDOMMatrixM33(a);
-  const a34 = getDOMMatrixM34(a);
-  const a41 = getDOMMatrixM41(a);
-  const a42 = getDOMMatrixM42(a);
-  const a43 = getDOMMatrixM43(a);
-  const a44 = getDOMMatrixM44(a);
-  const aIs2D = getDOMMatrixIs2D(a);
-  const b11 = getDOMMatrixM11(b);
-  const b12 = getDOMMatrixM12(b);
-  const b13 = getDOMMatrixM13(b);
-  const b14 = getDOMMatrixM14(b);
-  const b21 = getDOMMatrixM21(b);
-  const b22 = getDOMMatrixM22(b);
-  const b23 = getDOMMatrixM23(b);
-  const b24 = getDOMMatrixM24(b);
-  const b31 = getDOMMatrixM31(b);
-  const b32 = getDOMMatrixM32(b);
-  const b33 = getDOMMatrixM33(b);
-  const b34 = getDOMMatrixM34(b);
-  const b41 = getDOMMatrixM41(b);
-  const b42 = getDOMMatrixM42(b);
-  const b43 = getDOMMatrixM43(b);
-  const b44 = getDOMMatrixM44(b);
-  const bIs2D = getDOMMatrixIs2D(b);
-  setDOMMatrixM11(out, a11 * b11 + a21 * b12 + a31 * b13 + a41 * b14);
-  setDOMMatrixM12(out, a12 * b11 + a22 * b12 + a32 * b13 + a42 * b14);
-  setDOMMatrixM13(out, a13 * b11 + a23 * b12 + a33 * b13 + a43 * b14);
-  setDOMMatrixM14(out, a14 * b11 + a24 * b12 + a34 * b13 + a44 * b14);
-  setDOMMatrixM21(out, a11 * b21 + a21 * b22 + a31 * b23 + a41 * b24);
-  setDOMMatrixM22(out, a12 * b21 + a22 * b22 + a32 * b23 + a42 * b24);
-  setDOMMatrixM23(out, a13 * b21 + a23 * b22 + a33 * b23 + a43 * b24);
-  setDOMMatrixM24(out, a14 * b21 + a24 * b22 + a34 * b23 + a44 * b24);
-  setDOMMatrixM31(out, a11 * b31 + a21 * b32 + a31 * b33 + a41 * b34);
-  setDOMMatrixM32(out, a12 * b31 + a22 * b32 + a32 * b33 + a42 * b34);
-  setDOMMatrixM33(out, a13 * b31 + a23 * b32 + a33 * b33 + a43 * b34);
-  setDOMMatrixM34(out, a14 * b31 + a24 * b32 + a34 * b33 + a44 * b34);
-  setDOMMatrixM41(out, a11 * b41 + a21 * b42 + a31 * b43 + a41 * b44);
-  setDOMMatrixM42(out, a12 * b41 + a22 * b42 + a32 * b43 + a42 * b44);
-  setDOMMatrixM43(out, a13 * b41 + a23 * b42 + a33 * b43 + a43 * b44);
-  setDOMMatrixM44(out, a14 * b41 + a24 * b42 + a34 * b43 + a44 * b44);
-  setDOMMatrixIs2D(out, aIs2D && bIs2D);
+  const a11 = DOMMatrixReadOnlyInternals.getM11(a);
+  const a12 = DOMMatrixReadOnlyInternals.getM12(a);
+  const a13 = DOMMatrixReadOnlyInternals.getM13(a);
+  const a14 = DOMMatrixReadOnlyInternals.getM14(a);
+  const a21 = DOMMatrixReadOnlyInternals.getM21(a);
+  const a22 = DOMMatrixReadOnlyInternals.getM22(a);
+  const a23 = DOMMatrixReadOnlyInternals.getM23(a);
+  const a24 = DOMMatrixReadOnlyInternals.getM24(a);
+  const a31 = DOMMatrixReadOnlyInternals.getM31(a);
+  const a32 = DOMMatrixReadOnlyInternals.getM32(a);
+  const a33 = DOMMatrixReadOnlyInternals.getM33(a);
+  const a34 = DOMMatrixReadOnlyInternals.getM34(a);
+  const a41 = DOMMatrixReadOnlyInternals.getM41(a);
+  const a42 = DOMMatrixReadOnlyInternals.getM42(a);
+  const a43 = DOMMatrixReadOnlyInternals.getM43(a);
+  const a44 = DOMMatrixReadOnlyInternals.getM44(a);
+  const aIs2D = DOMMatrixReadOnlyInternals.getIs2D(a);
+  const b11 = DOMMatrixReadOnlyInternals.getM11(b);
+  const b12 = DOMMatrixReadOnlyInternals.getM12(b);
+  const b13 = DOMMatrixReadOnlyInternals.getM13(b);
+  const b14 = DOMMatrixReadOnlyInternals.getM14(b);
+  const b21 = DOMMatrixReadOnlyInternals.getM21(b);
+  const b22 = DOMMatrixReadOnlyInternals.getM22(b);
+  const b23 = DOMMatrixReadOnlyInternals.getM23(b);
+  const b24 = DOMMatrixReadOnlyInternals.getM24(b);
+  const b31 = DOMMatrixReadOnlyInternals.getM31(b);
+  const b32 = DOMMatrixReadOnlyInternals.getM32(b);
+  const b33 = DOMMatrixReadOnlyInternals.getM33(b);
+  const b34 = DOMMatrixReadOnlyInternals.getM34(b);
+  const b41 = DOMMatrixReadOnlyInternals.getM41(b);
+  const b42 = DOMMatrixReadOnlyInternals.getM42(b);
+  const b43 = DOMMatrixReadOnlyInternals.getM43(b);
+  const b44 = DOMMatrixReadOnlyInternals.getM44(b);
+  const bIs2D = DOMMatrixReadOnlyInternals.getIs2D(b);
+  DOMMatrixReadOnlyInternals.setM11(
+    out,
+    a11 * b11 + a21 * b12 + a31 * b13 + a41 * b14,
+  );
+  DOMMatrixReadOnlyInternals.setM12(
+    out,
+    a12 * b11 + a22 * b12 + a32 * b13 + a42 * b14,
+  );
+  DOMMatrixReadOnlyInternals.setM13(
+    out,
+    a13 * b11 + a23 * b12 + a33 * b13 + a43 * b14,
+  );
+  DOMMatrixReadOnlyInternals.setM14(
+    out,
+    a14 * b11 + a24 * b12 + a34 * b13 + a44 * b14,
+  );
+  DOMMatrixReadOnlyInternals.setM21(
+    out,
+    a11 * b21 + a21 * b22 + a31 * b23 + a41 * b24,
+  );
+  DOMMatrixReadOnlyInternals.setM22(
+    out,
+    a12 * b21 + a22 * b22 + a32 * b23 + a42 * b24,
+  );
+  DOMMatrixReadOnlyInternals.setM23(
+    out,
+    a13 * b21 + a23 * b22 + a33 * b23 + a43 * b24,
+  );
+  DOMMatrixReadOnlyInternals.setM24(
+    out,
+    a14 * b21 + a24 * b22 + a34 * b23 + a44 * b24,
+  );
+  DOMMatrixReadOnlyInternals.setM31(
+    out,
+    a11 * b31 + a21 * b32 + a31 * b33 + a41 * b34,
+  );
+  DOMMatrixReadOnlyInternals.setM32(
+    out,
+    a12 * b31 + a22 * b32 + a32 * b33 + a42 * b34,
+  );
+  DOMMatrixReadOnlyInternals.setM33(
+    out,
+    a13 * b31 + a23 * b32 + a33 * b33 + a43 * b34,
+  );
+  DOMMatrixReadOnlyInternals.setM34(
+    out,
+    a14 * b31 + a24 * b32 + a34 * b33 + a44 * b34,
+  );
+  DOMMatrixReadOnlyInternals.setM41(
+    out,
+    a11 * b41 + a21 * b42 + a31 * b43 + a41 * b44,
+  );
+  DOMMatrixReadOnlyInternals.setM42(
+    out,
+    a12 * b41 + a22 * b42 + a32 * b43 + a42 * b44,
+  );
+  DOMMatrixReadOnlyInternals.setM43(
+    out,
+    a13 * b41 + a23 * b42 + a33 * b43 + a43 * b44,
+  );
+  DOMMatrixReadOnlyInternals.setM44(
+    out,
+    a14 * b41 + a24 * b42 + a34 * b43 + a44 * b44,
+  );
+  DOMMatrixReadOnlyInternals.setIs2D(out, aIs2D && bIs2D);
 }
 
 function invertMatrix(out, m) {
-  const m11 = getDOMMatrixM11(m);
-  const m12 = getDOMMatrixM12(m);
-  const m13 = getDOMMatrixM13(m);
-  const m14 = getDOMMatrixM14(m);
-  const m21 = getDOMMatrixM21(m);
-  const m22 = getDOMMatrixM22(m);
-  const m23 = getDOMMatrixM23(m);
-  const m24 = getDOMMatrixM24(m);
-  const m31 = getDOMMatrixM31(m);
-  const m32 = getDOMMatrixM32(m);
-  const m33 = getDOMMatrixM33(m);
-  const m34 = getDOMMatrixM34(m);
-  const m41 = getDOMMatrixM41(m);
-  const m42 = getDOMMatrixM42(m);
-  const m43 = getDOMMatrixM43(m);
-  const m44 = getDOMMatrixM44(m);
+  const m11 = DOMMatrixReadOnlyInternals.getM11(m);
+  const m12 = DOMMatrixReadOnlyInternals.getM12(m);
+  const m13 = DOMMatrixReadOnlyInternals.getM13(m);
+  const m14 = DOMMatrixReadOnlyInternals.getM14(m);
+  const m21 = DOMMatrixReadOnlyInternals.getM21(m);
+  const m22 = DOMMatrixReadOnlyInternals.getM22(m);
+  const m23 = DOMMatrixReadOnlyInternals.getM23(m);
+  const m24 = DOMMatrixReadOnlyInternals.getM24(m);
+  const m31 = DOMMatrixReadOnlyInternals.getM31(m);
+  const m32 = DOMMatrixReadOnlyInternals.getM32(m);
+  const m33 = DOMMatrixReadOnlyInternals.getM33(m);
+  const m34 = DOMMatrixReadOnlyInternals.getM34(m);
+  const m41 = DOMMatrixReadOnlyInternals.getM41(m);
+  const m42 = DOMMatrixReadOnlyInternals.getM42(m);
+  const m43 = DOMMatrixReadOnlyInternals.getM43(m);
+  const m44 = DOMMatrixReadOnlyInternals.getM44(m);
   const det = m14 * m23 * m32 * m41 - m13 * m24 * m32 * m41 -
     m14 * m22 * m33 * m41 + m12 * m24 * m33 * m41 +
     m13 * m22 * m34 * m41 - m12 * m23 * m34 * m41 -
@@ -2146,106 +2466,109 @@ function invertMatrix(out, m) {
     m13 * m21 * m32 * m44 - m11 * m23 * m32 * m44 -
     m12 * m21 * m33 * m44 + m11 * m22 * m33 * m44;
   if (!det) {
-    setDOMMatrixM11(out, NaN);
-    setDOMMatrixM12(out, NaN);
-    setDOMMatrixM13(out, NaN);
-    setDOMMatrixM14(out, NaN);
-    setDOMMatrixM21(out, NaN);
-    setDOMMatrixM22(out, NaN);
-    setDOMMatrixM23(out, NaN);
-    setDOMMatrixM24(out, NaN);
-    setDOMMatrixM31(out, NaN);
-    setDOMMatrixM32(out, NaN);
-    setDOMMatrixM33(out, NaN);
-    setDOMMatrixM34(out, NaN);
-    setDOMMatrixM41(out, NaN);
-    setDOMMatrixM42(out, NaN);
-    setDOMMatrixM43(out, NaN);
-    setDOMMatrixM44(out, NaN);
-    setDOMMatrixIs2D(out, false);
+    DOMMatrixReadOnlyInternals.setM11(out, NaN);
+    DOMMatrixReadOnlyInternals.setM12(out, NaN);
+    DOMMatrixReadOnlyInternals.setM13(out, NaN);
+    DOMMatrixReadOnlyInternals.setM14(out, NaN);
+    DOMMatrixReadOnlyInternals.setM21(out, NaN);
+    DOMMatrixReadOnlyInternals.setM22(out, NaN);
+    DOMMatrixReadOnlyInternals.setM23(out, NaN);
+    DOMMatrixReadOnlyInternals.setM24(out, NaN);
+    DOMMatrixReadOnlyInternals.setM31(out, NaN);
+    DOMMatrixReadOnlyInternals.setM32(out, NaN);
+    DOMMatrixReadOnlyInternals.setM33(out, NaN);
+    DOMMatrixReadOnlyInternals.setM34(out, NaN);
+    DOMMatrixReadOnlyInternals.setM41(out, NaN);
+    DOMMatrixReadOnlyInternals.setM42(out, NaN);
+    DOMMatrixReadOnlyInternals.setM43(out, NaN);
+    DOMMatrixReadOnlyInternals.setM44(out, NaN);
+    DOMMatrixReadOnlyInternals.setIs2D(out, false);
     return;
   }
-  setDOMMatrixM11(
+  DOMMatrixReadOnlyInternals.setM11(
     out,
     (m23 * m34 * m42 - m24 * m33 * m42 + m24 * m32 * m43 -
       m22 * m34 * m43 - m23 * m32 * m44 + m22 * m33 * m44) / det,
   );
-  setDOMMatrixM12(
+  DOMMatrixReadOnlyInternals.setM12(
     out,
     (m14 * m33 * m42 - m13 * m34 * m42 - m14 * m32 * m43 +
       m12 * m34 * m43 + m13 * m32 * m44 - m12 * m33 * m44) / det,
   );
-  setDOMMatrixM13(
+  DOMMatrixReadOnlyInternals.setM13(
     out,
     (m13 * m24 * m42 - m14 * m23 * m42 + m14 * m22 * m43 -
       m12 * m24 * m43 - m13 * m22 * m44 + m12 * m23 * m44) / det,
   );
-  setDOMMatrixM14(
+  DOMMatrixReadOnlyInternals.setM14(
     out,
     (m14 * m23 * m32 - m13 * m24 * m32 - m14 * m22 * m33 +
       m12 * m24 * m33 + m13 * m22 * m34 - m12 * m23 * m34) / det,
   );
-  setDOMMatrixM21(
+  DOMMatrixReadOnlyInternals.setM21(
     out,
     (m24 * m33 * m41 - m23 * m34 * m41 - m24 * m31 * m43 +
       m21 * m34 * m43 + m23 * m31 * m44 - m21 * m33 * m44) / det,
   );
-  setDOMMatrixM22(
+  DOMMatrixReadOnlyInternals.setM22(
     out,
     (m13 * m34 * m41 - m14 * m33 * m41 + m14 * m31 * m43 -
       m11 * m34 * m43 - m13 * m31 * m44 + m11 * m33 * m44) / det,
   );
-  setDOMMatrixM23(
+  DOMMatrixReadOnlyInternals.setM23(
     out,
     (m14 * m23 * m41 - m13 * m24 * m41 - m14 * m21 * m43 +
       m11 * m24 * m43 + m13 * m21 * m44 - m11 * m23 * m44) / det,
   );
-  setDOMMatrixM24(
+  DOMMatrixReadOnlyInternals.setM24(
     out,
     (m13 * m24 * m31 - m14 * m23 * m31 + m14 * m21 * m33 -
       m11 * m24 * m33 - m13 * m21 * m34 + m11 * m23 * m34) / det,
   );
-  setDOMMatrixM31(
+  DOMMatrixReadOnlyInternals.setM31(
     out,
     (m22 * m34 * m41 - m24 * m32 * m41 + m24 * m31 * m42 -
       m21 * m34 * m42 - m22 * m31 * m44 + m21 * m32 * m44) / det,
   );
-  setDOMMatrixM32(
+  DOMMatrixReadOnlyInternals.setM32(
     out,
     (m14 * m32 * m41 - m12 * m34 * m41 - m14 * m31 * m42 +
       m11 * m34 * m42 + m12 * m31 * m44 - m11 * m32 * m44) / det,
   );
-  setDOMMatrixM33(
+  DOMMatrixReadOnlyInternals.setM33(
     out,
     (m12 * m24 * m41 - m14 * m22 * m41 + m14 * m21 * m42 -
       m11 * m24 * m42 - m12 * m21 * m44 + m11 * m22 * m44) / det,
   );
-  setDOMMatrixM34(
+  DOMMatrixReadOnlyInternals.setM34(
     out,
     (m14 * m22 * m31 - m12 * m24 * m31 - m14 * m21 * m32 +
       m11 * m24 * m32 + m12 * m21 * m34 - m11 * m22 * m34) / det,
   );
-  setDOMMatrixM41(
+  DOMMatrixReadOnlyInternals.setM41(
     out,
     (m23 * m32 * m41 - m22 * m33 * m41 - m23 * m31 * m42 +
       m21 * m33 * m42 + m22 * m31 * m43 - m21 * m32 * m43) / det,
   );
-  setDOMMatrixM42(
+  DOMMatrixReadOnlyInternals.setM42(
     out,
     (m12 * m33 * m41 - m13 * m32 * m41 + m13 * m31 * m42 -
       m11 * m33 * m42 - m12 * m31 * m43 + m11 * m32 * m43) / det,
   );
-  setDOMMatrixM43(
+  DOMMatrixReadOnlyInternals.setM43(
     out,
     (m13 * m22 * m41 - m12 * m23 * m41 - m13 * m21 * m42 +
       m11 * m23 * m42 + m12 * m21 * m43 - m11 * m22 * m43) / det,
   );
-  setDOMMatrixM44(
+  DOMMatrixReadOnlyInternals.setM44(
     out,
     (m12 * m23 * m31 - m13 * m22 * m31 + m13 * m21 * m32 -
       m11 * m23 * m32 - m12 * m21 * m33 + m11 * m22 * m33) / det,
   );
-  setDOMMatrixIs2D(out, getDOMMatrixIs2D(m));
+  DOMMatrixReadOnlyInternals.setIs2D(
+    out,
+    DOMMatrixReadOnlyInternals.getIs2D(m),
+  );
 }
 
 let inWorker = false;

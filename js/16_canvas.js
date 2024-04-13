@@ -33,6 +33,7 @@ import {
   op_canvas_2d_image_bitmap_resize,
   op_canvas_2d_image_bitmap_width,
 } from "./00_ops.js";
+import { capturePrototype } from "./01_capture_prototype.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
 import { makeSafePromise } from "./01_promise.js";
 import { isBlob } from "./02_is_blob.js";
@@ -48,6 +49,8 @@ import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
 import { EventHandler } from "./15_event.js";
 
 const {
+  Object,
+  ObjectCreate,
   ObjectFreeze,
   ObjectGetPrototypeOf,
   Promise,
@@ -272,10 +275,10 @@ export class OffscreenCanvas extends EventTarget {
     requiredArguments(arguments.length, 2, prefix);
     width = convertEnforceRangeUnsignedLongLong(width);
     height = convertEnforceRangeUnsignedLongLong(height);
-    return new OffscreenCanvasInternals(
-      ReflectConstruct(EventTarget, [], new.target),
-      new DummyCanvasContext(width, height),
-    );
+    const newTarget = capturePrototype(new.target, OffscreenCanvas);
+    const o = ReflectConstruct(EventTarget, [], newTarget);
+    new OffscreenCanvasInternals(o, new DummyCanvasContext(width, height));
+    return o;
   }
 
   get width() {
@@ -334,7 +337,7 @@ export class OffscreenCanvas extends EventTarget {
       throw new DOMException("Canvas is detached", "InvalidStateError");
     }
     const mode = getOffscreenCanvasContextMode(ctx);
-    return new ImageBitmap(illegalConstructor, mode.transferToImageBitmap(ctx));
+    return createImageBitmapFromRaw(mode.transferToImageBitmap(ctx));
   }
 
   convertToBlob(options = undefined) {
@@ -412,44 +415,37 @@ export const colorSpaceToRepr = ObjectFreeze({
   "srgb": 0,
   "display-p3": 1,
 });
-export let objectIsImageBitmap;
-export let getImageBitmapRaw;
-export let transferImageBitmap;
-
-export class ImageBitmap {
+export const ImageBitmapInternals = class ImageBitmap
+  extends IdentityConstructor {
   #brand() {}
 
   #raw;
 
-  constructor(key = undefined, raw) {
-    if (key !== illegalConstructor) {
-      illegalConstructor();
-    }
+  constructor(o, raw) {
+    super(o);
     this.#raw = raw;
   }
 
-  get width() {
-    return this.#raw ? op_canvas_2d_image_bitmap_width(this.#raw) : 0;
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
   }
 
-  get height() {
-    return this.#raw ? op_canvas_2d_image_bitmap_height(this.#raw) : 0;
+  static checkInstance(o) {
+    o.#brand;
   }
 
-  close() {
-    const bitmap = this.#transfer();
-    if (bitmap) {
-      op_canvas_2d_image_bitmap_close(bitmap);
-    }
+  static getRaw(o) {
+    return o.#raw;
   }
 
-  #transfer() {
-    const bitmap = this.#raw;
-    this.#raw = null;
+  static transfer(o) {
+    const bitmap = o.#raw;
+    o.#raw = null;
     return bitmap;
   }
 
-  #inspect(inspect, options) {
+  static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
         object: this,
@@ -459,27 +455,51 @@ export class ImageBitmap {
       options,
     );
   }
+};
+
+export class ImageBitmap extends Object {
+  // deno-lint-ignore constructor-super
+  constructor() {
+    illegalConstructor();
+  }
+
+  get width() {
+    const raw = ImageBitmapInternals.getRaw(this);
+    return raw ? op_canvas_2d_image_bitmap_width(raw) : 0;
+  }
+
+  get height() {
+    const raw = ImageBitmapInternals.getRaw(this);
+    return raw ? op_canvas_2d_image_bitmap_height(raw) : 0;
+  }
+
+  close() {
+    const bitmap = ImageBitmapInternals.transfer(this);
+    if (bitmap) {
+      op_canvas_2d_image_bitmap_close(bitmap);
+    }
+  }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return ImageBitmapInternals.hasInstance(this)
+      ? ImageBitmapInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsImageBitmap = (o) => #brand in o;
-    getImageBitmapRaw = (o) => o.#raw;
-    transferImageBitmap = (o) => o.#transfer();
   }
 }
 
+export function createImageBitmapFromRaw(raw) {
+  const o = ObjectCreate(ImageBitmap.prototype);
+  new ImageBitmapInternals(o, raw);
+  return o;
+}
+
 export function checkUsabilityAndClone(image) {
-  if (objectIsImageBitmap(image)) {
-    const raw = getImageBitmapRaw(image);
+  if (ImageBitmapInternals.hasInstance(image)) {
+    const raw = ImageBitmapInternals.getRaw(image);
     if (!raw) {
       throw new DOMException("Image is detached", "InvalidStateError");
     }
@@ -501,7 +521,7 @@ export function checkUsabilityAndClone(image) {
 const convertImageBitmapSource = (value) => {
   if (
     (type(value) === "Object" &&
-      (objectIsImageBitmap(value) ||
+      (ImageBitmapInternals.hasInstance(value) ||
         OffscreenCanvasInternals.hasInstance(value))) ||
     isBlob(value) || isImageData(value)
   ) {
@@ -598,8 +618,8 @@ async function checkUsabilityAndCropWithFormatting(
     }
     return bitmap;
   }
-  if (objectIsImageBitmap(image)) {
-    const raw = getImageBitmapRaw(image);
+  if (ImageBitmapInternals.hasInstance(image)) {
+    const raw = ImageBitmapInternals.getRaw(image);
     if (!raw) {
       throw new DOMException("Image is detached", "InvalidStateError");
     }
@@ -682,7 +702,7 @@ async function createImageBitmapInner(image, sx, sy, sw, sh, options) {
     resizeQuality,
     imageOrientation,
   ));
-  return new ImageBitmap(illegalConstructor, bitmap);
+  return createImageBitmapFromRaw(bitmap);
 }
 
 export const makeCreateImageBitmap = (prefix) => ({

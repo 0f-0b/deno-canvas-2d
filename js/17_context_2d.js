@@ -128,7 +128,9 @@ import {
   op_canvas_2d_state_width,
   op_canvas_2d_state_word_spacing,
 } from "./00_ops.js";
+import { capturePrototype } from "./01_capture_prototype.js";
 import { defaultTo } from "./01_default_to.js";
+import { IdentityConstructor } from "./01_identity_constructor.js";
 import { requireObject } from "./01_require_object.js";
 import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
 import { createEnumConverter } from "./04_create_enum_converter.js";
@@ -143,15 +145,14 @@ import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
 import {
   convertDOMMatrix2DInit,
   convertDOMPointInit,
-  directConstruct,
-  DOMMatrix,
+  createDOMMatrix,
   validateAndFixup2D,
 } from "./15_geometry.js";
 import {
   alignUint8ClampedArrayToUint32,
   checkUsabilityAndClone,
   colorSpaceToRepr,
-  objectIsImageBitmap,
+  ImageBitmapInternals,
   OffscreenCanvasInternals,
   registerCanvasContextMode,
 } from "./16_canvas.js";
@@ -165,6 +166,8 @@ const {
   MathMin,
   MathSign,
   NumberIsFinite,
+  Object,
+  ObjectCreate,
   ObjectFreeze,
   RangeError,
   SymbolFor,
@@ -179,7 +182,8 @@ const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertCanvasImageSource = (value) => {
   if (
     type(value) === "Object" &&
-    (objectIsImageBitmap(value) || OffscreenCanvasInternals.hasInstance(value))
+    (ImageBitmapInternals.hasInstance(value) ||
+      OffscreenCanvasInternals.hasInstance(value))
   ) {
     return value;
   }
@@ -211,29 +215,46 @@ const convertCanvasRenderingContext2DSettings = createDictionaryConverter(
 const convertDOMStringOrCanvasGradientOrCanvasPattern = (value) => {
   if (
     type(value) === "Object" &&
-    (objectIsCanvasGradient(value) || objectIsCanvasPattern(value))
+    (CanvasGradientInternals.hasInstance(value) ||
+      CanvasPatternInternals.hasInstance(value))
   ) {
     return value;
   }
   return convertDOMString(value);
 };
-let objectIsCanvasGradient;
-let getCanvasGradientRaw;
-
-export class CanvasGradient {
+const CanvasGradientInternals = class CanvasGradient
+  extends IdentityConstructor {
   #brand() {}
 
   #raw;
 
-  constructor(key = undefined, raw) {
-    if (key !== illegalConstructor) {
-      illegalConstructor();
-    }
+  constructor(o, raw) {
+    super(o);
     this.#raw = raw;
   }
 
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+
+  static getRaw(o) {
+    return o.#raw;
+  }
+};
+
+export class CanvasGradient extends Object {
+  // deno-lint-ignore constructor-super
+  constructor() {
+    illegalConstructor();
+  }
+
   addColorStop(offset, color) {
-    this.#brand;
+    CanvasGradientInternals.checkInstance(this);
     const prefix = "Failed to execute 'addColorStop' on 'CanvasGradient'";
     requiredArguments(arguments.length, 2, prefix);
     offset = convertDouble(offset);
@@ -244,53 +265,70 @@ export class CanvasGradient {
         "IndexSizeError",
       );
     }
-    op_canvas_2d_gradient_add_color_stop(this.#raw, offset, color);
+    op_canvas_2d_gradient_add_color_stop(
+      CanvasGradientInternals.getRaw(this),
+      offset,
+      color,
+    );
   }
 
   static {
     configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsCanvasGradient = (o) => #brand in o;
-    getCanvasGradientRaw = (o) => o.#raw;
   }
 }
 
+function createCanvasGradientFromRaw(raw) {
+  const o = ObjectCreate(CanvasGradient.prototype);
+  new CanvasGradientInternals(o, raw);
+  return o;
+}
+
 const linearGradient = (x0, y0, x1, y1) =>
-  new CanvasGradient(
-    illegalConstructor,
-    op_canvas_2d_gradient_new_linear(x0, y0, x1, y1),
-  );
+  createCanvasGradientFromRaw(op_canvas_2d_gradient_new_linear(x0, y0, x1, y1));
 const radialGradient = (x0, y0, r0, x1, y1, r1) =>
-  new CanvasGradient(
-    illegalConstructor,
+  createCanvasGradientFromRaw(
     op_canvas_2d_gradient_new_radial(x0, y0, r0, x1, y1, r1),
   );
 const conicGradient = (startAngle, x, y) =>
-  new CanvasGradient(
-    illegalConstructor,
+  createCanvasGradientFromRaw(
     op_canvas_2d_gradient_new_conic(startAngle, x, y),
   );
-let objectIsCanvasPattern;
-let getCanvasPatternRaw;
-
-export class CanvasPattern {
+const CanvasPatternInternals = class CanvasPattern extends IdentityConstructor {
   #brand() {}
 
   #raw;
 
-  constructor(key = undefined, raw) {
-    if (key !== illegalConstructor) {
-      illegalConstructor();
-    }
+  constructor(o, raw) {
+    super(o);
     this.#raw = raw;
   }
 
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+
+  static getRaw(o) {
+    return o.#raw;
+  }
+};
+
+export class CanvasPattern extends Object {
+  // deno-lint-ignore constructor-super
+  constructor() {
+    illegalConstructor();
+  }
+
   setTransform(transform = undefined) {
-    this.#brand;
+    CanvasPatternInternals.checkInstance(this);
     transform = convertDOMMatrix2DInit(transform);
     validateAndFixup2D(transform);
     op_canvas_2d_pattern_set_transform(
-      this.#raw,
+      CanvasPatternInternals.getRaw(this),
       transform.m11,
       transform.m12,
       transform.m21,
@@ -302,10 +340,13 @@ export class CanvasPattern {
 
   static {
     configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsCanvasPattern = (o) => #brand in o;
-    getCanvasPatternRaw = (o) => o.#raw;
   }
+}
+
+function createCanvasPatternFromRaw(raw) {
+  const o = ObjectCreate(CanvasPattern.prototype);
+  new CanvasPatternInternals(o, raw);
+  return o;
 }
 
 const repetitionBehaviorToRepr = ObjectFreeze({
@@ -328,13 +369,13 @@ const getRepetitionBehavior = (repetition) => {
 const pattern = (image, repetition) => {
   const bitmap = checkUsabilityAndClone(image);
   repetition = getRepetitionBehavior(repetition);
-  return new CanvasPattern(
-    illegalConstructor,
+  return createCanvasPatternFromRaw(
     op_canvas_2d_pattern_new(bitmap, repetition),
   );
 };
+const TextMetricsInternals = class TextMetrics extends IdentityConstructor {
+  #brand() {}
 
-export class TextMetrics {
   #width;
   #actualBoundingBoxLeft;
   #actualBoundingBoxRight;
@@ -348,10 +389,8 @@ export class TextMetrics {
   #alphabeticBaseline;
   #ideographicBaseline;
 
-  constructor(key = undefined, values) {
-    if (key !== illegalConstructor) {
-      illegalConstructor();
-    }
+  constructor(o, values) {
+    super(o);
     this.#width = values[0];
     this.#actualBoundingBoxLeft = values[1];
     this.#actualBoundingBoxRight = values[2];
@@ -366,55 +405,64 @@ export class TextMetrics {
     this.#ideographicBaseline = values[11];
   }
 
-  get width() {
-    return this.#width;
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
   }
 
-  get actualBoundingBoxLeft() {
-    return this.#actualBoundingBoxLeft;
+  static checkInstance(o) {
+    o.#brand;
   }
 
-  get actualBoundingBoxRight() {
-    return this.#actualBoundingBoxRight;
+  static getWidth(o) {
+    return o.#width;
   }
 
-  get fontBoundingBoxAscent() {
-    return this.#fontBoundingBoxAscent;
+  static getActualBoundingBoxLeft(o) {
+    return o.#actualBoundingBoxLeft;
   }
 
-  get fontBoundingBoxDescent() {
-    return this.#fontBoundingBoxDescent;
+  static getActualBoundingBoxRight(o) {
+    return o.#actualBoundingBoxRight;
   }
 
-  get actualBoundingBoxAscent() {
-    return this.#actualBoundingBoxAscent;
+  static getFontBoundingBoxAscent(o) {
+    return o.#fontBoundingBoxAscent;
   }
 
-  get actualBoundingBoxDescent() {
-    return this.#actualBoundingBoxDescent;
+  static getFontBoundingBoxDescent(o) {
+    return o.#fontBoundingBoxDescent;
   }
 
-  get emHeightAscent() {
-    return this.#emHeightAscent;
+  static getActualBoundingBoxAscent(o) {
+    return o.#actualBoundingBoxAscent;
   }
 
-  get emHeightDescent() {
-    return this.#emHeightDescent;
+  static getActualBoundingBoxDescent(o) {
+    return o.#actualBoundingBoxDescent;
   }
 
-  get hangingBaseline() {
-    return this.#hangingBaseline;
+  static getEmHeightAscent(o) {
+    return o.#emHeightAscent;
   }
 
-  get alphabeticBaseline() {
-    return this.#alphabeticBaseline;
+  static getEmHeightDescent(o) {
+    return o.#emHeightDescent;
   }
 
-  get ideographicBaseline() {
-    return this.#ideographicBaseline;
+  static getHangingBaseline(o) {
+    return o.#hangingBaseline;
   }
 
-  #inspect(inspect, options) {
+  static getAlphabeticBaseline(o) {
+    return o.#alphabeticBaseline;
+  }
+
+  static getIdeographicBaseline(o) {
+    return o.#ideographicBaseline;
+  }
+
+  static inspect(inspect, options) {
     return inspect(
       createFilteredInspectProxy({
         object: this,
@@ -437,18 +485,77 @@ export class TextMetrics {
       options,
     );
   }
+};
+
+export class TextMetrics extends Object {
+  // deno-lint-ignore constructor-super
+  constructor() {
+    illegalConstructor();
+  }
+
+  get width() {
+    return TextMetricsInternals.getWidth(this);
+  }
+
+  get actualBoundingBoxLeft() {
+    return TextMetricsInternals.getActualBoundingBoxLeft(this);
+  }
+
+  get actualBoundingBoxRight() {
+    return TextMetricsInternals.getActualBoundingBoxRight(this);
+  }
+
+  get fontBoundingBoxAscent() {
+    return TextMetricsInternals.getFontBoundingBoxAscent(this);
+  }
+
+  get fontBoundingBoxDescent() {
+    return TextMetricsInternals.getFontBoundingBoxDescent(this);
+  }
+
+  get actualBoundingBoxAscent() {
+    return TextMetricsInternals.getActualBoundingBoxAscent(this);
+  }
+
+  get actualBoundingBoxDescent() {
+    return TextMetricsInternals.getActualBoundingBoxDescent(this);
+  }
+
+  get emHeightAscent() {
+    return TextMetricsInternals.getEmHeightAscent(this);
+  }
+
+  get emHeightDescent() {
+    return TextMetricsInternals.getEmHeightDescent(this);
+  }
+
+  get hangingBaseline() {
+    return TextMetricsInternals.getHangingBaseline(this);
+  }
+
+  get alphabeticBaseline() {
+    return TextMetricsInternals.getAlphabeticBaseline(this);
+  }
+
+  get ideographicBaseline() {
+    return TextMetricsInternals.getIdeographicBaseline(this);
+  }
 
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return TextMetricsInternals.hasInstance(this)
+      ? TextMetricsInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
   }
+}
+
+function createTextMetrics(values) {
+  const o = ObjectCreate(TextMetrics.prototype);
+  new TextMetricsInternals(o, values);
+  return o;
 }
 
 const readImageDataSettingsMembers = (value) => {
@@ -463,13 +570,13 @@ const convertImageDataSettings = createDictionaryConverter(
   readImageDataSettingsMembers,
 );
 const convertPath2D = (value) => {
-  if (!(type(value) === "Object" && objectIsPath2D(value))) {
+  if (!(type(value) === "Object" && Path2DInternals.hasInstance(value))) {
     throw new TypeError("Expected Path2D");
   }
   return value;
 };
 const convertPath2DOrDOMString = (value) =>
-  type(value) === "Object" && objectIsPath2D(value)
+  type(value) === "Object" && Path2DInternals.hasInstance(value)
     ? value
     : convertDOMString(value);
 
@@ -558,35 +665,58 @@ function normalizeAndScaleRadii(x, y, w, h, radii) {
   return { upperLeft, upperRight, lowerRight, lowerLeft };
 }
 
-let objectIsPath2D;
-let getPath2DRaw;
-
-export class Path2D {
+const Path2DInternals = class Path2D extends IdentityConstructor {
   #brand() {}
 
   #raw;
 
+  constructor(o, raw) {
+    super(o);
+    this.#raw = raw;
+  }
+
+  static hasInstance(o) {
+    // deno-lint-ignore prefer-primordials
+    return #brand in o;
+  }
+
+  static checkInstance(o) {
+    o.#brand;
+  }
+
+  static getRaw(o) {
+    return o.#raw;
+  }
+};
+
+export class Path2D extends Object {
   constructor(path = undefined) {
     if (path !== undefined) {
       path = convertPath2DOrDOMString(path);
     }
-    this.#raw = path === undefined
-      ? op_canvas_2d_path_new()
-      : typeof path === "string"
-      ? op_canvas_2d_path_from_svg(path)
-      : op_canvas_2d_path_clone(/** @type {Path2D} */ (path).#raw);
+    const newTarget = capturePrototype(new.target, Path2D);
+    const o = ObjectCreate(newTarget.prototype);
+    new Path2DInternals(
+      o,
+      path === undefined
+        ? op_canvas_2d_path_new()
+        : typeof path === "string"
+        ? op_canvas_2d_path_from_svg(path)
+        : op_canvas_2d_path_clone(Path2DInternals.getRaw(path)),
+    );
+    return o;
   }
 
   addPath(path, transform = undefined) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'addPath' on 'Path2D'";
     requiredArguments(arguments.length, 1, prefix);
     path = convertPath2D(path);
     transform = convertDOMMatrix2DInit(transform);
     validateAndFixup2D(transform);
     op_canvas_2d_path_extend(
-      this.#raw,
-      path.#raw,
+      Path2DInternals.getRaw(this),
+      Path2DInternals.getRaw(path),
       transform.m11,
       transform.m12,
       transform.m21,
@@ -597,41 +727,41 @@ export class Path2D {
   }
 
   closePath() {
-    this.#brand;
-    op_canvas_2d_path_close(this.#raw);
+    Path2DInternals.checkInstance(this);
+    op_canvas_2d_path_close(Path2DInternals.getRaw(this));
   }
 
   moveTo(x, y) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'moveTo' on 'Path2D'";
     requiredArguments(arguments.length, 2, prefix);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_move_to(this.#raw, x, y);
+    op_canvas_2d_path_move_to(Path2DInternals.getRaw(this), x, y);
   }
 
   lineTo(x, y) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'lineTo' on 'Path2D'";
     requiredArguments(arguments.length, 2, prefix);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_line_to(this.#raw, x, y);
+    op_canvas_2d_path_line_to(Path2DInternals.getRaw(this), x, y);
   }
 
   quadraticCurveTo(cpx, cpy, x, y) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'quadraticCurveTo' on 'Path2D'";
     requiredArguments(arguments.length, 4, prefix);
     cpx = convertUnrestrictedDouble(cpx);
     cpy = convertUnrestrictedDouble(cpy);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_quad_to(this.#raw, cpx, cpy, x, y);
+    op_canvas_2d_path_quad_to(Path2DInternals.getRaw(this), cpx, cpy, x, y);
   }
 
   bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'bezierCurveTo' on 'Path2D'";
     requiredArguments(arguments.length, 6, prefix);
     cp1x = convertUnrestrictedDouble(cp1x);
@@ -640,11 +770,19 @@ export class Path2D {
     cp2y = convertUnrestrictedDouble(cp2y);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_cubic_to(this.#raw, cp1x, cp1y, cp2x, cp2y, x, y);
+    op_canvas_2d_path_cubic_to(
+      Path2DInternals.getRaw(this),
+      cp1x,
+      cp1y,
+      cp2x,
+      cp2y,
+      x,
+      y,
+    );
   }
 
   arcTo(x1, y1, x2, y2, radius) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'arcTo' on 'Path2D'";
     requiredArguments(arguments.length, 5, prefix);
     x1 = convertUnrestrictedDouble(x1);
@@ -659,25 +797,32 @@ export class Path2D {
       return;
     }
     if (radius < 0) {
-      op_canvas_2d_path_ensure_subpath(this.#raw, x1, y1);
+      op_canvas_2d_path_ensure_subpath(Path2DInternals.getRaw(this), x1, y1);
       throw new DOMException("Radius must be non-negative", "IndexSizeError");
     }
-    op_canvas_2d_path_arc_to(this.#raw, x1, y1, x2, y2, radius);
+    op_canvas_2d_path_arc_to(
+      Path2DInternals.getRaw(this),
+      x1,
+      y1,
+      x2,
+      y2,
+      radius,
+    );
   }
 
   rect(x, y, w, h) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'rect' on 'Path2D'";
     requiredArguments(arguments.length, 4, prefix);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
     w = convertUnrestrictedDouble(w);
     h = convertUnrestrictedDouble(h);
-    op_canvas_2d_path_rect(this.#raw, x, y, w, h);
+    op_canvas_2d_path_rect(Path2DInternals.getRaw(this), x, y, w, h);
   }
 
   roundRect(x, y, w, h, radii = 0) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'roundRect' on 'Path2D'";
     requiredArguments(arguments.length, 4, prefix);
     x = convertUnrestrictedDouble(x);
@@ -691,7 +836,7 @@ export class Path2D {
     }
     const { upperLeft, upperRight, lowerRight, lowerLeft } = normalizedRadii;
     op_canvas_2d_path_round_rect(
-      this.#raw,
+      Path2DInternals.getRaw(this),
       x,
       y,
       w,
@@ -708,7 +853,7 @@ export class Path2D {
   }
 
   arc(x, y, radius, startAngle, endAngle, counterclockwise = false) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'arc' on 'Path2D'";
     requiredArguments(arguments.length, 5, prefix);
     x = convertUnrestrictedDouble(x);
@@ -727,7 +872,7 @@ export class Path2D {
       throw new DOMException("Radius must be non-negative", "IndexSizeError");
     }
     op_canvas_2d_path_ellipse(
-      this.#raw,
+      Path2DInternals.getRaw(this),
       x,
       y,
       radius,
@@ -749,7 +894,7 @@ export class Path2D {
     endAngle,
     counterclockwise = false,
   ) {
-    this.#brand;
+    Path2DInternals.checkInstance(this);
     const prefix = "Failed to execute 'ellipse' on 'Path2D'";
     requiredArguments(arguments.length, 7, prefix);
     x = convertUnrestrictedDouble(x);
@@ -772,7 +917,7 @@ export class Path2D {
       throw new DOMException("Radius must be non-negative", "IndexSizeError");
     }
     op_canvas_2d_path_ellipse(
-      this.#raw,
+      Path2DInternals.getRaw(this),
       x,
       y,
       radiusX,
@@ -786,9 +931,6 @@ export class Path2D {
 
   static {
     configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsPath2D = (o) => #brand in o;
-    getPath2DRaw = (o) => o.#raw;
   }
 }
 
@@ -813,9 +955,249 @@ const convertUnrestrictedDoubleOrDOMPointInitOrSequenceThereof = (value) => {
   }
   return convertUnrestrictedDoubleOrDOMPointInit(value);
 };
-let objectIsOffscreenCanvasRenderingContext2D;
-let getOffscreenCanvasRenderingContext2DState;
-let getOffscreenCanvasRenderingContext2DColorSpace;
+const OffscreenCanvasRenderingContext2DInternals =
+  class OffscreenCanvasRenderingContext2D extends IdentityConstructor {
+    #brand() {}
+
+    #canvas;
+    #state;
+    #colorSpace;
+    #cachedDrawingStateStack = [];
+    #cachedFont = null;
+    #cachedLetterSpacing = null;
+    #cachedWordSpacing = null;
+    #cachedFillStyle = null;
+    #cachedStrokeStyle = null;
+    #cachedDefaultPath = null;
+    #cachedShadowColor = null;
+    #cachedFilter = "none";
+
+    constructor(o, canvas, state, colorSpace) {
+      super(o);
+      this.#canvas = canvas;
+      this.#state = state;
+      this.#colorSpace = colorSpace;
+    }
+
+    static hasInstance(o) {
+      // deno-lint-ignore prefer-primordials
+      return #brand in o;
+    }
+
+    static checkInstance(o) {
+      o.#brand;
+    }
+
+    static getCanvas(o) {
+      return o.#canvas;
+    }
+
+    static getState(o) {
+      return o.#state;
+    }
+
+    static getColorSpace(o) {
+      return o.#colorSpace;
+    }
+
+    static save(o) {
+      op_canvas_2d_state_save(o.#state);
+      ArrayPrototypePush(o.#cachedDrawingStateStack, {
+        font: o.#cachedFont,
+        letterSpacing: o.#cachedLetterSpacing,
+        wordSpacing: o.#cachedWordSpacing,
+        fillStyle: o.#cachedFillStyle,
+        strokeStyle: o.#cachedStrokeStyle,
+        defaultPath: o.#cachedDefaultPath,
+        shadowColor: o.#cachedShadowColor,
+        filter: o.#cachedFilter,
+      });
+    }
+
+    static restore(o) {
+      const cache = ArrayPrototypePop(o.#cachedDrawingStateStack);
+      if (!cache) {
+        return;
+      }
+      op_canvas_2d_state_restore(o.#state);
+      o.#cachedFont = cache.font;
+      o.#cachedLetterSpacing = cache.letterSpacing;
+      o.#cachedWordSpacing = cache.wordSpacing;
+      o.#cachedFillStyle = cache.fillStyle;
+      o.#cachedStrokeStyle = cache.strokeStyle;
+      o.#cachedDefaultPath = cache.defaultPath;
+      o.#cachedShadowColor = cache.shadowColor;
+      o.#cachedFilter = cache.filter;
+    }
+
+    static getStrokeStyle(o) {
+      o.#cachedStrokeStyle ??= op_canvas_2d_state_stroke_style(o.#state);
+      return o.#cachedStrokeStyle;
+    }
+
+    static setStrokeStyle(o, value) {
+      if (typeof value === "string") {
+        if (op_canvas_2d_state_set_stroke_style_color(o.#state, value)) {
+          o.#cachedStrokeStyle = null;
+        }
+      } else {
+        if (CanvasGradientInternals.hasInstance(value)) {
+          op_canvas_2d_state_set_stroke_style_gradient(
+            o.#state,
+            CanvasGradientInternals.getRaw(value),
+          );
+        } else {
+          op_canvas_2d_state_set_stroke_style_pattern(
+            o.#state,
+            CanvasPatternInternals.getRaw(value),
+          );
+        }
+        o.#cachedStrokeStyle = value;
+      }
+    }
+
+    static getFillStyle(o) {
+      o.#cachedFillStyle ??= op_canvas_2d_state_fill_style(o.#state);
+      return o.#cachedFillStyle;
+    }
+
+    static setFillStyle(o, value) {
+      if (typeof value === "string") {
+        if (op_canvas_2d_state_set_fill_style_color(o.#state, value)) {
+          o.#cachedFillStyle = null;
+        }
+      } else {
+        if (CanvasGradientInternals.hasInstance(value)) {
+          op_canvas_2d_state_set_fill_style_gradient(
+            o.#state,
+            CanvasGradientInternals.getRaw(value),
+          );
+        } else {
+          op_canvas_2d_state_set_fill_style_pattern(
+            o.#state,
+            CanvasPatternInternals.getRaw(value),
+          );
+        }
+        o.#cachedFillStyle = value;
+      }
+    }
+
+    static getShadowColor(o) {
+      o.#cachedShadowColor ??= op_canvas_2d_state_shadow_color(o.#state);
+      return o.#cachedShadowColor;
+    }
+
+    static setShadowColor(o, value) {
+      if (op_canvas_2d_state_set_shadow_color(o.#state, value)) {
+        o.#cachedShadowColor = null;
+      }
+    }
+
+    static getFilter(o) {
+      return o.#cachedFilter;
+    }
+
+    static setFilter(o, value) {
+      if (op_canvas_2d_state_set_filter(o.#state, value)) {
+        o.#cachedFilter = value;
+      }
+    }
+
+    static getDefaultPath(o) {
+      o.#cachedDefaultPath ??= op_canvas_2d_path_new();
+      return o.#cachedDefaultPath;
+    }
+
+    static getIntendedPath(o, path) {
+      return path
+        ? Path2DInternals.getRaw(path)
+        : OffscreenCanvasRenderingContext2DInternals.getDefaultPath(o);
+    }
+
+    static beginPath(o) {
+      if (o.#cachedDefaultPath) {
+        op_canvas_2d_path_clear(o.#cachedDefaultPath);
+      } else {
+        o.#cachedDefaultPath = op_canvas_2d_path_new();
+      }
+    }
+
+    static getFont(o) {
+      o.#cachedFont ??= op_canvas_2d_state_font(o.#state);
+      return o.#cachedFont;
+    }
+
+    static setFont(o, value) {
+      if (op_canvas_2d_state_set_font(o.#state, value)) {
+        o.#cachedFont = null;
+      }
+    }
+
+    static invalidateCachedFont(o) {
+      o.#cachedFont = null;
+    }
+
+    static getLetterSpacing(o) {
+      o.#cachedLetterSpacing ??= op_canvas_2d_state_letter_spacing(o.#state);
+      return o.#cachedLetterSpacing;
+    }
+
+    static setLetterSpacing(o, value) {
+      if (op_canvas_2d_state_set_letter_spacing(o.#state, value)) {
+        o.#cachedLetterSpacing = null;
+      }
+    }
+
+    static getWordSpacing(o) {
+      o.#cachedWordSpacing ??= op_canvas_2d_state_word_spacing(o.#state);
+      return o.#cachedWordSpacing;
+    }
+
+    static setWordSpacing(o, value) {
+      if (op_canvas_2d_state_set_word_spacing(o.#state, value)) {
+        o.#cachedWordSpacing = null;
+      }
+    }
+
+    static inspect(inspect, options) {
+      return inspect(
+        createFilteredInspectProxy({
+          object: this,
+          evaluate: true,
+          keys: [
+            "canvas",
+            "globalAlpha",
+            "globalCompositeOperation",
+            "imageSmoothingEnabled",
+            "imageSmoothingQuality",
+            "strokeStyle",
+            "fillStyle",
+            "shadowOffsetX",
+            "shadowOffsetY",
+            "shadowBlur",
+            "shadowColor",
+            "filter",
+            "lineWidth",
+            "lineCap",
+            "lineJoin",
+            "miterLimit",
+            "lineDashOffset",
+            "font",
+            "textAlign",
+            "textBaseline",
+            "direction",
+            "letterSpacing",
+            "fontKerning",
+            "fontStretch",
+            "fontVariantCaps",
+            "textRendering",
+            "wordSpacing",
+          ],
+        }),
+        options,
+      );
+    }
+  };
 const lineCapFromRepr = ObjectFreeze([
   "butt",
   "round",
@@ -1031,118 +1413,84 @@ const imageSmoothingQualityToRepr = ObjectFreeze({
 const getTransformBuffer = new Float64Array(6);
 const measureTextBuffer = new Float64Array(12);
 
-export class OffscreenCanvasRenderingContext2D {
-  #brand() {}
-
-  #canvas;
-  #state;
-  #colorSpace;
-  #cachedDrawingStateStack = [];
-  #cachedFont = null;
-  #cachedLetterSpacing = null;
-  #cachedWordSpacing = null;
-  #cachedFillStyle = null;
-  #cachedStrokeStyle = null;
-  #cachedDefaultPath = null;
-  #cachedShadowColor = null;
-  #cachedFilter = "none";
-
-  constructor(key = undefined, target, width, height, settings) {
-    if (key !== illegalConstructor) {
-      illegalConstructor();
-    }
-    settings = convertCanvasRenderingContext2DSettings(settings);
-    this.#canvas = target;
-    this.#state = op_canvas_2d_state_new(
-      width,
-      height,
-      settings.alpha,
-      colorSpaceToRepr[settings.colorSpace],
-    );
-    this.#colorSpace = settings.colorSpace;
+export class OffscreenCanvasRenderingContext2D extends Object {
+  // deno-lint-ignore constructor-super
+  constructor() {
+    illegalConstructor();
   }
 
   commit() {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
   }
 
   get canvas() {
-    return this.#canvas;
+    return OffscreenCanvasRenderingContext2DInternals.getCanvas(this);
   }
 
   save() {
-    this.#brand;
-    op_canvas_2d_state_save(this.#state);
-    ArrayPrototypePush(this.#cachedDrawingStateStack, {
-      font: this.#cachedFont,
-      letterSpacing: this.#cachedLetterSpacing,
-      wordSpacing: this.#cachedWordSpacing,
-      fillStyle: this.#cachedFillStyle,
-      strokeStyle: this.#cachedStrokeStyle,
-      defaultPath: this.#cachedDefaultPath,
-      shadowColor: this.#cachedShadowColor,
-      filter: this.#cachedFilter,
-    });
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    OffscreenCanvasRenderingContext2DInternals.save(this);
   }
 
   restore() {
-    this.#brand;
-    const cache = ArrayPrototypePop(this.#cachedDrawingStateStack);
-    if (!cache) {
-      return;
-    }
-    op_canvas_2d_state_restore(this.#state);
-    this.#cachedFont = cache.font;
-    this.#cachedLetterSpacing = cache.letterSpacing;
-    this.#cachedWordSpacing = cache.wordSpacing;
-    this.#cachedFillStyle = cache.fillStyle;
-    this.#cachedStrokeStyle = cache.strokeStyle;
-    this.#cachedDefaultPath = cache.defaultPath;
-    this.#cachedShadowColor = cache.shadowColor;
-    this.#cachedFilter = cache.filter;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    OffscreenCanvasRenderingContext2DInternals.restore(this);
   }
 
   reset() {
-    this.#brand;
-    op_canvas_2d_state_reset(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    op_canvas_2d_state_reset(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   isContextLost() {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     return false;
   }
 
   scale(x, y) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'scale' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 2, prefix);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_state_scale(this.#state, x, y);
+    op_canvas_2d_state_scale(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      x,
+      y,
+    );
   }
 
   rotate(angle) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'rotate' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     angle = convertUnrestrictedDouble(angle);
-    op_canvas_2d_state_rotate(this.#state, angle);
+    op_canvas_2d_state_rotate(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      angle,
+    );
   }
 
   translate(x, y) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'translate' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 2, prefix);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_state_translate(this.#state, x, y);
+    op_canvas_2d_state_translate(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      x,
+      y,
+    );
   }
 
   transform(a, b, c, d, e, f) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'transform' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 6, prefix);
@@ -1152,17 +1500,28 @@ export class OffscreenCanvasRenderingContext2D {
     d = convertUnrestrictedDouble(d);
     e = convertUnrestrictedDouble(e);
     f = convertUnrestrictedDouble(f);
-    op_canvas_2d_state_transform(this.#state, a, b, c, d, e, f);
+    op_canvas_2d_state_transform(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      a,
+      b,
+      c,
+      d,
+      e,
+      f,
+    );
   }
 
   getTransform() {
-    this.#brand;
-    op_canvas_2d_state_get_transform(this.#state, getTransformBuffer);
-    return new DOMMatrix(directConstruct, getTransformBuffer, true);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    op_canvas_2d_state_get_transform(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      getTransformBuffer,
+    );
+    return createDOMMatrix(getTransformBuffer, true);
   }
 
   setTransform(a = undefined, b, c, d, e, f) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     if (nArgs <= 1) {
       const matrix = convertDOMMatrix2DInit(a);
@@ -1183,37 +1542,54 @@ export class OffscreenCanvasRenderingContext2D {
     } else {
       throw new TypeError("Overload resolution failed");
     }
-    op_canvas_2d_state_set_transform(this.#state, a, b, c, d, e, f);
+    op_canvas_2d_state_set_transform(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      a,
+      b,
+      c,
+      d,
+      e,
+      f,
+    );
   }
 
   resetTransform() {
-    this.#brand;
-    op_canvas_2d_state_reset_transform(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    op_canvas_2d_state_reset_transform(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   get globalAlpha() {
-    this.#brand;
-    return op_canvas_2d_state_global_alpha(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_global_alpha(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set globalAlpha(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'globalAlpha' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    op_canvas_2d_state_set_global_alpha(this.#state, value);
+    op_canvas_2d_state_set_global_alpha(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   get globalCompositeOperation() {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     return blendOrCompositeModeFromRepr[
-      op_canvas_2d_state_global_composite_operation(this.#state)
+      op_canvas_2d_state_global_composite_operation(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
     ];
   }
 
   set globalCompositeOperation(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'globalCompositeOperation' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -1222,32 +1598,42 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_global_composite_operation(this.#state, repr);
+    op_canvas_2d_state_set_global_composite_operation(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get imageSmoothingEnabled() {
-    this.#brand;
-    return op_canvas_2d_state_image_smoothing_enabled(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_image_smoothing_enabled(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set imageSmoothingEnabled(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'imageSmoothingEnabled' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertBoolean(value);
-    op_canvas_2d_state_set_image_smoothing_enabled(this.#state, value);
+    op_canvas_2d_state_set_image_smoothing_enabled(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   get imageSmoothingQuality() {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     return imageSmoothingQualityFromRepr[
-      op_canvas_2d_state_image_smoothing_quality(this.#state)
+      op_canvas_2d_state_image_smoothing_quality(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
     ];
   }
 
   set imageSmoothingQuality(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'imageSmoothingQuality' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -1256,75 +1642,42 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_image_smoothing_quality(this.#state, repr);
+    op_canvas_2d_state_set_image_smoothing_quality(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get strokeStyle() {
-    this.#brand;
-    this.#cachedStrokeStyle ??= op_canvas_2d_state_stroke_style(this.#state);
-    return this.#cachedStrokeStyle;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getStrokeStyle(this);
   }
 
   set strokeStyle(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'strokeStyle' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMStringOrCanvasGradientOrCanvasPattern(value);
-    if (typeof value === "string") {
-      if (op_canvas_2d_state_set_stroke_style_color(this.#state, value)) {
-        this.#cachedStrokeStyle = null;
-      }
-    } else {
-      if (objectIsCanvasGradient(value)) {
-        op_canvas_2d_state_set_stroke_style_gradient(
-          this.#state,
-          getCanvasGradientRaw(value),
-        );
-      } else {
-        op_canvas_2d_state_set_stroke_style_pattern(
-          this.#state,
-          getCanvasPatternRaw(value),
-        );
-      }
-      this.#cachedStrokeStyle = value;
-    }
+    OffscreenCanvasRenderingContext2DInternals.setStrokeStyle(this, value);
   }
 
   get fillStyle() {
-    this.#brand;
-    this.#cachedFillStyle ??= op_canvas_2d_state_fill_style(this.#state);
-    return this.#cachedFillStyle;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getFillStyle(this);
   }
 
   set fillStyle(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'fillStyle' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMStringOrCanvasGradientOrCanvasPattern(value);
-    if (typeof value === "string") {
-      if (op_canvas_2d_state_set_fill_style_color(this.#state, value)) {
-        this.#cachedFillStyle = null;
-      }
-    } else {
-      if (objectIsCanvasGradient(value)) {
-        op_canvas_2d_state_set_fill_style_gradient(
-          this.#state,
-          getCanvasGradientRaw(value),
-        );
-      } else {
-        op_canvas_2d_state_set_fill_style_pattern(
-          this.#state,
-          getCanvasPatternRaw(value),
-        );
-      }
-      this.#cachedFillStyle = value;
-    }
+    OffscreenCanvasRenderingContext2DInternals.setFillStyle(this, value);
   }
 
   createLinearGradient(x0, y0, x1, y1) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'createLinearGradient' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -1336,7 +1689,7 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   createRadialGradient(x0, y0, r0, x1, y1, r1) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'createRadialGradient' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 6, prefix);
@@ -1353,7 +1706,7 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   createConicGradient(startAngle, x, y) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'createConicGradient' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 3, prefix);
@@ -1364,7 +1717,7 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   createPattern(image, repetition) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'createPattern' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 2, prefix);
@@ -1374,82 +1727,92 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   get shadowOffsetX() {
-    this.#brand;
-    return op_canvas_2d_state_shadow_offset_x(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_shadow_offset_x(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set shadowOffsetX(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'shadowOffsetX' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    op_canvas_2d_state_set_shadow_offset_x(this.#state, value);
+    op_canvas_2d_state_set_shadow_offset_x(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   get shadowOffsetY() {
-    this.#brand;
-    return op_canvas_2d_state_shadow_offset_y(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_shadow_offset_y(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set shadowOffsetY(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'shadowOffsetY' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    op_canvas_2d_state_set_shadow_offset_y(this.#state, value);
+    op_canvas_2d_state_set_shadow_offset_y(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   get shadowBlur() {
-    this.#brand;
-    return op_canvas_2d_state_shadow_blur(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_shadow_blur(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set shadowBlur(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'shadowBlur' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    op_canvas_2d_state_set_shadow_blur(this.#state, value);
+    op_canvas_2d_state_set_shadow_blur(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   get shadowColor() {
-    this.#brand;
-    this.#cachedShadowColor ??= op_canvas_2d_state_shadow_color(this.#state);
-    return this.#cachedShadowColor;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getShadowColor(this);
   }
 
   set shadowColor(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'shadowColor' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    if (op_canvas_2d_state_set_shadow_color(this.#state, value)) {
-      this.#cachedShadowColor = null;
-    }
+    OffscreenCanvasRenderingContext2DInternals.setShadowColor(this, value);
   }
 
   get filter() {
-    this.#brand;
-    return this.#cachedFilter;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getFilter(this);
   }
 
   set filter(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'filter' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    if (op_canvas_2d_state_set_filter(this.#state, value)) {
-      this.#cachedFilter = value;
-    }
+    OffscreenCanvasRenderingContext2DInternals.setFilter(this, value);
   }
 
   clearRect(x, y, w, h) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'clearRect' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -1465,11 +1828,17 @@ export class OffscreenCanvasRenderingContext2D {
       y += h;
       h = -h;
     }
-    op_canvas_2d_state_clear_rect(this.#state, x, y, w, h);
+    op_canvas_2d_state_clear_rect(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      x,
+      y,
+      w,
+      h,
+    );
   }
 
   fillRect(x, y, w, h) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'fillRect' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -1485,11 +1854,17 @@ export class OffscreenCanvasRenderingContext2D {
       y += h;
       h = -h;
     }
-    op_canvas_2d_state_fill_rect(this.#state, x, y, w, h);
+    op_canvas_2d_state_fill_rect(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      x,
+      y,
+      w,
+      h,
+    );
   }
 
   strokeRect(x, y, w, h) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'strokeRect' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -1505,33 +1880,27 @@ export class OffscreenCanvasRenderingContext2D {
       y += h;
       h = -h;
     }
-    op_canvas_2d_state_stroke_rect(this.#state, x, y, w, h);
+    op_canvas_2d_state_stroke_rect(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      x,
+      y,
+      w,
+      h,
+    );
   }
 
   beginPath() {
-    this.#brand;
-    if (this.#cachedDefaultPath) {
-      op_canvas_2d_path_clear(this.#cachedDefaultPath);
-    } else {
-      this.#cachedDefaultPath = op_canvas_2d_path_new();
-    }
-  }
-
-  get #defaultPath() {
-    this.#cachedDefaultPath ??= op_canvas_2d_path_new();
-    return this.#cachedDefaultPath;
-  }
-
-  #intendedPathFor(path) {
-    return path ? getPath2DRaw(path) : this.#defaultPath;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    OffscreenCanvasRenderingContext2DInternals.beginPath(this);
   }
 
   fill(path = undefined, fillRule) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     if (
       nArgs === 0 ||
-      (nArgs === 1 && !(type(path) === "Object" && objectIsPath2D(path)))
+      (nArgs === 1 &&
+        !(type(path) === "Object" && Path2DInternals.hasInstance(path)))
     ) {
       fillRule = path;
       path = null;
@@ -1540,24 +1909,28 @@ export class OffscreenCanvasRenderingContext2D {
     }
     fillRule = convertCanvasFillRule(defaultTo(fillRule, "nonzero"));
     op_canvas_2d_state_fill(
-      this.#state,
-      this.#intendedPathFor(path),
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      OffscreenCanvasRenderingContext2DInternals.getIntendedPath(this, path),
       fillRuleToRepr[fillRule],
     );
   }
 
   stroke(path = undefined) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     path = arguments.length === 0 ? null : convertPath2D(path);
-    op_canvas_2d_state_stroke(this.#state, this.#intendedPathFor(path));
+    op_canvas_2d_state_stroke(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      OffscreenCanvasRenderingContext2DInternals.getIntendedPath(this, path),
+    );
   }
 
   clip(path = undefined, fillRule) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     if (
       nArgs === 0 ||
-      (nArgs === 1 && !(type(path) === "Object" && objectIsPath2D(path)))
+      (nArgs === 1 &&
+        !(type(path) === "Object" && Path2DInternals.hasInstance(path)))
     ) {
       fillRule = path;
       path = null;
@@ -1566,21 +1939,22 @@ export class OffscreenCanvasRenderingContext2D {
     }
     fillRule = convertCanvasFillRule(defaultTo(fillRule, "nonzero"));
     op_canvas_2d_state_clip(
-      this.#state,
-      this.#intendedPathFor(path),
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      OffscreenCanvasRenderingContext2DInternals.getIntendedPath(this, path),
       fillRuleToRepr[fillRule],
     );
   }
 
   isPointInPath(path, x, y = undefined, fillRule) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     const prefix =
       "Failed to execute 'isPointInPath' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(nArgs, 2, prefix);
     if (
       nArgs === 2 ||
-      (nArgs === 3 && !(type(path) === "Object" && objectIsPath2D(path)))
+      (nArgs === 3 &&
+        !(type(path) === "Object" && Path2DInternals.hasInstance(path)))
     ) {
       fillRule = y;
       y = x;
@@ -1593,8 +1967,8 @@ export class OffscreenCanvasRenderingContext2D {
     y = convertUnrestrictedDouble(y);
     fillRule = convertCanvasFillRule(defaultTo(fillRule, "nonzero"));
     return op_canvas_2d_state_is_point_in_path(
-      this.#state,
-      this.#intendedPathFor(path),
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      OffscreenCanvasRenderingContext2DInternals.getIntendedPath(this, path),
       x,
       y,
       fillRuleToRepr[fillRule],
@@ -1602,7 +1976,7 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   isPointInStroke(path, x, y = undefined) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     const prefix =
       "Failed to execute 'isPointInStroke' on 'OffscreenCanvasRenderingContext2D'";
@@ -1617,15 +1991,15 @@ export class OffscreenCanvasRenderingContext2D {
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
     return op_canvas_2d_state_is_point_in_stroke(
-      this.#state,
-      this.#intendedPathFor(path),
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      OffscreenCanvasRenderingContext2DInternals.getIntendedPath(this, path),
       x,
       y,
     );
   }
 
   fillText(text, x, y, maxWidth = undefined) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'fillText' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 3, prefix);
@@ -1640,11 +2014,17 @@ export class OffscreenCanvasRenderingContext2D {
         return;
       }
     }
-    op_canvas_2d_state_fill_text(this.#state, text, x, y, maxWidth);
+    op_canvas_2d_state_fill_text(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      text,
+      x,
+      y,
+      maxWidth,
+    );
   }
 
   strokeText(text, x, y, maxWidth = undefined) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'strokeText' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 3, prefix);
@@ -1659,21 +2039,31 @@ export class OffscreenCanvasRenderingContext2D {
         return;
       }
     }
-    op_canvas_2d_state_stroke_text(this.#state, text, x, y, maxWidth);
+    op_canvas_2d_state_stroke_text(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      text,
+      x,
+      y,
+      maxWidth,
+    );
   }
 
   measureText(text) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'measureText' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     text = convertDOMString(text);
-    op_canvas_2d_state_measure_text(this.#state, text, measureTextBuffer);
-    return new TextMetrics(illegalConstructor, measureTextBuffer);
+    op_canvas_2d_state_measure_text(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      text,
+      measureTextBuffer,
+    );
+    return createTextMetrics(measureTextBuffer);
   }
 
   drawImage(image, sx, sy, sw = undefined, sh, dx, dy, dw, dh) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     const prefix =
       "Failed to execute 'drawImage' on 'OffscreenCanvasRenderingContext2D'";
@@ -1752,7 +2142,7 @@ export class OffscreenCanvasRenderingContext2D {
     sw ??= op_canvas_2d_image_bitmap_width(bitmap);
     sh ??= op_canvas_2d_image_bitmap_height(bitmap);
     op_canvas_2d_state_draw_image(
-      this.#state,
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
       bitmap,
       sx,
       sy,
@@ -1766,7 +2156,7 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   createImageData(arg0, arg1 = undefined, arg2) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     const prefix =
       "Failed to execute 'createImageData' on 'OffscreenCanvasRenderingContext2D'";
@@ -1781,13 +2171,14 @@ export class OffscreenCanvasRenderingContext2D {
       const sw = convertEnforceRangeLong(arg0);
       const sh = convertEnforceRangeLong(arg1);
       const settings = convertImageDataSettings(arg2);
-      const colorSpace = settings.colorSpace ?? this.#colorSpace;
+      const colorSpace = settings.colorSpace ??
+        OffscreenCanvasRenderingContext2DInternals.getColorSpace(this);
       return new ImageData(sw, sh, { __proto__: null, colorSpace });
     }
   }
 
   getImageData(sx, sy, sw, sh, settings = undefined) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'getImageData' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -1816,13 +2207,14 @@ export class OffscreenCanvasRenderingContext2D {
       sy += sh;
       sh = -sh;
     }
-    const colorSpace = settings.colorSpace ?? this.#colorSpace;
+    const colorSpace = settings.colorSpace ??
+      OffscreenCanvasRenderingContext2DInternals.getColorSpace(this);
     const result = new ImageData(sw, sh, { __proto__: null, colorSpace });
     const buf = new Uint32Array(
       TypedArrayPrototypeGetBuffer(ImageDataPrototypeGetData(result)),
     );
     op_canvas_2d_state_get_image_data(
-      this.#state,
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
       buf,
       sw,
       sh,
@@ -1842,7 +2234,7 @@ export class OffscreenCanvasRenderingContext2D {
     dirtyWidth,
     dirtyHeight,
   ) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const nArgs = arguments.length;
     const prefix =
       "Failed to execute 'putImageData' on 'OffscreenCanvasRenderingContext2D'";
@@ -1904,7 +2296,7 @@ export class OffscreenCanvasRenderingContext2D {
     const buf = alignUint8ClampedArrayToUint32(data);
     const colorSpace = ImageDataPrototypeGetColorSpace(imagedata);
     op_canvas_2d_state_put_image_data(
-      this.#state,
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
       buf,
       sw,
       sh,
@@ -1919,26 +2311,35 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   get lineWidth() {
-    this.#brand;
-    return op_canvas_2d_state_line_width(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_line_width(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set lineWidth(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'lineWidth' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    op_canvas_2d_state_set_line_width(this.#state, value);
+    op_canvas_2d_state_set_line_width(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   get lineCap() {
-    this.#brand;
-    return lineCapFromRepr[op_canvas_2d_state_line_cap(this.#state)];
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return lineCapFromRepr[
+      op_canvas_2d_state_line_cap(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
+    ];
   }
 
   set lineCap(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'lineCap' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -1947,16 +2348,23 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_line_cap(this.#state, repr);
+    op_canvas_2d_state_set_line_cap(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get lineJoin() {
-    this.#brand;
-    return lineJoinFromRepr[op_canvas_2d_state_line_join(this.#state)];
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return lineJoinFromRepr[
+      op_canvas_2d_state_line_join(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
+    ];
   }
 
   set lineJoin(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'lineJoin' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -1965,25 +2373,33 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_line_join(this.#state, repr);
+    op_canvas_2d_state_set_line_join(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get miterLimit() {
-    this.#brand;
-    return op_canvas_2d_state_miter_limit(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_miter_limit(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set miterLimit(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'miterLimit' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    op_canvas_2d_state_set_miter_limit(this.#state, value);
+    op_canvas_2d_state_set_miter_limit(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   setLineDash(segments) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'setLineDash' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -1997,52 +2413,63 @@ export class OffscreenCanvasRenderingContext2D {
       }
       buf[i] = value;
     }
-    op_canvas_2d_state_set_dash_list(this.#state, buf);
+    op_canvas_2d_state_set_dash_list(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      buf,
+    );
   }
 
   getLineDash() {
-    this.#brand;
-    return op_canvas_2d_state_dash_list(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_dash_list(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   get lineDashOffset() {
-    this.#brand;
-    return op_canvas_2d_state_line_dash_offset(this.#state);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return op_canvas_2d_state_line_dash_offset(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+    );
   }
 
   set lineDashOffset(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'lineDashOffset' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
-    op_canvas_2d_state_set_line_dash_offset(this.#state, value);
+    op_canvas_2d_state_set_line_dash_offset(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      value,
+    );
   }
 
   get font() {
-    this.#brand;
-    this.#cachedFont ??= op_canvas_2d_state_font(this.#state);
-    return this.#cachedFont;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getFont(this);
   }
 
   set font(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'font' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    if (op_canvas_2d_state_set_font(this.#state, value)) {
-      this.#cachedFont = null;
-    }
+    OffscreenCanvasRenderingContext2DInternals.setFont(this, value);
   }
 
   get textAlign() {
-    this.#brand;
-    return textAlignFromRepr[op_canvas_2d_state_text_align(this.#state)];
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return textAlignFromRepr[
+      op_canvas_2d_state_text_align(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
+    ];
   }
 
   set textAlign(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'textAlign' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -2051,16 +2478,23 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_text_align(this.#state, repr);
+    op_canvas_2d_state_set_text_align(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get textBaseline() {
-    this.#brand;
-    return textBaselineFromRepr[op_canvas_2d_state_text_baseline(this.#state)];
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return textBaselineFromRepr[
+      op_canvas_2d_state_text_baseline(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
+    ];
   }
 
   set textBaseline(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'textBaseline' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -2069,16 +2503,23 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_text_baseline(this.#state, repr);
+    op_canvas_2d_state_set_text_baseline(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get direction() {
-    this.#brand;
-    return directionFromRepr[op_canvas_2d_state_direction(this.#state)];
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return directionFromRepr[
+      op_canvas_2d_state_direction(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
+    ];
   }
 
   set direction(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'direction' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -2087,35 +2528,37 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_direction(this.#state, repr);
+    op_canvas_2d_state_set_direction(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get letterSpacing() {
-    this.#brand;
-    this.#cachedLetterSpacing ??= op_canvas_2d_state_letter_spacing(
-      this.#state,
-    );
-    return this.#cachedLetterSpacing;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getLetterSpacing(this);
   }
 
   set letterSpacing(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'letterSpacing' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    if (op_canvas_2d_state_set_letter_spacing(this.#state, value)) {
-      this.#cachedLetterSpacing = null;
-    }
+    OffscreenCanvasRenderingContext2DInternals.setLetterSpacing(this, value);
   }
 
   get fontKerning() {
-    this.#brand;
-    return fontKerningFromRepr[op_canvas_2d_state_font_kerning(this.#state)];
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return fontKerningFromRepr[
+      op_canvas_2d_state_font_kerning(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
+    ];
   }
 
   set fontKerning(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'fontKerning' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -2124,16 +2567,23 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_font_kerning(this.#state, repr);
+    op_canvas_2d_state_set_font_kerning(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get fontStretch() {
-    this.#brand;
-    return fontStretchFromRepr[op_canvas_2d_state_font_stretch(this.#state)];
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return fontStretchFromRepr[
+      op_canvas_2d_state_font_stretch(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
+    ];
   }
 
   set fontStretch(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'fontStretch' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -2142,19 +2592,24 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_font_stretch(this.#state, repr);
-    this.#cachedFont = null;
+    op_canvas_2d_state_set_font_stretch(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
+    OffscreenCanvasRenderingContext2DInternals.invalidateCachedFont(this);
   }
 
   get fontVariantCaps() {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     return fontVariantCapsFromRepr[
-      op_canvas_2d_state_font_variant_caps(this.#state)
+      op_canvas_2d_state_font_variant_caps(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
     ];
   }
 
   set fontVariantCaps(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'fontVariantCaps' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -2163,19 +2618,24 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_font_variant_caps(this.#state, repr);
-    this.#cachedFont = null;
+    op_canvas_2d_state_set_font_variant_caps(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
+    OffscreenCanvasRenderingContext2DInternals.invalidateCachedFont(this);
   }
 
   get textRendering() {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     return textRenderingFromRepr[
-      op_canvas_2d_state_text_rendering(this.#state)
+      op_canvas_2d_state_text_rendering(
+        OffscreenCanvasRenderingContext2DInternals.getState(this),
+      )
     ];
   }
 
   set textRendering(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'textRendering' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
@@ -2184,53 +2644,63 @@ export class OffscreenCanvasRenderingContext2D {
     if (repr === undefined) {
       return;
     }
-    op_canvas_2d_state_set_text_rendering(this.#state, repr);
+    op_canvas_2d_state_set_text_rendering(
+      OffscreenCanvasRenderingContext2DInternals.getState(this),
+      repr,
+    );
   }
 
   get wordSpacing() {
-    this.#brand;
-    this.#cachedWordSpacing ??= op_canvas_2d_state_word_spacing(this.#state);
-    return this.#cachedWordSpacing;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getWordSpacing(this);
   }
 
   set wordSpacing(value) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to set 'wordSpacing' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
-    if (op_canvas_2d_state_set_word_spacing(this.#state, value)) {
-      this.#cachedWordSpacing = null;
-    }
+    OffscreenCanvasRenderingContext2DInternals.setWordSpacing(this, value);
   }
 
   closePath() {
-    this.#brand;
-    op_canvas_2d_path_close(this.#defaultPath);
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    op_canvas_2d_path_close(
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+    );
   }
 
   moveTo(x, y) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'moveTo' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 2, prefix);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_move_to(this.#defaultPath, x, y);
+    op_canvas_2d_path_move_to(
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+      x,
+      y,
+    );
   }
 
   lineTo(x, y) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'lineTo' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 2, prefix);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_line_to(this.#defaultPath, x, y);
+    op_canvas_2d_path_line_to(
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+      x,
+      y,
+    );
   }
 
   quadraticCurveTo(cpx, cpy, x, y) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'quadraticCurveTo' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -2238,11 +2708,17 @@ export class OffscreenCanvasRenderingContext2D {
     cpy = convertUnrestrictedDouble(cpy);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_quad_to(this.#defaultPath, cpx, cpy, x, y);
+    op_canvas_2d_path_quad_to(
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+      cpx,
+      cpy,
+      x,
+      y,
+    );
   }
 
   bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'bezierCurveTo' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 6, prefix);
@@ -2252,11 +2728,19 @@ export class OffscreenCanvasRenderingContext2D {
     cp2y = convertUnrestrictedDouble(cp2y);
     x = convertUnrestrictedDouble(x);
     y = convertUnrestrictedDouble(y);
-    op_canvas_2d_path_cubic_to(this.#defaultPath, cp1x, cp1y, cp2x, cp2y, x, y);
+    op_canvas_2d_path_cubic_to(
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+      cp1x,
+      cp1y,
+      cp2x,
+      cp2y,
+      x,
+      y,
+    );
   }
 
   arcTo(x1, y1, x2, y2, radius) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'arcTo' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 5, prefix);
@@ -2272,14 +2756,25 @@ export class OffscreenCanvasRenderingContext2D {
       return;
     }
     if (radius < 0) {
-      op_canvas_2d_path_ensure_subpath(this.#defaultPath, x1, y1);
+      op_canvas_2d_path_ensure_subpath(
+        OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+        x1,
+        y1,
+      );
       throw new DOMException("Radius must be non-negative", "IndexSizeError");
     }
-    op_canvas_2d_path_arc_to(this.#defaultPath, x1, y1, x2, y2, radius);
+    op_canvas_2d_path_arc_to(
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+      x1,
+      y1,
+      x2,
+      y2,
+      radius,
+    );
   }
 
   rect(x, y, w, h) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'rect' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -2287,11 +2782,17 @@ export class OffscreenCanvasRenderingContext2D {
     y = convertUnrestrictedDouble(y);
     w = convertUnrestrictedDouble(w);
     h = convertUnrestrictedDouble(h);
-    op_canvas_2d_path_rect(this.#defaultPath, x, y, w, h);
+    op_canvas_2d_path_rect(
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
+      x,
+      y,
+      w,
+      h,
+    );
   }
 
   roundRect(x, y, w, h, radii = 0) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'roundRect' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 4, prefix);
@@ -2306,7 +2807,7 @@ export class OffscreenCanvasRenderingContext2D {
     }
     const { upperLeft, upperRight, lowerRight, lowerLeft } = normalizedRadii;
     op_canvas_2d_path_round_rect(
-      this.#defaultPath,
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
       x,
       y,
       w,
@@ -2323,7 +2824,7 @@ export class OffscreenCanvasRenderingContext2D {
   }
 
   arc(x, y, radius, startAngle, endAngle, counterclockwise = false) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'arc' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 5, prefix);
@@ -2343,7 +2844,7 @@ export class OffscreenCanvasRenderingContext2D {
       throw new DOMException("Radius must be non-negative", "IndexSizeError");
     }
     op_canvas_2d_path_ellipse(
-      this.#defaultPath,
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
       x,
       y,
       radius,
@@ -2365,7 +2866,7 @@ export class OffscreenCanvasRenderingContext2D {
     endAngle,
     counterclockwise = false,
   ) {
-    this.#brand;
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
     const prefix =
       "Failed to execute 'ellipse' on 'OffscreenCanvasRenderingContext2D'";
     requiredArguments(arguments.length, 7, prefix);
@@ -2389,7 +2890,7 @@ export class OffscreenCanvasRenderingContext2D {
       throw new DOMException("Radius must be non-negative", "IndexSizeError");
     }
     op_canvas_2d_path_ellipse(
-      this.#defaultPath,
+      OffscreenCanvasRenderingContext2DInternals.getDefaultPath(this),
       x,
       y,
       radiusX,
@@ -2401,103 +2902,68 @@ export class OffscreenCanvasRenderingContext2D {
     );
   }
 
-  #inspect(inspect, options) {
-    return inspect(
-      createFilteredInspectProxy({
-        object: this,
-        evaluate: true,
-        keys: [
-          "canvas",
-          "globalAlpha",
-          "globalCompositeOperation",
-          "imageSmoothingEnabled",
-          "imageSmoothingQuality",
-          "strokeStyle",
-          "fillStyle",
-          "shadowOffsetX",
-          "shadowOffsetY",
-          "shadowBlur",
-          "shadowColor",
-          "filter",
-          "lineWidth",
-          "lineCap",
-          "lineJoin",
-          "miterLimit",
-          "lineDashOffset",
-          "font",
-          "textAlign",
-          "textBaseline",
-          "direction",
-          "letterSpacing",
-          "fontKerning",
-          "fontStretch",
-          "fontVariantCaps",
-          "textRendering",
-          "wordSpacing",
-        ],
-      }),
-      options,
-    );
-  }
-
   get [privateCustomInspect]() {
-    try {
-      return this.#inspect;
-    } catch {
-      return undefined;
-    }
+    return OffscreenCanvasRenderingContext2DInternals.hasInstance(this)
+      ? OffscreenCanvasRenderingContext2DInternals.inspect
+      : undefined;
   }
 
   static {
     configureInterface(this);
-    // deno-lint-ignore prefer-primordials
-    objectIsOffscreenCanvasRenderingContext2D = (o) => #brand in o;
-    getOffscreenCanvasRenderingContext2DState = (o) => o.#state;
-    getOffscreenCanvasRenderingContext2DColorSpace = (o) => o.#colorSpace;
   }
+}
+
+function createOffscreenCanvasRenderingContext2D(canvas, state, colorSpace) {
+  const o = ObjectCreate(OffscreenCanvasRenderingContext2D.prototype);
+  new OffscreenCanvasRenderingContext2DInternals(o, canvas, state, colorSpace);
+  return o;
 }
 
 registerCanvasContextMode("2d", {
   newInstance(canvas, width, height, options) {
-    return new OffscreenCanvasRenderingContext2D(
-      illegalConstructor,
+    const settings = convertCanvasRenderingContext2DSettings(options);
+    return createOffscreenCanvasRenderingContext2D(
       canvas,
-      width,
-      height,
-      options,
+      op_canvas_2d_state_new(
+        width,
+        height,
+        settings.alpha,
+        colorSpaceToRepr[settings.colorSpace],
+      ),
+      settings.colorSpace,
     );
   },
   hasInstance(ctx) {
-    return objectIsOffscreenCanvasRenderingContext2D(ctx);
+    return OffscreenCanvasRenderingContext2DInternals.hasInstance(ctx);
   },
   getWidth(ctx) {
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     return op_canvas_2d_state_width(state);
   },
   setWidth(ctx, width) {
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     op_canvas_2d_state_set_width(state, width);
   },
   getHeight(ctx) {
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     return op_canvas_2d_state_height(state);
   },
   setHeight(ctx, height) {
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     op_canvas_2d_state_set_height(state, height);
   },
   transferToImageBitmap(ctx) {
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     const bitmap = op_canvas_2d_image_bitmap_from_canvas_state(state);
     op_canvas_2d_state_clear(state);
     return bitmap;
   },
   cloneToImageBitmap(ctx) {
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     return op_canvas_2d_image_bitmap_from_canvas_state(state);
   },
   cropToImageBitmap(ctx, sx, sy, sw, sh) {
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     return {
       bitmap: op_canvas_2d_image_bitmap_from_canvas_state_crop(
         state,
@@ -2510,8 +2976,9 @@ registerCanvasContextMode("2d", {
     };
   },
   getDataForSerialization(ctx, colorSpace) {
-    colorSpace ??= getOffscreenCanvasRenderingContext2DColorSpace(ctx);
-    const state = getOffscreenCanvasRenderingContext2DState(ctx);
+    colorSpace ??= OffscreenCanvasRenderingContext2DInternals
+      .getColorSpace(ctx);
+    const state = OffscreenCanvasRenderingContext2DInternals.getState(ctx);
     const width = op_canvas_2d_state_width(state);
     const height = op_canvas_2d_state_height(state);
     const buf = new Uint32Array(width * height);
