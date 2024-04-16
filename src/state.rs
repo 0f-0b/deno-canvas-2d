@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::convert::Infallible;
-use std::ffi::c_void;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
@@ -27,7 +26,6 @@ use super::css::font::{
 use super::css::length::{ComputedLength, SpecifiedAbsoluteLength};
 use super::css::FromCss as _;
 use super::filter::{compile_filter, BoxedRenderFunction, FilterChain};
-use super::gc::{borrow_v8, borrow_v8_mut, from_v8, into_v8};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
 use super::image_data::{AlignedImageDataView, AlignedImageDataViewMut};
@@ -1333,130 +1331,131 @@ impl CanvasState {
 }
 
 #[op2]
-pub fn op_canvas_2d_state_new<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
+#[cppgc]
+pub fn op_canvas_2d_state_new(
     #[number] width: u64,
     #[number] height: u64,
     alpha: bool,
     color_space: i32,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
+) -> anyhow::Result<RefCell<CanvasState>> {
     let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
-    let result = CanvasState::new(width, height, alpha, color_space)?;
-    Ok(into_v8(state, scope, result))
+    Ok(RefCell::new(CanvasState::new(
+        width,
+        height,
+        alpha,
+        color_space,
+    )?))
 }
 
 #[op2(fast)]
 #[number]
-pub fn op_canvas_2d_state_width(state: &OpState, this: *const c_void) -> u64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_width(#[cppgc] this: &RefCell<CanvasState>) -> u64 {
+    let this = this.borrow();
     this.width()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_width(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[number] width: u64,
 ) -> anyhow::Result<()> {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     let height = this.height();
     this.reset(width, height)
 }
 
 #[op2(fast)]
 #[number]
-pub fn op_canvas_2d_state_height(state: &OpState, this: *const c_void) -> u64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_height(#[cppgc] this: &RefCell<CanvasState>) -> u64 {
+    let this = this.borrow();
     this.height()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_height(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[number] height: u64,
 ) -> anyhow::Result<()> {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     let width = this.width();
     this.reset(width, height)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_save(state: &OpState, this: *const c_void) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_save(#[cppgc] this: &RefCell<CanvasState>) {
+    let mut this = this.borrow_mut();
     this.save()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_restore(state: &OpState, this: *const c_void) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_restore(#[cppgc] this: &RefCell<CanvasState>) {
+    let mut this = this.borrow_mut();
     this.restore()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_reset(state: &OpState, this: *const c_void) -> anyhow::Result<()> {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_reset(#[cppgc] this: &RefCell<CanvasState>) -> anyhow::Result<()> {
+    let mut this = this.borrow_mut();
     let width = this.width();
     let height = this.height();
     this.reset(width, height)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_clear(state: &OpState, this: *const c_void) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_clear(#[cppgc] this: &RefCell<CanvasState>) {
+    let mut this = this.borrow_mut();
     this.clear()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_width(state: &OpState, this: *const c_void) -> f64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_line_width(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+    let this = this.borrow();
     this.line_width()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_width(state: &OpState, this: *const c_void, value: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_line_width(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+    let mut this = this.borrow_mut();
     if value.is_finite() && value > 0.0 {
         this.set_line_width(value);
     }
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_cap(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_line_cap(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.line_cap() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_cap(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_line_cap(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasLineCap::from_repr(value).unwrap();
     this.set_line_cap(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_join(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_line_join(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.line_join() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_join(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_line_join(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasLineJoin::from_repr(value).unwrap();
     this.set_line_join(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_miter_limit(state: &OpState, this: *const c_void) -> f64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_miter_limit(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+    let this = this.borrow();
     this.miter_limit()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_miter_limit(state: &OpState, this: *const c_void, value: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_miter_limit(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+    let mut this = this.borrow_mut();
     if value.is_finite() && value > 0.0 {
         this.set_miter_limit(value);
     }
@@ -1465,10 +1464,10 @@ pub fn op_canvas_2d_state_set_miter_limit(state: &OpState, this: *const c_void, 
 #[op2]
 pub fn op_canvas_2d_state_dash_list<'a>(
     scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    this: *const c_void,
+
+    #[cppgc] this: &RefCell<CanvasState>,
 ) -> v8::Local<'a, v8::Array> {
-    let this = borrow_v8::<CanvasState>(state, this);
+    let this = this.borrow();
     let segments = this.dash_list();
     let mut elements = segments
         .iter()
@@ -1482,23 +1481,22 @@ pub fn op_canvas_2d_state_dash_list<'a>(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_dash_list(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[buffer] segments: &[f64],
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     this.set_dash_list(segments)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_dash_offset(state: &OpState, this: *const c_void) -> f64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_line_dash_offset(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+    let this = this.borrow();
     this.line_dash_offset()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_dash_offset(state: &OpState, this: *const c_void, value: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_line_dash_offset(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+    let mut this = this.borrow_mut();
     if value.is_finite() {
         this.set_line_dash_offset(value);
     }
@@ -1506,8 +1504,8 @@ pub fn op_canvas_2d_state_set_line_dash_offset(state: &OpState, this: *const c_v
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_font(state: &OpState, this: *const c_void) -> Cow<'static, str> {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_font(#[cppgc] this: &RefCell<CanvasState>) -> Cow<'static, str> {
+    let this = this.borrow();
     match this.font() {
         Some(v) => v.to_css_string().into(),
         None => "".into(),
@@ -1516,11 +1514,10 @@ pub fn op_canvas_2d_state_font(state: &OpState, this: *const c_void) -> Cow<'sta
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_font(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] value: &str,
 ) -> bool {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if let Ok(mut value) = ComputedFont::from_css_string(value) {
         value.line_height = ComputedLineHeight::Normal;
         this.set_font(value);
@@ -1531,58 +1528,57 @@ pub fn op_canvas_2d_state_set_font(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_text_align(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_text_align(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.text_align() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_text_align(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_text_align(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasTextAlign::from_repr(value).unwrap();
     this.set_text_align(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_text_baseline(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_text_baseline(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.text_baseline() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_text_baseline(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_text_baseline(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasTextBaseline::from_repr(value).unwrap();
     this.set_text_baseline(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_direction(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_direction(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.direction() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_direction(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_direction(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasDirection::from_repr(value).unwrap();
     this.set_direction(value)
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_letter_spacing(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_letter_spacing(#[cppgc] this: &RefCell<CanvasState>) -> String {
+    let this = this.borrow();
     this.letter_spacing().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_letter_spacing(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] value: &str,
 ) -> bool {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if let Ok(value) = SpecifiedAbsoluteLength::from_css_string(value) {
         this.set_letter_spacing(value);
         true
@@ -1593,18 +1589,17 @@ pub fn op_canvas_2d_state_set_letter_spacing(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_word_spacing(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_word_spacing(#[cppgc] this: &RefCell<CanvasState>) -> String {
+    let this = this.borrow();
     this.word_spacing().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_word_spacing(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] value: &str,
 ) -> bool {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if let Ok(value) = SpecifiedAbsoluteLength::from_css_string(value) {
         this.set_word_spacing(value);
         true
@@ -1614,86 +1609,84 @@ pub fn op_canvas_2d_state_set_word_spacing(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_font_kerning(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_font_kerning(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.font_kerning() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_font_kerning(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_font_kerning(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasFontKerning::from_repr(value).unwrap();
     this.set_font_kerning(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_font_stretch(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_font_stretch(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.font_stretch() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_font_stretch(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_font_stretch(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasFontStretch::from_repr(value).unwrap();
     this.set_font_stretch(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_font_variant_caps(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_font_variant_caps(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.font_variant_caps() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_font_variant_caps(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_font_variant_caps(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasFontVariantCaps::from_repr(value).unwrap();
     this.set_font_variant_caps(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_text_rendering(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_text_rendering(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.text_rendering() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_text_rendering(state: &OpState, this: *const c_void, value: i32) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_text_rendering(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+    let mut this = this.borrow_mut();
     let value = CanvasTextRendering::from_repr(value).unwrap();
     this.set_text_rendering(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_scale(state: &OpState, this: *const c_void, x: f64, y: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_scale(#[cppgc] this: &RefCell<CanvasState>, x: f64, y: f64) {
+    let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         this.scale(x, y);
     }
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_rotate(state: &OpState, this: *const c_void, radians: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_rotate(#[cppgc] this: &RefCell<CanvasState>, radians: f64) {
+    let mut this = this.borrow_mut();
     if radians.is_finite() {
         this.rotate(radians);
     }
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_translate(state: &OpState, this: *const c_void, x: f64, y: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_translate(#[cppgc] this: &RefCell<CanvasState>, x: f64, y: f64) {
+    let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         this.translate(x, y);
     }
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_transform(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     a: f64,
     b: f64,
     c: f64,
@@ -1701,7 +1694,7 @@ pub fn op_canvas_2d_state_transform(
     e: f64,
     f: f64,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if [a, b, c, d, e, f].into_iter().all(f64::is_finite) {
         this.transform(Transform2D::new(a, b, c, d, e, f));
     }
@@ -1709,19 +1702,16 @@ pub fn op_canvas_2d_state_transform(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_get_transform(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[buffer] out: &mut [f64],
 ) {
-    let this = borrow_v8::<CanvasState>(state, this);
+    let this = this.borrow();
     out.copy_from_slice(&this.get_transform().to_array())
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_set_transform(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     a: f64,
     b: f64,
     c: f64,
@@ -1729,22 +1719,22 @@ pub fn op_canvas_2d_state_set_transform(
     e: f64,
     f: f64,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if [a, b, c, d, e, f].into_iter().all(f64::is_finite) {
         this.set_transform(Transform2D::new(a, b, c, d, e, f));
     }
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_reset_transform(state: &OpState, this: *const c_void) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_reset_transform(#[cppgc] this: &RefCell<CanvasState>) {
+    let mut this = this.borrow_mut();
     this.reset_transform()
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_fill_style(state: &OpState, this: *const c_void) -> Option<String> {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_fill_style(#[cppgc] this: &RefCell<CanvasState>) -> Option<String> {
+    let this = this.borrow();
     if let FillOrStrokeStyle::Color(color) = *this.fill_style() {
         Some(serialize_color_for_canvas(color))
     } else {
@@ -1754,11 +1744,10 @@ pub fn op_canvas_2d_state_fill_style(state: &OpState, this: *const c_void) -> Op
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_fill_style_color(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] value: &str,
 ) -> bool {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if let Ok(value) = ComputedColor::from_css_string(value) {
         this.set_fill_style(FillOrStrokeStyle::Color(resolve_color_for_canvas(value)));
         true
@@ -1769,30 +1758,26 @@ pub fn op_canvas_2d_state_set_fill_style_color(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_fill_style_pattern(
-    state: &OpState,
-    this: *const c_void,
-    value: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] value: &Rc<CanvasPattern>,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let value = borrow_v8::<Rc<CanvasPattern>>(state, value);
+    let mut this = this.borrow_mut();
     this.set_fill_style(FillOrStrokeStyle::Pattern(value.clone()))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_fill_style_gradient(
-    state: &OpState,
-    this: *const c_void,
-    value: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] value: &Rc<CanvasGradient>,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let value = borrow_v8::<Rc<CanvasGradient>>(state, value);
+    let mut this = this.borrow_mut();
     this.set_fill_style(FillOrStrokeStyle::Gradient(value.clone()))
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_stroke_style(state: &OpState, this: *const c_void) -> Option<String> {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_stroke_style(#[cppgc] this: &RefCell<CanvasState>) -> Option<String> {
+    let this = this.borrow();
     if let FillOrStrokeStyle::Color(color) = *this.stroke_style() {
         Some(serialize_color_for_canvas(color))
     } else {
@@ -1802,11 +1787,10 @@ pub fn op_canvas_2d_state_stroke_style(state: &OpState, this: *const c_void) -> 
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_stroke_style_color(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] value: &str,
 ) -> bool {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if let Ok(value) = ComputedColor::from_css_string(value) {
         this.set_stroke_style(FillOrStrokeStyle::Color(resolve_color_for_canvas(value)));
         true
@@ -1817,36 +1801,31 @@ pub fn op_canvas_2d_state_set_stroke_style_color(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_stroke_style_pattern(
-    state: &OpState,
-    this: *const c_void,
-    value: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] value: &Rc<CanvasPattern>,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let value = borrow_v8::<Rc<CanvasPattern>>(state, value);
+    let mut this = this.borrow_mut();
     this.set_stroke_style(FillOrStrokeStyle::Pattern(value.clone()))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_stroke_style_gradient(
-    state: &OpState,
-    this: *const c_void,
-    value: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] value: &Rc<CanvasGradient>,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let value = borrow_v8::<Rc<CanvasGradient>>(state, value);
+    let mut this = this.borrow_mut();
     this.set_stroke_style(FillOrStrokeStyle::Gradient(value.clone()))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_clear_rect(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     x: f64,
     y: f64,
     width: f64,
     height: f64,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if [x, y, width, height].into_iter().all(f64::is_finite) {
         this.clear_rect(x, y, width, height);
     }
@@ -1854,14 +1833,13 @@ pub fn op_canvas_2d_state_clear_rect(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_fill_rect(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     x: f64,
     y: f64,
     width: f64,
     height: f64,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if [x, y, width, height].into_iter().all(f64::is_finite) {
         this.fill_rect(x, y, width, height);
     }
@@ -1869,14 +1847,13 @@ pub fn op_canvas_2d_state_fill_rect(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_stroke_rect(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     x: f64,
     y: f64,
     width: f64,
     height: f64,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if [x, y, width, height].into_iter().all(f64::is_finite) {
         this.stroke_rect(x, y, width, height);
     }
@@ -1885,13 +1862,13 @@ pub fn op_canvas_2d_state_stroke_rect(
 #[op2(fast)]
 pub fn op_canvas_2d_state_fill_text(
     state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] text: &str,
     x: f64,
     y: f64,
     max_width: f64,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         let fonts = state.borrow::<Rc<RefCell<FontFaceSet>>>().borrow();
         this.fill_text(&fonts, text, x, y, max_width);
@@ -1901,13 +1878,13 @@ pub fn op_canvas_2d_state_fill_text(
 #[op2(fast)]
 pub fn op_canvas_2d_state_stroke_text(
     state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] text: &str,
     x: f64,
     y: f64,
     max_width: f64,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         let fonts = state.borrow::<Rc<RefCell<FontFaceSet>>>().borrow();
         this.stroke_text(&fonts, text, x, y, max_width);
@@ -1917,11 +1894,11 @@ pub fn op_canvas_2d_state_stroke_text(
 #[op2(fast)]
 pub fn op_canvas_2d_state_measure_text(
     state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] text: &str,
     #[buffer] out: &mut [f64],
 ) {
-    let this = borrow_v8::<CanvasState>(state, this);
+    let this = this.borrow();
     let out = &mut out[..12];
     let fonts = state.borrow::<Rc<RefCell<FontFaceSet>>>().borrow();
     let result = this.measure_text(&fonts, text);
@@ -1941,71 +1918,69 @@ pub fn op_canvas_2d_state_measure_text(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_fill(
-    state: &OpState,
-    this: *const c_void,
-    path: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] path: &RefCell<Path>,
     fill_rule: i32,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let path = borrow_v8::<Path>(state, path);
+    let mut this = this.borrow_mut();
+    let path = path.borrow();
     let fill_rule = CanvasFillRule::from_repr(fill_rule).unwrap();
     this.fill(&path, fill_rule)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_stroke(state: &OpState, this: *const c_void, path: *const c_void) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let path = borrow_v8::<Path>(state, path);
+pub fn op_canvas_2d_state_stroke(
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] path: &RefCell<Path>,
+) {
+    let mut this = this.borrow_mut();
+    let path = path.borrow();
     this.stroke(&path)
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_clip(
-    state: &OpState,
-    this: *const c_void,
-    path: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] path: &RefCell<Path>,
     fill_rule: i32,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let path = borrow_v8::<Path>(state, path);
+    let mut this = this.borrow_mut();
+    let path = path.borrow();
     let fill_rule = CanvasFillRule::from_repr(fill_rule).unwrap();
     this.clip(&path, fill_rule)
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_is_point_in_path(
-    state: &OpState,
-    this: *const c_void,
-    path: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] path: &RefCell<Path>,
     x: f64,
     y: f64,
     fill_rule: i32,
 ) -> bool {
-    let this = borrow_v8::<CanvasState>(state, this);
-    let path = borrow_v8::<Path>(state, path);
+    let this = this.borrow();
+    let path = path.borrow();
     let fill_rule = CanvasFillRule::from_repr(fill_rule).unwrap();
     [x, y].into_iter().all(f64::is_finite) && this.is_point_in_path(&path, x, y, fill_rule)
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_is_point_in_stroke(
-    state: &OpState,
-    this: *const c_void,
-    path: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] path: &RefCell<Path>,
     x: f64,
     y: f64,
 ) -> bool {
-    let this = borrow_v8::<CanvasState>(state, this);
-    let path = borrow_v8::<Path>(state, path);
+    let this = this.borrow();
+    let path = path.borrow();
     [x, y].into_iter().all(f64::is_finite) && this.is_point_in_stroke(&path, x, y)
 }
 
 #[op2(fast)]
 #[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_draw_image(
-    state: &OpState,
-    this: *const c_void,
-    image: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] image: &RefCell<ImageBitmap>,
     sx: f64,
     sy: f64,
     sw: f64,
@@ -2015,8 +1990,8 @@ pub fn op_canvas_2d_state_draw_image(
     dw: f64,
     dh: f64,
 ) -> anyhow::Result<()> {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
-    let image = from_v8::<ImageBitmap>(state, image);
+    let mut this = this.borrow_mut();
+    let image = image.take();
     if [sx, sy, sw, sh, dx, dy, dw, dh]
         .into_iter()
         .all(f64::is_finite)
@@ -2027,10 +2002,8 @@ pub fn op_canvas_2d_state_draw_image(
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_get_image_data(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[buffer] dst_data: &mut [u32],
     dst_width: u32,
     dst_height: u32,
@@ -2038,7 +2011,7 @@ pub fn op_canvas_2d_state_get_image_data(
     #[number] x: i64,
     #[number] y: i64,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<CanvasState>(state, this);
+    let this = this.borrow();
     let dst = AlignedImageDataViewMut {
         width: dst_width,
         height: dst_height,
@@ -2051,8 +2024,7 @@ pub fn op_canvas_2d_state_get_image_data(
 #[op2(fast)]
 #[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_put_image_data(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[buffer] src_data: &[u32],
     src_width: u32,
     src_height: u32,
@@ -2064,7 +2036,7 @@ pub fn op_canvas_2d_state_put_image_data(
     #[number] dx: i64,
     #[number] dy: i64,
 ) -> anyhow::Result<()> {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     let src = AlignedImageDataView {
         width: src_width,
         height: src_height,
@@ -2075,83 +2047,79 @@ pub fn op_canvas_2d_state_put_image_data(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_global_alpha(state: &OpState, this: *const c_void) -> f64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_global_alpha(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+    let this = this.borrow();
     this.global_alpha()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_global_alpha(state: &OpState, this: *const c_void, value: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_global_alpha(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+    let mut this = this.borrow_mut();
     if (0.0..=1.0).contains(&value) {
         this.set_global_alpha(value);
     }
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_global_composite_operation(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_global_composite_operation(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.global_composite_operation() as i32
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_global_composite_operation(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     value: i32,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     let value = BlendOrCompositeMode::from_repr(value).unwrap();
     this.set_global_compositing_operator(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_image_smoothing_enabled(state: &OpState, this: *const c_void) -> bool {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_image_smoothing_enabled(#[cppgc] this: &RefCell<CanvasState>) -> bool {
+    let this = this.borrow();
     this.image_smoothing_enabled()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_image_smoothing_enabled(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     value: bool,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     this.set_image_smoothing_enabled(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_image_smoothing_quality(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_image_smoothing_quality(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+    let this = this.borrow();
     this.image_smoothing_quality() as i32
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_image_smoothing_quality(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     value: i32,
 ) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     let value = ImageSmoothingQuality::from_repr(value).unwrap();
     this.set_image_smoothing_quality(value)
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_shadow_color(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_shadow_color(#[cppgc] this: &RefCell<CanvasState>) -> String {
+    let this = this.borrow();
     serialize_color_for_canvas(this.shadow_color())
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_shadow_color(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] value: &str,
 ) -> bool {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if let Ok(value) = ComputedColor::from_css_string(value) {
         this.set_shadow_color(resolve_color_for_canvas(value));
         true
@@ -2161,42 +2129,42 @@ pub fn op_canvas_2d_state_set_shadow_color(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_shadow_offset_x(state: &OpState, this: *const c_void) -> f64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_shadow_offset_x(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+    let this = this.borrow();
     this.shadow_offset_x()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_shadow_offset_x(state: &OpState, this: *const c_void, value: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_shadow_offset_x(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+    let mut this = this.borrow_mut();
     if value.is_finite() {
         this.set_shadow_offset_x(value);
     }
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_shadow_offset_y(state: &OpState, this: *const c_void) -> f64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_shadow_offset_y(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+    let this = this.borrow();
     this.shadow_offset_y()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_shadow_offset_y(state: &OpState, this: *const c_void, value: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_shadow_offset_y(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+    let mut this = this.borrow_mut();
     if value.is_finite() {
         this.set_shadow_offset_y(value);
     }
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_shadow_blur(state: &OpState, this: *const c_void) -> f64 {
-    let this = borrow_v8::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_shadow_blur(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+    let this = this.borrow();
     this.shadow_blur()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_shadow_blur(state: &OpState, this: *const c_void, value: f64) {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+pub fn op_canvas_2d_state_set_shadow_blur(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+    let mut this = this.borrow_mut();
     if value.is_finite() && value >= 0.0 {
         this.set_shadow_blur(value);
     }
@@ -2204,11 +2172,10 @@ pub fn op_canvas_2d_state_set_shadow_blur(state: &OpState, this: *const c_void, 
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_filter(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<CanvasState>,
     #[string] value: &str,
 ) -> bool {
-    let mut this = borrow_v8_mut::<CanvasState>(state, this);
+    let mut this = this.borrow_mut();
     if let Ok(value) = ComputedFilter::from_css_string(value) {
         this.set_filter(value);
         true

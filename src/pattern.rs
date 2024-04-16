@@ -1,12 +1,10 @@
-use std::cell::Cell;
-use std::ffi::c_void;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use deno_core::{op2, v8, OpState};
+use deno_core::op2;
 use euclid::default::Transform2D;
 use strum_macros::FromRepr;
 
-use super::gc::{borrow_v8, from_v8, into_v8};
 use super::image_bitmap::ImageBitmap;
 use super::{raqote_ext, CanvasColorSpace};
 
@@ -75,23 +73,19 @@ impl CanvasPattern {
 }
 
 #[op2]
-pub fn op_canvas_2d_pattern_new<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    image: *const c_void,
+#[cppgc]
+pub fn op_canvas_2d_pattern_new(
+    #[cppgc] image: &RefCell<ImageBitmap>,
     repetition: i32,
-) -> v8::Local<'a, v8::External> {
-    let image = from_v8::<ImageBitmap>(state, image);
+) -> Rc<CanvasPattern> {
+    let image = image.take();
     let repetition = RepetitionBehavior::from_repr(repetition).unwrap();
-    let result = Rc::new(CanvasPattern::new(image, repetition));
-    into_v8(state, scope, result)
+    Rc::new(CanvasPattern::new(image, repetition))
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_pattern_set_transform(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<CanvasPattern>,
     a: f64,
     b: f64,
     c: f64,
@@ -99,7 +93,6 @@ pub fn op_canvas_2d_pattern_set_transform(
     e: f64,
     f: f64,
 ) {
-    let this = borrow_v8::<Rc<CanvasPattern>>(state, this);
     if [a, b, c, d, e, f].into_iter().all(f64::is_finite) {
         this.set_transform(Transform2D::new(a, b, c, d, e, f));
     }

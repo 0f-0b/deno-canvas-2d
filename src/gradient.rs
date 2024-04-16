@@ -1,16 +1,14 @@
 use std::cell::RefCell;
 use std::f64::consts::TAU;
-use std::ffi::c_void;
 use std::rc::Rc;
 
 use deno_core::anyhow::Context as _;
-use deno_core::{anyhow, op2, v8, OpState};
+use deno_core::{anyhow, op2};
 use euclid::default::Point2D;
 use euclid::{point2, Angle};
 
 use super::css::color::{AbsoluteColor, ComputedColor};
 use super::css::{FromCss as _, SyntaxError};
-use super::gc::{borrow_v8, into_v8};
 use super::{raqote_ext, resolve_color_for_canvas, to_raqote_color, CanvasColorSpace};
 
 #[derive(Clone, Copy, Debug)]
@@ -156,54 +154,36 @@ impl CanvasGradient {
 }
 
 #[op2]
-pub fn op_canvas_2d_gradient_new_linear<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    x0: f64,
-    y0: f64,
-    x1: f64,
-    y1: f64,
-) -> v8::Local<'a, v8::External> {
-    let result = Rc::new(CanvasGradient::new_linear(x0, y0, x1, y1));
-    into_v8(state, scope, result)
+#[cppgc]
+pub fn op_canvas_2d_gradient_new_linear(x0: f64, y0: f64, x1: f64, y1: f64) -> Rc<CanvasGradient> {
+    Rc::new(CanvasGradient::new_linear(x0, y0, x1, y1))
 }
 
 #[op2]
-#[allow(clippy::too_many_arguments)]
-pub fn op_canvas_2d_gradient_new_radial<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
+#[cppgc]
+pub fn op_canvas_2d_gradient_new_radial(
     x0: f64,
     y0: f64,
     r0: f64,
     x1: f64,
     y1: f64,
     r1: f64,
-) -> v8::Local<'a, v8::External> {
-    let result = Rc::new(CanvasGradient::new_radial(x0, y0, r0, x1, y1, r1));
-    into_v8(state, scope, result)
+) -> Rc<CanvasGradient> {
+    Rc::new(CanvasGradient::new_radial(x0, y0, r0, x1, y1, r1))
 }
 
 #[op2]
-pub fn op_canvas_2d_gradient_new_conic<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    start_angle: f64,
-    x: f64,
-    y: f64,
-) -> v8::Local<'a, v8::External> {
-    let result = Rc::new(CanvasGradient::new_conic(start_angle, x, y));
-    into_v8(state, scope, result)
+#[cppgc]
+pub fn op_canvas_2d_gradient_new_conic(start_angle: f64, x: f64, y: f64) -> Rc<CanvasGradient> {
+    Rc::new(CanvasGradient::new_conic(start_angle, x, y))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_gradient_add_color_stop(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<CanvasGradient>,
     offset: f64,
     #[string] color: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<CanvasGradient>>(state, this);
     let color = ComputedColor::from_css_string(color)
         .map_err(SyntaxError::from)
         .with_context(|| format!("Invalid CSS color '{color}'"))?;

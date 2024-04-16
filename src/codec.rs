@@ -1,7 +1,8 @@
-use deno_core::error::custom_error;
-use deno_core::{anyhow, op2, v8, OpState};
+use std::cell::RefCell;
 
-use super::gc::into_v8;
+use deno_core::error::custom_error;
+use deno_core::{anyhow, op2};
+
 use super::image_bitmap::{
     aspect_resize, non_zero_u32, out_of_bounds, same_size, ImageBitmap, ImageOrientation,
     ResizeQuality,
@@ -132,10 +133,9 @@ fn decode_image(
 }
 
 #[op2]
+#[cppgc]
 #[allow(clippy::too_many_arguments)]
-pub fn op_canvas_2d_decode_image<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
+pub fn op_canvas_2d_decode_image(
     #[buffer] buf: &[u8],
     #[string] mime_type: &str,
     #[number] sx: i64,
@@ -146,10 +146,10 @@ pub fn op_canvas_2d_decode_image<'a>(
     dh: u32,
     resize_quality: i32,
     image_orientation: i32,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
+) -> anyhow::Result<RefCell<ImageBitmap>> {
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
-    let result = decode_image(
+    Ok(RefCell::new(decode_image(
         buf,
         mime_type,
         sx,
@@ -160,6 +160,5 @@ pub fn op_canvas_2d_decode_image<'a>(
         non_zero_u32(dh),
         resize_quality,
         image_orientation,
-    )?;
-    Ok(into_v8(state, scope, result))
+    )?))
 }

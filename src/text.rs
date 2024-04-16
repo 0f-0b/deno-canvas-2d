@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::c_void;
 use std::num::NonZeroU64;
 use std::ops::Range;
 use std::process;
@@ -31,7 +30,6 @@ use super::css::font::{
     ComputedFontWeight, ComputedFontWidth, SpecifiedSpecificFamily,
 };
 use super::css::{FromCss as _, SyntaxError, UnicodeRangeSet};
-use super::gc::{borrow_v8, into_v8};
 use super::harfbuzz_ext::{FaceExt as _, FontExt as _};
 use super::path::Path;
 use super::state::{
@@ -1155,10 +1153,9 @@ pub fn op_canvas_2d_font_face_select_source(#[string] source: &str) -> anyhow::R
 }
 
 #[op2]
+#[cppgc]
 #[allow(clippy::too_many_arguments)]
-pub fn op_canvas_2d_font_face_new<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
+pub fn op_canvas_2d_font_face_new(
     #[string] family: String,
     #[string] style: String,
     #[string] weight: String,
@@ -1170,8 +1167,8 @@ pub fn op_canvas_2d_font_face_new<'a>(
     #[string] ascent_override: String,
     #[string] descent_override: String,
     #[string] line_gap_override: String,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
-    let result = Rc::new(FontFace::new(FontFaceData::new(
+) -> anyhow::Result<Rc<FontFace>> {
+    Ok(Rc::new(FontFace::new(FontFaceData::new(
         parse_family_or_throw(&family)?,
         parse_style_or_throw(&style)?,
         parse_weight_or_throw(&weight)?,
@@ -1184,16 +1181,13 @@ pub fn op_canvas_2d_font_face_new<'a>(
         parse_descent_override_or_throw(&descent_override)?,
         parse_line_gap_override_or_throw(&line_gap_override)?,
         FontFaceState::Unloaded,
-    )));
-    Ok(into_v8(state, scope, result))
+    ))))
 }
 
 #[op2]
-pub fn op_canvas_2d_font_face_errored<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-) -> v8::Local<'a, v8::External> {
-    let result = Rc::new(FontFace::new(FontFaceData::new(
+#[cppgc]
+pub fn op_canvas_2d_font_face_errored() -> Rc<FontFace> {
+    Rc::new(FontFace::new(FontFaceData::new(
         SpecifiedSpecificFamily { name: "".into() },
         SpecifiedFontStyleRange::default(),
         SpecifiedFontWeightRange::default(),
@@ -1206,32 +1200,27 @@ pub fn op_canvas_2d_font_face_errored<'a>(
         SpecifiedMetricsOverride::default(),
         SpecifiedMetricsOverride::default(),
         FontFaceState::Errored,
-    )));
-    into_v8(state, scope, result)
+    )))
 }
 
 #[op2(fast)]
 #[bigint]
-pub fn op_canvas_2d_font_face_id(state: &OpState, this: *const c_void) -> u64 {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_id(#[cppgc] this: &Rc<FontFace>) -> u64 {
     this.id().as_u64()
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_family(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_family(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.family().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_family(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_family_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_family(value);
@@ -1240,19 +1229,16 @@ pub fn op_canvas_2d_font_face_set_family(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_style(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_style(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.style().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_style(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_style_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_style(value);
@@ -1261,19 +1247,16 @@ pub fn op_canvas_2d_font_face_set_style(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_weight(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_weight(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.weight().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_weight(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_weight_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_weight(value);
@@ -1282,19 +1265,16 @@ pub fn op_canvas_2d_font_face_set_weight(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_stretch(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_stretch(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.width().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_stretch(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_stretch_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_width(value);
@@ -1303,19 +1283,16 @@ pub fn op_canvas_2d_font_face_set_stretch(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_unicode_range(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_unicode_range(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.unicode_range().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_unicode_range(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_unicode_range_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_unicode_range(value);
@@ -1324,19 +1301,16 @@ pub fn op_canvas_2d_font_face_set_unicode_range(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_feature_settings(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_feature_settings(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.feature_settings().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_feature_settings(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_feature_settings_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_feature_settings(value);
@@ -1345,19 +1319,16 @@ pub fn op_canvas_2d_font_face_set_feature_settings(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_variation_settings(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_variation_settings(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.variation_settings().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_variation_settings(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_variation_settings_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_variation_settings(value);
@@ -1366,19 +1337,16 @@ pub fn op_canvas_2d_font_face_set_variation_settings(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_display(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_display(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.display().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_display(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_display_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_display(value);
@@ -1387,19 +1355,16 @@ pub fn op_canvas_2d_font_face_set_display(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_ascent_override(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_ascent_override(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.ascent_override().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_ascent_override(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_ascent_override_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_ascent_override(value);
@@ -1408,19 +1373,16 @@ pub fn op_canvas_2d_font_face_set_ascent_override(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_descent_override(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_descent_override(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.descent_override().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_descent_override(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_descent_override_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_descent_override(value);
@@ -1429,19 +1391,16 @@ pub fn op_canvas_2d_font_face_set_descent_override(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_line_gap_override(state: &OpState, this: *const c_void) -> String {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
+pub fn op_canvas_2d_font_face_line_gap_override(#[cppgc] this: &Rc<FontFace>) -> String {
     let data = this.data().borrow();
     data.line_gap_override().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_line_gap_override(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[string] value: &str,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let value = parse_line_gap_override_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_line_gap_override(value);
@@ -1450,12 +1409,10 @@ pub fn op_canvas_2d_font_face_set_line_gap_override(
 
 #[op2]
 pub fn op_canvas_2d_font_face_load(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<FontFace>,
     #[anybuffer] source: &[u8],
     from_url: bool,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<Rc<FontFace>>(state, this);
     let mut data = this.data().borrow_mut();
     data.load(source).map_err(|err| {
         custom_error(
@@ -1470,41 +1427,31 @@ pub fn op_canvas_2d_font_face_load(
 }
 
 #[op2]
-pub fn op_canvas_2d_font_face_set_new<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-) -> v8::Local<'a, v8::External> {
-    let result = Rc::new(RefCell::new(FontFaceSet::new()));
-    into_v8(state, scope, result)
+#[cppgc]
+pub fn op_canvas_2d_font_face_set_new() -> Rc<RefCell<FontFaceSet>> {
+    Rc::new(RefCell::new(FontFaceSet::new()))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_insert(
-    state: &OpState,
-    this: *const c_void,
-    font: *const c_void,
+    #[cppgc] this: &Rc<RefCell<FontFaceSet>>,
+    #[cppgc] font: &Rc<FontFace>,
 ) {
-    let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
-    let font = borrow_v8::<Rc<FontFace>>(state, font);
     let mut this = this.borrow_mut();
     this.insert(font.clone())
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_remove(
-    state: &OpState,
-    this: *const c_void,
-    font: *const c_void,
+    #[cppgc] this: &Rc<RefCell<FontFaceSet>>,
+    #[cppgc] font: &Rc<FontFace>,
 ) {
-    let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
-    let font = borrow_v8::<Rc<FontFace>>(state, font);
     let mut this = this.borrow_mut();
     this.remove(font.id())
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_font_face_set_clear(state: &OpState, this: *const c_void) {
-    let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
+pub fn op_canvas_2d_font_face_set_clear(#[cppgc] this: &Rc<RefCell<FontFaceSet>>) {
     let mut this = this.borrow_mut();
     this.clear()
 }
@@ -1512,12 +1459,10 @@ pub fn op_canvas_2d_font_face_set_clear(state: &OpState, this: *const c_void) {
 #[op2]
 pub fn op_canvas_2d_font_face_set_match<'a>(
     scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &Rc<RefCell<FontFaceSet>>,
     #[string] font: &str,
     #[string] text: &str,
 ) -> anyhow::Result<v8::Local<'a, v8::Set>> {
-    let this = borrow_v8::<Rc<RefCell<FontFaceSet>>>(state, this);
     let this = this.borrow();
     let font = ComputedFont::from_css_string(font)
         .map_err(SyntaxError::from)
@@ -1537,12 +1482,9 @@ pub fn op_canvas_2d_font_face_set_match<'a>(
 }
 
 #[op2]
-pub fn op_canvas_2d_font_source<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-) -> v8::Local<'a, v8::External> {
-    let result = state.borrow::<Rc<RefCell<FontFaceSet>>>().clone();
-    into_v8(state, scope, result)
+#[cppgc]
+pub fn op_canvas_2d_font_source(state: &OpState) -> Rc<RefCell<FontFaceSet>> {
+    state.borrow::<Rc<RefCell<FontFaceSet>>>().clone()
 }
 
 pub fn init(state: &mut OpState) {

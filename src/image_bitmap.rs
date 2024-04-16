@@ -1,8 +1,8 @@
-use std::ffi::c_void;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use deno_core::error::range_error;
-use deno_core::{anyhow, op2, v8, OpState};
+use deno_core::{anyhow, op2};
 use euclid::default::{Box2D, Point2D, Size2D, Transform2D};
 use euclid::size2;
 use strum_macros::FromRepr;
@@ -14,7 +14,6 @@ use super::convert::{
     premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_srgb, transform_argb32,
     unpack_argb32_to_rgba8,
 };
-use super::gc::{borrow_v8, from_v8, into_v8};
 use super::image_data::{AlignedImageDataViewMut, ImageData, ImageDataView};
 use super::state::CanvasState;
 use super::{raqote_ext, to_raqote_point, to_raqote_size, CanvasColorSpace, ARGB32_ALPHA_MASK};
@@ -484,43 +483,49 @@ impl ImageBitmap {
     }
 }
 
-#[op2]
-pub fn op_canvas_2d_image_bitmap_from_canvas_state<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    canvas_state: *const c_void,
-) -> v8::Local<'a, v8::External> {
-    let canvas_state = borrow_v8::<CanvasState>(state, canvas_state);
-    let result = ImageBitmap::from_canvas_state(&canvas_state);
-    into_v8(state, scope, result)
+impl Default for ImageBitmap {
+    fn default() -> Self {
+        Self {
+            width: 0,
+            height: 0,
+            color_space: CanvasColorSpace::Srgb,
+            data: None,
+        }
+    }
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_from_canvas_state_crop<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    canvas_state: *const c_void,
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_from_canvas_state(
+    #[cppgc] canvas_state: &RefCell<CanvasState>,
+) -> RefCell<ImageBitmap> {
+    let canvas_state = canvas_state.borrow();
+    RefCell::new(ImageBitmap::from_canvas_state(&canvas_state))
+}
+
+#[op2]
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_from_canvas_state_crop(
+    #[cppgc] canvas_state: &RefCell<CanvasState>,
     #[number] x: i64,
     #[number] y: i64,
     width: u32,
     height: u32,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
-    let canvas_state = borrow_v8::<CanvasState>(state, canvas_state);
-    let result = ImageBitmap::from_canvas_state_crop(
+) -> anyhow::Result<RefCell<ImageBitmap>> {
+    let canvas_state = canvas_state.borrow();
+    Ok(RefCell::new(ImageBitmap::from_canvas_state_crop(
         &canvas_state,
         x,
         y,
         non_zero_u32(width),
         non_zero_u32(height),
-    )?;
-    Ok(into_v8(state, scope, result))
+    )?))
 }
 
 #[op2]
+#[cppgc]
 #[allow(clippy::too_many_arguments)]
-pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
+pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
     #[buffer] src_data: &[u8],
     src_width: u32,
     src_height: u32,
@@ -533,7 +538,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize<'a>(
     dh: u32,
     resize_quality: i32,
     image_orientation: i32,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
+) -> anyhow::Result<RefCell<ImageBitmap>> {
     let src = ImageDataView {
         width: src_width,
         height: src_height,
@@ -542,7 +547,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize<'a>(
     };
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
-    let result = ImageBitmap::from_image_data_crop_and_resize(
+    Ok(RefCell::new(ImageBitmap::from_image_data_crop_and_resize(
         src,
         sx,
         sy,
@@ -552,92 +557,82 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize<'a>(
         non_zero_u32(dh),
         resize_quality,
         image_orientation,
-    )?;
-    Ok(into_v8(state, scope, result))
+    )?))
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_empty<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    width: u32,
-    height: u32,
-) -> v8::Local<'a, v8::External> {
-    let result = ImageBitmap::empty(width, height, CanvasColorSpace::Srgb);
-    into_v8(state, scope, result)
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_empty(width: u32, height: u32) -> RefCell<ImageBitmap> {
+    RefCell::new(ImageBitmap::empty(width, height, CanvasColorSpace::Srgb))
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_empty_resize<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_empty_resize(
     #[number] sw: u64,
     #[number] sh: u64,
     dw: u32,
     dh: u32,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
+) -> anyhow::Result<RefCell<ImageBitmap>> {
     let size = aspect_resize(sw, sh, non_zero_u32(dw), non_zero_u32(dh))?;
-    let result = ImageBitmap::empty(size.width, size.height, CanvasColorSpace::Srgb);
-    Ok(into_v8(state, scope, result))
+    Ok(RefCell::new(ImageBitmap::empty(
+        size.width,
+        size.height,
+        CanvasColorSpace::Srgb,
+    )))
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_width(state: &OpState, this: *const c_void) -> u32 {
-    let this = borrow_v8::<ImageBitmap>(state, this);
+pub fn op_canvas_2d_image_bitmap_width(#[cppgc] this: &RefCell<ImageBitmap>) -> u32 {
+    let this = this.borrow();
     this.width
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_height(state: &OpState, this: *const c_void) -> u32 {
-    let this = borrow_v8::<ImageBitmap>(state, this);
+pub fn op_canvas_2d_image_bitmap_height(#[cppgc] this: &RefCell<ImageBitmap>) -> u32 {
+    let this = this.borrow();
     this.height
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_color_space(state: &OpState, this: *const c_void) -> i32 {
-    let this = borrow_v8::<ImageBitmap>(state, this);
+pub fn op_canvas_2d_image_bitmap_color_space(#[cppgc] this: &RefCell<ImageBitmap>) -> i32 {
+    let this = this.borrow();
     this.color_space as i32
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_clone<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    this: *const c_void,
-) -> v8::Local<'a, v8::External> {
-    let this = borrow_v8::<ImageBitmap>(state, this);
-    let result = this.clone();
-    into_v8(state, scope, result)
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_clone(
+    #[cppgc] this: &RefCell<ImageBitmap>,
+) -> RefCell<ImageBitmap> {
+    this.clone()
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_crop<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    this: *const c_void,
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_crop(
+    #[cppgc] this: &RefCell<ImageBitmap>,
     #[number] x: i64,
     #[number] y: i64,
     width: u32,
     height: u32,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
-    let this = borrow_v8::<ImageBitmap>(state, this);
+) -> anyhow::Result<RefCell<ImageBitmap>> {
+    let this = this.borrow();
     let width = non_zero_u32(width).unwrap_or(this.width);
     let height = non_zero_u32(height).unwrap_or(this.height);
-    let result = this.crop(x, y, width, height)?;
-    Ok(into_v8(state, scope, result))
+    Ok(RefCell::new(this.crop(x, y, width, height)?))
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_resize<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    this: *const c_void,
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_resize(
+    #[cppgc] this: &RefCell<ImageBitmap>,
     width: u32,
     height: u32,
     quality: i32,
     image_orientation: i32,
-) -> anyhow::Result<v8::Local<'a, v8::External>> {
-    let this = from_v8::<ImageBitmap>(state, this);
+) -> anyhow::Result<RefCell<ImageBitmap>> {
+    let this = this.take();
     let size = aspect_resize(
         this.width as u64,
         this.height as u64,
@@ -646,20 +641,17 @@ pub fn op_canvas_2d_image_bitmap_resize<'a>(
     )?;
     let quality = ResizeQuality::from_repr(quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
-    let result = this.resize(
+    Ok(RefCell::new(this.resize(
         size.width,
         size.height,
         quality,
         matches!(image_orientation, ImageOrientation::FlipY),
-    )?;
-    Ok(into_v8(state, scope, result))
+    )?))
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_image_bitmap_get_image_data(
-    state: &OpState,
-    this: *const c_void,
+    #[cppgc] this: &RefCell<ImageBitmap>,
     #[buffer] dst_data: &mut [u32],
     dst_width: u32,
     dst_height: u32,
@@ -667,7 +659,7 @@ pub fn op_canvas_2d_image_bitmap_get_image_data(
     #[number] x: i64,
     #[number] y: i64,
 ) -> anyhow::Result<()> {
-    let this = borrow_v8::<ImageBitmap>(state, this);
+    let this = this.borrow();
     let dst = AlignedImageDataViewMut {
         width: dst_width,
         height: dst_height,
@@ -678,17 +670,15 @@ pub fn op_canvas_2d_image_bitmap_get_image_data(
 }
 
 #[op2]
-pub fn op_canvas_2d_image_bitmap_remove_alpha<'a>(
-    scope: &mut v8::HandleScope<'a>,
-    state: &OpState,
-    this: *const c_void,
-) -> v8::Local<'a, v8::External> {
-    let this = from_v8::<ImageBitmap>(state, this);
-    let result = this.remove_alpha();
-    into_v8(state, scope, result)
+#[cppgc]
+pub fn op_canvas_2d_image_bitmap_remove_alpha(
+    #[cppgc] this: &RefCell<ImageBitmap>,
+) -> RefCell<ImageBitmap> {
+    let this = this.take();
+    RefCell::new(this.remove_alpha())
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_close(state: &OpState, this: *const c_void) {
-    drop(from_v8::<ImageBitmap>(state, this));
+pub fn op_canvas_2d_image_bitmap_close(#[cppgc] this: &RefCell<ImageBitmap>) {
+    this.take();
 }

@@ -2,7 +2,6 @@ mod codec;
 mod convert;
 mod css;
 mod filter;
-mod gc;
 mod gradient;
 mod harfbuzz_ext;
 mod image_bitmap;
@@ -328,7 +327,6 @@ deno_core::extension!(
         "17_context_bitmaprenderer.js",
     ],
     state = |state| {
-        gc::init(state);
         text::init(state);
     },
 );
