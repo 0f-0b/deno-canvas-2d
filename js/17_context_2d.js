@@ -1419,10 +1419,6 @@ export class OffscreenCanvasRenderingContext2D extends Object {
     illegalConstructor();
   }
 
-  commit() {
-    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
-  }
-
   get canvas() {
     return OffscreenCanvasRenderingContext2DInternals.getCanvas(this);
   }
