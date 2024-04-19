@@ -162,6 +162,7 @@ const {
   ArrayPrototypePop,
   ArrayPrototypePush,
   Float64Array,
+  FunctionPrototype,
   MathAbs,
   MathMin,
   MathSign,
@@ -169,6 +170,7 @@ const {
   Object,
   ObjectCreate,
   ObjectFreeze,
+  ObjectSetPrototypeOf,
   RangeError,
   SymbolFor,
   SymbolIterator,
@@ -273,6 +275,7 @@ export class CanvasGradient extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
@@ -339,6 +342,7 @@ export class CanvasPattern extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
@@ -548,6 +552,7 @@ export class TextMetrics extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
@@ -930,6 +935,7 @@ export class Path2D extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
@@ -2905,6 +2911,7 @@ export class OffscreenCanvasRenderingContext2D extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }

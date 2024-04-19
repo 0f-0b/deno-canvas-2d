@@ -20,6 +20,7 @@ import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
 const {
   Float32Array,
   Float64Array,
+  FunctionPrototype,
   MathAtan2,
   MathCos,
   MathHypot,
@@ -31,6 +32,7 @@ const {
   Object,
   ObjectCreate,
   ObjectFreeze,
+  ObjectSetPrototypeOf,
   SymbolFor,
   SymbolIterator,
   TypeError,
@@ -170,6 +172,7 @@ export class DOMPointReadOnly extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
@@ -486,6 +489,7 @@ export class DOMRectReadOnly extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
@@ -746,6 +750,7 @@ export class DOMQuad extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
@@ -1542,6 +1547,7 @@ export class DOMMatrixReadOnly extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }

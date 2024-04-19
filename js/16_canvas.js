@@ -49,14 +49,16 @@ import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
 import { EventHandler } from "./15_event.js";
 
 const {
+  FunctionPrototype,
   Object,
   ObjectCreate,
   ObjectFreeze,
   ObjectGetPrototypeOf,
+  ObjectSetPrototypeOf,
   Promise,
   PromiseReject,
-  ReflectConstruct,
   RangeError,
+  ReflectConstruct,
   SafeArrayIterator,
   SafeMap,
   SymbolFor,
@@ -487,6 +489,7 @@ export class ImageBitmap extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }

@@ -72,19 +72,21 @@ import { EventHandler, readEventInitMembers } from "./15_event.js";
 const {
   ArrayPrototypeEvery,
   ArrayPrototypePush,
+  FunctionPrototype,
   Object,
   ObjectCreate,
   ObjectDefineProperties,
-  ObjectGetOwnPropertyDescriptors,
   ObjectFreeze,
+  ObjectGetOwnPropertyDescriptors,
+  ObjectSetPrototypeOf,
   PromiseReject,
   ReflectConstruct,
   SafeArrayIterator,
   SafeSet,
   Set,
-  SetPrototypeGetSize,
   SetPrototypeEntries,
   SetPrototypeForEach,
+  SetPrototypeGetSize,
   SetPrototypeHas,
   SetPrototypeValues,
   SymbolFor,
@@ -628,6 +630,7 @@ export class FontFace extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }

@@ -29,8 +29,10 @@ import {
 } from "./16_canvas.js";
 
 const {
+  FunctionPrototype,
   Object,
   ObjectCreate,
+  ObjectSetPrototypeOf,
   RangeError,
   SymbolFor,
   TypeError,
@@ -144,6 +146,7 @@ export class ImageBitmapRenderingContext extends Object {
   }
 
   static {
+    ObjectSetPrototypeOf(this, FunctionPrototype);
     configureInterface(this);
   }
 }
