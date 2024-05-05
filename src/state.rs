@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::cell::RefCell;
 use std::convert::Infallible;
 use std::fmt::{self, Debug};
@@ -1503,11 +1502,11 @@ pub fn op_canvas_2d_state_set_line_dash_offset(#[cppgc] this: &RefCell<CanvasSta
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_font(#[cppgc] this: &RefCell<CanvasState>) -> Cow<'static, str> {
+pub fn op_canvas_2d_state_font(#[cppgc] this: &RefCell<CanvasState>) -> String {
     let this = this.borrow();
     match this.font() {
-        Some(v) => v.to_css_string().into(),
-        None => "".into(),
+        Some(v) => v.to_css_string(),
+        None => "".to_owned(),
     }
 }
 
