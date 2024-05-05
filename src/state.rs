@@ -1464,7 +1464,6 @@ pub fn op_canvas_2d_state_set_miter_limit(#[cppgc] this: &RefCell<CanvasState>, 
 #[op2]
 pub fn op_canvas_2d_state_dash_list<'a>(
     scope: &mut v8::HandleScope<'a>,
-
     #[cppgc] this: &RefCell<CanvasState>,
 ) -> v8::Local<'a, v8::Array> {
     let this = this.borrow();
