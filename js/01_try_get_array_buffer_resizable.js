@@ -1,4 +1,6 @@
-import { ArrayBufferPrototypeGetResizable } from "./00_array_buffer_primordials.js";
+import { primordials } from "ext:core/mod.js";
+
+const { ArrayBufferPrototypeGetResizable } = primordials;
 
 export function tryGetArrayBufferResizable(o) {
   try {

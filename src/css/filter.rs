@@ -145,7 +145,7 @@ impl FromCss for ComputedFilterFunction {
 
 #[derive(Clone, Debug)]
 pub enum ComputedFilterValue {
-    Url(Rc<str>),
+    Url(#[allow(dead_code)] Rc<str>),
     FilterFunction(ComputedFilterFunction),
 }
 

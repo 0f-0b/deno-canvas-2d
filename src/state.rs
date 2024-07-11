@@ -4,7 +4,7 @@ use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 use cssparser::ToCss as _;
-use deno_core::{anyhow, op2, v8, OpState};
+use deno_core::{anyhow, op2, v8, GarbageCollected, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2, Angle};
 use strum_macros::FromRepr;
@@ -31,6 +31,7 @@ use super::image_data::{AlignedImageDataView, AlignedImageDataViewMut};
 use super::path::{CanvasFillRule, Path};
 use super::pattern::CanvasPattern;
 use super::text::{prepare_text, FontFaceSet, TextMetrics};
+use super::wrap::Wrap;
 use super::{
     raqote_ext, resolve_color_for_canvas, serialize_color_for_canvas, to_raqote_color,
     to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace, ARGB32_ALPHA_MASK,
@@ -1329,6 +1330,8 @@ impl CanvasState {
     }
 }
 
+impl GarbageCollected for Wrap<RefCell<CanvasState>> {}
+
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_state_new(
@@ -1336,26 +1339,26 @@ pub fn op_canvas_2d_state_new(
     #[number] height: u64,
     alpha: bool,
     color_space: i32,
-) -> anyhow::Result<RefCell<CanvasState>> {
+) -> anyhow::Result<Wrap<RefCell<CanvasState>>> {
     let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
-    Ok(RefCell::new(CanvasState::new(
+    Ok(Wrap::new(RefCell::new(CanvasState::new(
         width,
         height,
         alpha,
         color_space,
-    )?))
+    )?)))
 }
 
 #[op2(fast)]
 #[number]
-pub fn op_canvas_2d_state_width(#[cppgc] this: &RefCell<CanvasState>) -> u64 {
+pub fn op_canvas_2d_state_width(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> u64 {
     let this = this.borrow();
     this.width()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_width(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[number] width: u64,
 ) -> anyhow::Result<()> {
     let mut this = this.borrow_mut();
@@ -1365,14 +1368,14 @@ pub fn op_canvas_2d_state_set_width(
 
 #[op2(fast)]
 #[number]
-pub fn op_canvas_2d_state_height(#[cppgc] this: &RefCell<CanvasState>) -> u64 {
+pub fn op_canvas_2d_state_height(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> u64 {
     let this = this.borrow();
     this.height()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_height(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[number] height: u64,
 ) -> anyhow::Result<()> {
     let mut this = this.borrow_mut();
@@ -1381,19 +1384,19 @@ pub fn op_canvas_2d_state_set_height(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_save(#[cppgc] this: &RefCell<CanvasState>) {
+pub fn op_canvas_2d_state_save(#[cppgc] this: &Wrap<RefCell<CanvasState>>) {
     let mut this = this.borrow_mut();
     this.save()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_restore(#[cppgc] this: &RefCell<CanvasState>) {
+pub fn op_canvas_2d_state_restore(#[cppgc] this: &Wrap<RefCell<CanvasState>>) {
     let mut this = this.borrow_mut();
     this.restore()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_reset(#[cppgc] this: &RefCell<CanvasState>) -> anyhow::Result<()> {
+pub fn op_canvas_2d_state_reset(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> anyhow::Result<()> {
     let mut this = this.borrow_mut();
     let width = this.width();
     let height = this.height();
@@ -1401,19 +1404,19 @@ pub fn op_canvas_2d_state_reset(#[cppgc] this: &RefCell<CanvasState>) -> anyhow:
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_clear(#[cppgc] this: &RefCell<CanvasState>) {
+pub fn op_canvas_2d_state_clear(#[cppgc] this: &Wrap<RefCell<CanvasState>>) {
     let mut this = this.borrow_mut();
     this.clear()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_width(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+pub fn op_canvas_2d_state_line_width(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> f64 {
     let this = this.borrow();
     this.line_width()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_width(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+pub fn op_canvas_2d_state_set_line_width(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: f64) {
     let mut this = this.borrow_mut();
     if value.is_finite() && value > 0.0 {
         this.set_line_width(value);
@@ -1421,39 +1424,39 @@ pub fn op_canvas_2d_state_set_line_width(#[cppgc] this: &RefCell<CanvasState>, v
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_cap(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_line_cap(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.line_cap() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_cap(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_line_cap(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: i32) {
     let mut this = this.borrow_mut();
     let value = CanvasLineCap::from_repr(value).unwrap();
     this.set_line_cap(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_join(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_line_join(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.line_join() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_join(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_line_join(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: i32) {
     let mut this = this.borrow_mut();
     let value = CanvasLineJoin::from_repr(value).unwrap();
     this.set_line_join(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_miter_limit(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+pub fn op_canvas_2d_state_miter_limit(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> f64 {
     let this = this.borrow();
     this.miter_limit()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_miter_limit(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+pub fn op_canvas_2d_state_set_miter_limit(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: f64) {
     let mut this = this.borrow_mut();
     if value.is_finite() && value > 0.0 {
         this.set_miter_limit(value);
@@ -1463,7 +1466,7 @@ pub fn op_canvas_2d_state_set_miter_limit(#[cppgc] this: &RefCell<CanvasState>, 
 #[op2]
 pub fn op_canvas_2d_state_dash_list<'a>(
     scope: &mut v8::HandleScope<'a>,
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
 ) -> v8::Local<'a, v8::Array> {
     let this = this.borrow();
     let segments = this.dash_list();
@@ -1479,7 +1482,7 @@ pub fn op_canvas_2d_state_dash_list<'a>(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_dash_list(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[buffer] segments: &[f64],
 ) {
     let mut this = this.borrow_mut();
@@ -1487,13 +1490,16 @@ pub fn op_canvas_2d_state_set_dash_list(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_line_dash_offset(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+pub fn op_canvas_2d_state_line_dash_offset(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> f64 {
     let this = this.borrow();
     this.line_dash_offset()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_line_dash_offset(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+pub fn op_canvas_2d_state_set_line_dash_offset(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    value: f64,
+) {
     let mut this = this.borrow_mut();
     if value.is_finite() {
         this.set_line_dash_offset(value);
@@ -1502,7 +1508,7 @@ pub fn op_canvas_2d_state_set_line_dash_offset(#[cppgc] this: &RefCell<CanvasSta
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_font(#[cppgc] this: &RefCell<CanvasState>) -> String {
+pub fn op_canvas_2d_state_font(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> String {
     let this = this.borrow();
     match this.font() {
         Some(v) => v.to_css_string(),
@@ -1512,7 +1518,7 @@ pub fn op_canvas_2d_state_font(#[cppgc] this: &RefCell<CanvasState>) -> String {
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_font(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] value: &str,
 ) -> bool {
     let mut this = this.borrow_mut();
@@ -1526,39 +1532,42 @@ pub fn op_canvas_2d_state_set_font(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_text_align(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_text_align(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.text_align() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_text_align(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_text_align(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: i32) {
     let mut this = this.borrow_mut();
     let value = CanvasTextAlign::from_repr(value).unwrap();
     this.set_text_align(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_text_baseline(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_text_baseline(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.text_baseline() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_text_baseline(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_text_baseline(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    value: i32,
+) {
     let mut this = this.borrow_mut();
     let value = CanvasTextBaseline::from_repr(value).unwrap();
     this.set_text_baseline(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_direction(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_direction(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.direction() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_direction(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_direction(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: i32) {
     let mut this = this.borrow_mut();
     let value = CanvasDirection::from_repr(value).unwrap();
     this.set_direction(value)
@@ -1566,14 +1575,14 @@ pub fn op_canvas_2d_state_set_direction(#[cppgc] this: &RefCell<CanvasState>, va
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_letter_spacing(#[cppgc] this: &RefCell<CanvasState>) -> String {
+pub fn op_canvas_2d_state_letter_spacing(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> String {
     let this = this.borrow();
     this.letter_spacing().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_letter_spacing(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] value: &str,
 ) -> bool {
     let mut this = this.borrow_mut();
@@ -1587,14 +1596,14 @@ pub fn op_canvas_2d_state_set_letter_spacing(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_word_spacing(#[cppgc] this: &RefCell<CanvasState>) -> String {
+pub fn op_canvas_2d_state_word_spacing(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> String {
     let this = this.borrow();
     this.word_spacing().to_css_string()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_word_spacing(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] value: &str,
 ) -> bool {
     let mut this = this.borrow_mut();
@@ -1607,59 +1616,65 @@ pub fn op_canvas_2d_state_set_word_spacing(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_font_kerning(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_font_kerning(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.font_kerning() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_font_kerning(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_font_kerning(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: i32) {
     let mut this = this.borrow_mut();
     let value = CanvasFontKerning::from_repr(value).unwrap();
     this.set_font_kerning(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_font_stretch(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_font_stretch(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.font_stretch() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_font_stretch(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_font_stretch(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: i32) {
     let mut this = this.borrow_mut();
     let value = CanvasFontStretch::from_repr(value).unwrap();
     this.set_font_stretch(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_font_variant_caps(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_font_variant_caps(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.font_variant_caps() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_font_variant_caps(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_font_variant_caps(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    value: i32,
+) {
     let mut this = this.borrow_mut();
     let value = CanvasFontVariantCaps::from_repr(value).unwrap();
     this.set_font_variant_caps(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_text_rendering(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_text_rendering(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> i32 {
     let this = this.borrow();
     this.text_rendering() as i32
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_text_rendering(#[cppgc] this: &RefCell<CanvasState>, value: i32) {
+pub fn op_canvas_2d_state_set_text_rendering(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    value: i32,
+) {
     let mut this = this.borrow_mut();
     let value = CanvasTextRendering::from_repr(value).unwrap();
     this.set_text_rendering(value)
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_scale(#[cppgc] this: &RefCell<CanvasState>, x: f64, y: f64) {
+pub fn op_canvas_2d_state_scale(#[cppgc] this: &Wrap<RefCell<CanvasState>>, x: f64, y: f64) {
     let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         this.scale(x, y);
@@ -1667,7 +1682,7 @@ pub fn op_canvas_2d_state_scale(#[cppgc] this: &RefCell<CanvasState>, x: f64, y:
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_rotate(#[cppgc] this: &RefCell<CanvasState>, radians: f64) {
+pub fn op_canvas_2d_state_rotate(#[cppgc] this: &Wrap<RefCell<CanvasState>>, radians: f64) {
     let mut this = this.borrow_mut();
     if radians.is_finite() {
         this.rotate(radians);
@@ -1675,7 +1690,7 @@ pub fn op_canvas_2d_state_rotate(#[cppgc] this: &RefCell<CanvasState>, radians: 
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_translate(#[cppgc] this: &RefCell<CanvasState>, x: f64, y: f64) {
+pub fn op_canvas_2d_state_translate(#[cppgc] this: &Wrap<RefCell<CanvasState>>, x: f64, y: f64) {
     let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         this.translate(x, y);
@@ -1684,7 +1699,7 @@ pub fn op_canvas_2d_state_translate(#[cppgc] this: &RefCell<CanvasState>, x: f64
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_transform(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     a: f64,
     b: f64,
     c: f64,
@@ -1700,7 +1715,7 @@ pub fn op_canvas_2d_state_transform(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_get_transform(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[buffer] out: &mut [f64],
 ) {
     let this = this.borrow();
@@ -1709,7 +1724,7 @@ pub fn op_canvas_2d_state_get_transform(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_transform(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     a: f64,
     b: f64,
     c: f64,
@@ -1724,14 +1739,14 @@ pub fn op_canvas_2d_state_set_transform(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_reset_transform(#[cppgc] this: &RefCell<CanvasState>) {
+pub fn op_canvas_2d_state_reset_transform(#[cppgc] this: &Wrap<RefCell<CanvasState>>) {
     let mut this = this.borrow_mut();
     this.reset_transform()
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_fill_style(#[cppgc] this: &RefCell<CanvasState>) -> Option<String> {
+pub fn op_canvas_2d_state_fill_style(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> Option<String> {
     let this = this.borrow();
     if let FillOrStrokeStyle::Color(color) = *this.fill_style() {
         Some(serialize_color_for_canvas(color))
@@ -1742,7 +1757,7 @@ pub fn op_canvas_2d_state_fill_style(#[cppgc] this: &RefCell<CanvasState>) -> Op
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_fill_style_color(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] value: &str,
 ) -> bool {
     let mut this = this.borrow_mut();
@@ -1756,25 +1771,27 @@ pub fn op_canvas_2d_state_set_fill_style_color(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_fill_style_pattern(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] value: &Rc<CanvasPattern>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] value: &Wrap<Rc<CanvasPattern>>,
 ) {
     let mut this = this.borrow_mut();
-    this.set_fill_style(FillOrStrokeStyle::Pattern(value.clone()))
+    this.set_fill_style(FillOrStrokeStyle::Pattern((*value).clone()))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_fill_style_gradient(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] value: &Rc<CanvasGradient>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] value: &Wrap<Rc<CanvasGradient>>,
 ) {
     let mut this = this.borrow_mut();
-    this.set_fill_style(FillOrStrokeStyle::Gradient(value.clone()))
+    this.set_fill_style(FillOrStrokeStyle::Gradient((*value).clone()))
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_stroke_style(#[cppgc] this: &RefCell<CanvasState>) -> Option<String> {
+pub fn op_canvas_2d_state_stroke_style(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+) -> Option<String> {
     let this = this.borrow();
     if let FillOrStrokeStyle::Color(color) = *this.stroke_style() {
         Some(serialize_color_for_canvas(color))
@@ -1785,7 +1802,7 @@ pub fn op_canvas_2d_state_stroke_style(#[cppgc] this: &RefCell<CanvasState>) -> 
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_stroke_style_color(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] value: &str,
 ) -> bool {
     let mut this = this.borrow_mut();
@@ -1799,25 +1816,25 @@ pub fn op_canvas_2d_state_set_stroke_style_color(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_stroke_style_pattern(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] value: &Rc<CanvasPattern>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] value: &Wrap<Rc<CanvasPattern>>,
 ) {
     let mut this = this.borrow_mut();
-    this.set_stroke_style(FillOrStrokeStyle::Pattern(value.clone()))
+    this.set_stroke_style(FillOrStrokeStyle::Pattern((*value).clone()))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_stroke_style_gradient(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] value: &Rc<CanvasGradient>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] value: &Wrap<Rc<CanvasGradient>>,
 ) {
     let mut this = this.borrow_mut();
-    this.set_stroke_style(FillOrStrokeStyle::Gradient(value.clone()))
+    this.set_stroke_style(FillOrStrokeStyle::Gradient((*value).clone()))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_clear_rect(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     x: f64,
     y: f64,
     width: f64,
@@ -1831,7 +1848,7 @@ pub fn op_canvas_2d_state_clear_rect(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_fill_rect(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     x: f64,
     y: f64,
     width: f64,
@@ -1845,7 +1862,7 @@ pub fn op_canvas_2d_state_fill_rect(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_stroke_rect(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     x: f64,
     y: f64,
     width: f64,
@@ -1860,7 +1877,7 @@ pub fn op_canvas_2d_state_stroke_rect(
 #[op2(fast)]
 pub fn op_canvas_2d_state_fill_text(
     state: &OpState,
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] text: &str,
     x: f64,
     y: f64,
@@ -1876,7 +1893,7 @@ pub fn op_canvas_2d_state_fill_text(
 #[op2(fast)]
 pub fn op_canvas_2d_state_stroke_text(
     state: &OpState,
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] text: &str,
     x: f64,
     y: f64,
@@ -1892,7 +1909,7 @@ pub fn op_canvas_2d_state_stroke_text(
 #[op2(fast)]
 pub fn op_canvas_2d_state_measure_text(
     state: &OpState,
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] text: &str,
     #[buffer] out: &mut [f64],
 ) {
@@ -1916,8 +1933,8 @@ pub fn op_canvas_2d_state_measure_text(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_fill(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] path: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] path: &Wrap<RefCell<Path>>,
     fill_rule: i32,
 ) {
     let mut this = this.borrow_mut();
@@ -1928,8 +1945,8 @@ pub fn op_canvas_2d_state_fill(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_stroke(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] path: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] path: &Wrap<RefCell<Path>>,
 ) {
     let mut this = this.borrow_mut();
     let path = path.borrow();
@@ -1938,8 +1955,8 @@ pub fn op_canvas_2d_state_stroke(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_clip(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] path: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] path: &Wrap<RefCell<Path>>,
     fill_rule: i32,
 ) {
     let mut this = this.borrow_mut();
@@ -1950,8 +1967,8 @@ pub fn op_canvas_2d_state_clip(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_is_point_in_path(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] path: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] path: &Wrap<RefCell<Path>>,
     x: f64,
     y: f64,
     fill_rule: i32,
@@ -1964,8 +1981,8 @@ pub fn op_canvas_2d_state_is_point_in_path(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_is_point_in_stroke(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] path: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] path: &Wrap<RefCell<Path>>,
     x: f64,
     y: f64,
 ) -> bool {
@@ -1977,8 +1994,8 @@ pub fn op_canvas_2d_state_is_point_in_stroke(
 #[op2(fast)]
 #[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_draw_image(
-    #[cppgc] this: &RefCell<CanvasState>,
-    #[cppgc] image: &RefCell<ImageBitmap>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[cppgc] image: &Wrap<RefCell<ImageBitmap>>,
     sx: f64,
     sy: f64,
     sw: f64,
@@ -2001,7 +2018,7 @@ pub fn op_canvas_2d_state_draw_image(
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_get_image_data(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[buffer] dst_data: &mut [u32],
     dst_width: u32,
     dst_height: u32,
@@ -2022,7 +2039,7 @@ pub fn op_canvas_2d_state_get_image_data(
 #[op2(fast)]
 #[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_put_image_data(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[buffer] src_data: &[u32],
     src_width: u32,
     src_height: u32,
@@ -2045,13 +2062,13 @@ pub fn op_canvas_2d_state_put_image_data(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_global_alpha(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+pub fn op_canvas_2d_state_global_alpha(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> f64 {
     let this = this.borrow();
     this.global_alpha()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_global_alpha(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+pub fn op_canvas_2d_state_set_global_alpha(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: f64) {
     let mut this = this.borrow_mut();
     if (0.0..=1.0).contains(&value) {
         this.set_global_alpha(value);
@@ -2059,14 +2076,16 @@ pub fn op_canvas_2d_state_set_global_alpha(#[cppgc] this: &RefCell<CanvasState>,
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_global_composite_operation(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_global_composite_operation(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+) -> i32 {
     let this = this.borrow();
     this.global_composite_operation() as i32
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_global_composite_operation(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     value: i32,
 ) {
     let mut this = this.borrow_mut();
@@ -2075,14 +2094,16 @@ pub fn op_canvas_2d_state_set_global_composite_operation(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_image_smoothing_enabled(#[cppgc] this: &RefCell<CanvasState>) -> bool {
+pub fn op_canvas_2d_state_image_smoothing_enabled(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+) -> bool {
     let this = this.borrow();
     this.image_smoothing_enabled()
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_image_smoothing_enabled(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     value: bool,
 ) {
     let mut this = this.borrow_mut();
@@ -2090,14 +2111,16 @@ pub fn op_canvas_2d_state_set_image_smoothing_enabled(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_image_smoothing_quality(#[cppgc] this: &RefCell<CanvasState>) -> i32 {
+pub fn op_canvas_2d_state_image_smoothing_quality(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+) -> i32 {
     let this = this.borrow();
     this.image_smoothing_quality() as i32
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_image_smoothing_quality(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     value: i32,
 ) {
     let mut this = this.borrow_mut();
@@ -2107,14 +2130,14 @@ pub fn op_canvas_2d_state_set_image_smoothing_quality(
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_state_shadow_color(#[cppgc] this: &RefCell<CanvasState>) -> String {
+pub fn op_canvas_2d_state_shadow_color(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> String {
     let this = this.borrow();
     serialize_color_for_canvas(this.shadow_color())
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_shadow_color(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] value: &str,
 ) -> bool {
     let mut this = this.borrow_mut();
@@ -2127,13 +2150,16 @@ pub fn op_canvas_2d_state_set_shadow_color(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_shadow_offset_x(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+pub fn op_canvas_2d_state_shadow_offset_x(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> f64 {
     let this = this.borrow();
     this.shadow_offset_x()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_shadow_offset_x(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+pub fn op_canvas_2d_state_set_shadow_offset_x(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    value: f64,
+) {
     let mut this = this.borrow_mut();
     if value.is_finite() {
         this.set_shadow_offset_x(value);
@@ -2141,13 +2167,16 @@ pub fn op_canvas_2d_state_set_shadow_offset_x(#[cppgc] this: &RefCell<CanvasStat
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_shadow_offset_y(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+pub fn op_canvas_2d_state_shadow_offset_y(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> f64 {
     let this = this.borrow();
     this.shadow_offset_y()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_shadow_offset_y(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+pub fn op_canvas_2d_state_set_shadow_offset_y(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    value: f64,
+) {
     let mut this = this.borrow_mut();
     if value.is_finite() {
         this.set_shadow_offset_y(value);
@@ -2155,13 +2184,13 @@ pub fn op_canvas_2d_state_set_shadow_offset_y(#[cppgc] this: &RefCell<CanvasStat
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_shadow_blur(#[cppgc] this: &RefCell<CanvasState>) -> f64 {
+pub fn op_canvas_2d_state_shadow_blur(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> f64 {
     let this = this.borrow();
     this.shadow_blur()
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_set_shadow_blur(#[cppgc] this: &RefCell<CanvasState>, value: f64) {
+pub fn op_canvas_2d_state_set_shadow_blur(#[cppgc] this: &Wrap<RefCell<CanvasState>>, value: f64) {
     let mut this = this.borrow_mut();
     if value.is_finite() && value >= 0.0 {
         this.set_shadow_blur(value);
@@ -2170,7 +2199,7 @@ pub fn op_canvas_2d_state_set_shadow_blur(#[cppgc] this: &RefCell<CanvasState>, 
 
 #[op2(fast)]
 pub fn op_canvas_2d_state_set_filter(
-    #[cppgc] this: &RefCell<CanvasState>,
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[string] value: &str,
 ) -> bool {
     let mut this = this.borrow_mut();

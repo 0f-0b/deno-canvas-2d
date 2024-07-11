@@ -1,7 +1,6 @@
 {
   "scopes": {
     "./examples/gradient/": {
-      "ext:canvas_2d/00_array_buffer_primordials.js": "./js/00_array_buffer_primordials.js",
       "ext:canvas_2d/15_geometry.js": "./js/15_geometry.js",
       "ext:canvas_2d/16_canvas.js": "./js/16_canvas.js",
       "ext:canvas_2d/16_font_loading.js": "./js/16_font_loading.js",

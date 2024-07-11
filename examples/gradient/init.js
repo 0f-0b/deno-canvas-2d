@@ -1,4 +1,3 @@
-import { initArrayBufferPrimordials } from "ext:canvas_2d/00_array_buffer_primordials.js";
 import {
   DOMMatrix,
   DOMMatrixReadOnly,
@@ -60,10 +59,6 @@ ObjectDefineProperties(globalThis, {
   // Install `fonts` on `globalThis` since we don't have a `Document`
   fonts: propGetterOnly(getFonts),
 });
-
-// This function must be called at startup before user code
-// It must not be called when taking a snapshot
-initArrayBufferPrimordials();
 
 // Suppress "following modules were not evaluated" warning
 import "ext:deno_url/01_urlpattern.js";

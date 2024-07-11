@@ -8,6 +8,7 @@ use super::image_bitmap::{
     ResizeQuality,
 };
 use super::image_data::ImageData;
+use super::wrap::Wrap;
 use super::CanvasColorSpace;
 
 #[op2]
@@ -146,10 +147,10 @@ pub fn op_canvas_2d_decode_image(
     dh: u32,
     resize_quality: i32,
     image_orientation: i32,
-) -> anyhow::Result<RefCell<ImageBitmap>> {
+) -> anyhow::Result<Wrap<RefCell<ImageBitmap>>> {
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
-    Ok(RefCell::new(decode_image(
+    Ok(Wrap::new(RefCell::new(decode_image(
         buf,
         mime_type,
         sx,
@@ -160,5 +161,5 @@ pub fn op_canvas_2d_decode_image(
         non_zero_u32(dh),
         resize_quality,
         image_orientation,
-    )?))
+    )?)))
 }

@@ -3,12 +3,13 @@ use std::f64::consts::TAU;
 use std::rc::Rc;
 
 use deno_core::anyhow::Context as _;
-use deno_core::{anyhow, op2};
+use deno_core::{anyhow, op2, GarbageCollected};
 use euclid::default::Point2D;
 use euclid::{point2, Angle};
 
 use super::css::color::{AbsoluteColor, ComputedColor};
 use super::css::{FromCss as _, SyntaxError};
+use super::wrap::Wrap;
 use super::{raqote_ext, resolve_color_for_canvas, to_raqote_color, CanvasColorSpace};
 
 #[derive(Clone, Copy, Debug)]
@@ -153,10 +154,17 @@ impl CanvasGradient {
     }
 }
 
+impl GarbageCollected for Wrap<Rc<CanvasGradient>> {}
+
 #[op2]
 #[cppgc]
-pub fn op_canvas_2d_gradient_new_linear(x0: f64, y0: f64, x1: f64, y1: f64) -> Rc<CanvasGradient> {
-    Rc::new(CanvasGradient::new_linear(x0, y0, x1, y1))
+pub fn op_canvas_2d_gradient_new_linear(
+    x0: f64,
+    y0: f64,
+    x1: f64,
+    y1: f64,
+) -> Wrap<Rc<CanvasGradient>> {
+    Wrap::new(Rc::new(CanvasGradient::new_linear(x0, y0, x1, y1)))
 }
 
 #[op2]
@@ -168,19 +176,23 @@ pub fn op_canvas_2d_gradient_new_radial(
     x1: f64,
     y1: f64,
     r1: f64,
-) -> Rc<CanvasGradient> {
-    Rc::new(CanvasGradient::new_radial(x0, y0, r0, x1, y1, r1))
+) -> Wrap<Rc<CanvasGradient>> {
+    Wrap::new(Rc::new(CanvasGradient::new_radial(x0, y0, r0, x1, y1, r1)))
 }
 
 #[op2]
 #[cppgc]
-pub fn op_canvas_2d_gradient_new_conic(start_angle: f64, x: f64, y: f64) -> Rc<CanvasGradient> {
-    Rc::new(CanvasGradient::new_conic(start_angle, x, y))
+pub fn op_canvas_2d_gradient_new_conic(
+    start_angle: f64,
+    x: f64,
+    y: f64,
+) -> Wrap<Rc<CanvasGradient>> {
+    Wrap::new(Rc::new(CanvasGradient::new_conic(start_angle, x, y)))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_gradient_add_color_stop(
-    #[cppgc] this: &Rc<CanvasGradient>,
+    #[cppgc] this: &Wrap<Rc<CanvasGradient>>,
     offset: f64,
     #[string] color: &str,
 ) -> anyhow::Result<()> {

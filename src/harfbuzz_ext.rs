@@ -1,3 +1,5 @@
+#![allow(clippy::undocumented_unsafe_blocks)] // TODO document these
+
 use std::ffi::{c_int, c_uint};
 use std::mem::MaybeUninit;
 

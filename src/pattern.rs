@@ -1,11 +1,12 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use deno_core::op2;
+use deno_core::{op2, GarbageCollected};
 use euclid::default::Transform2D;
 use strum_macros::FromRepr;
 
 use super::image_bitmap::ImageBitmap;
+use super::wrap::Wrap;
 use super::{raqote_ext, CanvasColorSpace};
 
 #[derive(Clone, Copy, Debug, FromRepr)]
@@ -72,20 +73,22 @@ impl CanvasPattern {
     }
 }
 
+impl GarbageCollected for Wrap<Rc<CanvasPattern>> {}
+
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_pattern_new(
-    #[cppgc] image: &RefCell<ImageBitmap>,
+    #[cppgc] image: &Wrap<RefCell<ImageBitmap>>,
     repetition: i32,
-) -> Rc<CanvasPattern> {
+) -> Wrap<Rc<CanvasPattern>> {
     let image = image.take();
     let repetition = RepetitionBehavior::from_repr(repetition).unwrap();
-    Rc::new(CanvasPattern::new(image, repetition))
+    Wrap::new(Rc::new(CanvasPattern::new(image, repetition)))
 }
 
 #[op2(fast)]
 pub fn op_canvas_2d_pattern_set_transform(
-    #[cppgc] this: &Rc<CanvasPattern>,
+    #[cppgc] this: &Wrap<Rc<CanvasPattern>>,
     a: f64,
     b: f64,
     c: f64,

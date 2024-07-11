@@ -12,6 +12,7 @@ mod pattern;
 mod raqote_ext;
 mod state;
 mod text;
+mod wrap;
 
 use css::color::{AbsoluteColor, ComputedColor};
 use deno_core::anyhow;
@@ -278,7 +279,6 @@ deno_core::extension!(
     ],
     esm = [
         dir "js",
-        "00_array_buffer_primordials.js",
         "00_blob_primordials.js",
         "00_event_primordials.js",
         "00_event_target_primordials.js",

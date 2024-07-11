@@ -16,7 +16,7 @@ use super::{ComputedSpecificFamily, SpecifiedAbsoluteFontWeight, SpecifiedFontWi
 #[derive(Clone, Debug)]
 pub enum SpecifiedFontSource {
     Url(Rc<str>),
-    Local(ComputedSpecificFamily),
+    Local(#[allow(dead_code)] ComputedSpecificFamily),
 }
 
 impl FromCss for SpecifiedFontSource {

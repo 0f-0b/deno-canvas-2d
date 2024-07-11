@@ -1,11 +1,13 @@
 use std::cell::RefCell;
 use std::f64::consts::TAU;
 
-use deno_core::op2;
+use deno_core::{op2, GarbageCollected};
 use euclid::default::{Box2D, Point2D, Transform2D};
 use euclid::{point2, size2, vec2, Angle};
 use lyon_geom::{Arc, ArcFlags, SvgArc};
 use strum_macros::FromRepr;
+
+use super::wrap::Wrap;
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
@@ -483,26 +485,28 @@ impl Path {
     }
 }
 
+impl GarbageCollected for Wrap<RefCell<Path>> {}
+
 #[op2]
 #[cppgc]
-pub fn op_canvas_2d_path_new() -> RefCell<Path> {
-    RefCell::new(Path::new())
+pub fn op_canvas_2d_path_new() -> Wrap<RefCell<Path>> {
+    Wrap::new(RefCell::new(Path::new()))
 }
 
 #[op2]
 #[cppgc]
-pub fn op_canvas_2d_path_from_svg(#[string] path_data: &str) -> RefCell<Path> {
-    RefCell::new(Path::from_svg(path_data))
+pub fn op_canvas_2d_path_from_svg(#[string] path_data: &str) -> Wrap<RefCell<Path>> {
+    Wrap::new(RefCell::new(Path::from_svg(path_data)))
 }
 
 #[op2]
 #[cppgc]
-pub fn op_canvas_2d_path_clone(#[cppgc] this: &RefCell<Path>) -> RefCell<Path> {
-    this.clone()
+pub fn op_canvas_2d_path_clone(#[cppgc] this: &Wrap<RefCell<Path>>) -> Wrap<RefCell<Path>> {
+    Wrap::new((*this).clone())
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_path_clear(#[cppgc] this: &RefCell<Path>) {
+pub fn op_canvas_2d_path_clear(#[cppgc] this: &Wrap<RefCell<Path>>) {
     let mut this = this.borrow_mut();
     this.clear()
 }
@@ -510,8 +514,8 @@ pub fn op_canvas_2d_path_clear(#[cppgc] this: &RefCell<Path>) {
 #[op2(fast)]
 #[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_path_extend(
-    #[cppgc] this: &RefCell<Path>,
-    #[cppgc] path: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<Path>>,
+    #[cppgc] path: &Wrap<RefCell<Path>>,
     a: f64,
     b: f64,
     c: f64,
@@ -527,7 +531,7 @@ pub fn op_canvas_2d_path_extend(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_path_ensure_subpath(#[cppgc] this: &RefCell<Path>, x: f64, y: f64) {
+pub fn op_canvas_2d_path_ensure_subpath(#[cppgc] this: &Wrap<RefCell<Path>>, x: f64, y: f64) {
     let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         this.ensure_subpath(x, y)
@@ -535,7 +539,7 @@ pub fn op_canvas_2d_path_ensure_subpath(#[cppgc] this: &RefCell<Path>, x: f64, y
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_path_move_to(#[cppgc] this: &RefCell<Path>, x: f64, y: f64) {
+pub fn op_canvas_2d_path_move_to(#[cppgc] this: &Wrap<RefCell<Path>>, x: f64, y: f64) {
     let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         this.move_to(x, y)
@@ -543,7 +547,7 @@ pub fn op_canvas_2d_path_move_to(#[cppgc] this: &RefCell<Path>, x: f64, y: f64) 
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_path_line_to(#[cppgc] this: &RefCell<Path>, x: f64, y: f64) {
+pub fn op_canvas_2d_path_line_to(#[cppgc] this: &Wrap<RefCell<Path>>, x: f64, y: f64) {
     let mut this = this.borrow_mut();
     if [x, y].into_iter().all(f64::is_finite) {
         this.line_to(x, y)
@@ -551,7 +555,13 @@ pub fn op_canvas_2d_path_line_to(#[cppgc] this: &RefCell<Path>, x: f64, y: f64) 
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_path_quad_to(#[cppgc] this: &RefCell<Path>, cx: f64, cy: f64, x: f64, y: f64) {
+pub fn op_canvas_2d_path_quad_to(
+    #[cppgc] this: &Wrap<RefCell<Path>>,
+    cx: f64,
+    cy: f64,
+    x: f64,
+    y: f64,
+) {
     let mut this = this.borrow_mut();
     if [cx, cy, x, y].into_iter().all(f64::is_finite) {
         this.quad_to(cx, cy, x, y)
@@ -560,7 +570,7 @@ pub fn op_canvas_2d_path_quad_to(#[cppgc] this: &RefCell<Path>, cx: f64, cy: f64
 
 #[op2(fast)]
 pub fn op_canvas_2d_path_cubic_to(
-    #[cppgc] this: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<Path>>,
     c1x: f64,
     c1y: f64,
     c2x: f64,
@@ -576,7 +586,7 @@ pub fn op_canvas_2d_path_cubic_to(
 
 #[op2(fast)]
 pub fn op_canvas_2d_path_arc_to(
-    #[cppgc] this: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<Path>>,
     c1x: f64,
     c1y: f64,
     c2x: f64,
@@ -592,7 +602,7 @@ pub fn op_canvas_2d_path_arc_to(
 #[op2(fast)]
 #[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_path_ellipse(
-    #[cppgc] this: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<Path>>,
     x: f64,
     y: f64,
     rx: f64,
@@ -612,7 +622,7 @@ pub fn op_canvas_2d_path_ellipse(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_path_rect(#[cppgc] this: &RefCell<Path>, x: f64, y: f64, w: f64, h: f64) {
+pub fn op_canvas_2d_path_rect(#[cppgc] this: &Wrap<RefCell<Path>>, x: f64, y: f64, w: f64, h: f64) {
     let mut this = this.borrow_mut();
     if [x, y, w, h].into_iter().all(f64::is_finite) {
         this.rect(x, y, w, h)
@@ -622,7 +632,7 @@ pub fn op_canvas_2d_path_rect(#[cppgc] this: &RefCell<Path>, x: f64, y: f64, w: 
 #[op2(fast)]
 #[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_path_round_rect(
-    #[cppgc] this: &RefCell<Path>,
+    #[cppgc] this: &Wrap<RefCell<Path>>,
     x: f64,
     y: f64,
     w: f64,
@@ -646,7 +656,7 @@ pub fn op_canvas_2d_path_round_rect(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_path_close(#[cppgc] this: &RefCell<Path>) {
+pub fn op_canvas_2d_path_close(#[cppgc] this: &Wrap<RefCell<Path>>) {
     let mut this = this.borrow_mut();
     this.close()
 }
