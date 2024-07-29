@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 cssparser = "0.33.0"
 cssparser-color = "0.1.0"
-deno_core = "0.294.0"
+deno_core = "0.299.0"
 euclid = "0.22.10"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "8fbc406506cfd1f8ab60e625d1e926a0e72e1d8a" }
 harfbuzz_rs = { git = "https://github.com/harfbuzz/harfbuzz_rs.git", rev = "43f0fb57556b5385681bbb2dc89e5f22e958d9d8" }
@@ -21,18 +21,18 @@ itertools = "0.13.0"
 lyon_geom = "1.0.5"
 palette = { version = "0.7.6", default-features = false, features = ["std"] }
 png = "0.17.13"
-raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "74dae4b2eac051bc583cc5768e836260ff89d847", default-features = false }
+raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "bc86ee8882c17dd37296d4d7dd5c0df460a12812", default-features = false }
 strum_macros = "0.26.4"
 svgtypes = "0.15.1"
 unicase = { git = "https://github.com/seanmonstar/unicase.git", rev = "8dc84ec6f13eae71c8d42e3b6e6d2c5ea249ed69" }
 unicode-bidi = "0.3.15"
 
 [dev-dependencies]
-deno_console = "0.162.0"
-deno_url = "0.162.0"
-deno_web = "0.193.0"
-deno_webidl = "0.162.0"
-tokio = { version = "1.38.1", features = ["fs", "rt", "macros"] }
+deno_console = "0.163.0"
+deno_url = "0.163.0"
+deno_web = "0.194.0"
+deno_webidl = "0.163.0"
+tokio = { version = "1.39.2", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
 undocumented_unsafe_blocks = "warn"
