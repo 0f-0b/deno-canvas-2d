@@ -100,7 +100,7 @@ const empty = ObjectFreeze({
   next: () => ({ done: true }),
   [SymbolIterator]: () => empty,
 });
-const convertDOMStringOrBinaryData = (value) => {
+const convertDOMStringOrBufferSource = (value) => {
   if (isArrayBuffer(value)) {
     return convertArrayBuffer(value);
   }
@@ -436,7 +436,7 @@ const FontFaceInternals = class FontFace extends IdentityConstructor {
 export class FontFace extends Object {
   constructor(family, source, descriptors = undefined) {
     family = convertDOMString(family);
-    source = convertDOMStringOrBinaryData(source);
+    source = convertDOMStringOrBufferSource(source);
     descriptors = convertFontFaceDescriptors(descriptors);
     const newTarget = capturePrototype(new.target, FontFace);
     const o = ObjectCreate(newTarget.prototype);
