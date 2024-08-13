@@ -476,6 +476,7 @@ export class ImageBitmap extends Object {
   }
 
   close() {
+    // deno-lint-ignore prefer-primordials
     const bitmap = ImageBitmapInternals.transfer(this);
     if (bitmap) {
       op_canvas_2d_image_bitmap_close(bitmap);
