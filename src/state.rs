@@ -616,10 +616,10 @@ impl CanvasState {
     }
 
     pub fn dash_list(&self) -> &[f64] {
-        match self.current_drawing_state.dash_list {
-            Some(ref v) => v,
-            None => &[],
-        }
+        self.current_drawing_state
+            .dash_list
+            .as_deref()
+            .unwrap_or_default()
     }
 
     pub fn set_dash_list(&mut self, segments: &[f64]) {
