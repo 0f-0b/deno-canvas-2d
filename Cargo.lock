@@ -67,9 +67,9 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
 name = "async-trait"
-version = "0.1.81"
+version = "0.1.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e0c28dcc82d7c8ead5cb13beb15405b57b8546e93215673ff8ca0349a028107"
+checksum = "a27b8a3a6e1a44fa4c8baf1f653e4172e81486d4941f2237e20dc2d0cf4ddff1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -241,9 +241,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.1.15"
+version = "1.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57b6a275aa2903740dc87da01c62040406b8812552e97129a63ea8850a17c6e6"
+checksum = "e9d013ecb737093c0e86b151a7b837993cf9ec6c502946cfb44bedc392421e0b"
 dependencies = [
  "jobserver",
  "libc",
@@ -347,9 +347,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.167.0"
+version = "0.168.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3747e782e2638b6511d687f5dae513e02871bce6438d963a64abd4fbd52fa346"
+checksum = "0ce4df3cfd9d3d98aabc106a506ea2d2789275b9f27b2a0c40bd71b40b8a72ea"
 dependencies = [
  "deno_core",
 ]
@@ -409,9 +409,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.27.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f88d0536f316632ad3f008255f569a223bab384dbf812e47d0caab108e914698"
+checksum = "c5da65cda75ef4fa8eb12f8da199fea40214aac98e8f040fe4063df181c91a54"
 dependencies = [
  "deno_core",
  "deno_terminal",
@@ -446,9 +446,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.167.0"
+version = "0.168.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2436734e3d2184fc781c57988ba87e4d9e72ad50ca1454ce6b84059790b99faf"
+checksum = "778a1b3d9cc786dad57b1bd38234661c5b6c393abb8696b8587703be60e42f30"
 dependencies = [
  "deno_core",
  "urlpattern",
@@ -456,9 +456,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.198.0"
+version = "0.199.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c7ad2f93fb48e384436fceeb13a19cc1f3752ac862273e4e30eba6aa21f543f"
+checksum = "b1cc535e4d4b3a5f7df12ae4e5e08411ee0b13d99f528b874dbb253222872b13"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -475,9 +475,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.167.0"
+version = "0.168.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed2d4efa84cbf18302e25392fc447ab5d048a0d7c869b11c3a38d11fe35e2787"
+checksum = "a6056a468bdad552aefd706c0349a1467e9578fb010ffff722396eaf39241171"
 dependencies = [
  "deno_core",
 ]
@@ -824,9 +824,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.4.0"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93ead53efc7ea8ed3cfb0c79fc8023fbb782a5432b52830b6518941cebe6505c"
+checksum = "68b900aa2f7301e21c36462b170ee99994de34dff39a4a6a528e80e7376d07e5"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -1055,9 +1055,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.36.3"
+version = "0.36.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27b64972346851a39438c60b341ebc01bba47464ae329e55cf343eb93964efd9"
+checksum = "084f1a5821ac4c651660a94a7153d27ac9d8a53736203f58b31945ded098070a"
 dependencies = [
  "memchr",
 ]
@@ -1609,9 +1609,9 @@ source = "git+https://github.com/0f-0b/sw-composite.git?rev=4f8ea31e249fd77ae7e9
 
 [[package]]
 name = "syn"
-version = "2.0.76"
+version = "2.0.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "578e081a14e0cefc3279b0472138c513f37b41a08d5a3cca9b6e4e8ceb6cd525"
+checksum = "9f35bcdf61fd8e7be6caf75f429fdca8beb3ed76584befb503b1569faee373ed"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1816,9 +1816,9 @@ dependencies = [
 
 [[package]]
 name = "v8"
-version = "0.105.0"
+version = "0.105.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "692624c4fd58ff50aa6d690c159df18e7881c13970005b9b2bff77dc425fd370"
+checksum = "b3f1b18ae89236d39abfa7136ec712f1d2daab61cddeef00b61a804e8a9b2dee"
 dependencies = [
  "bindgen",
  "bitflags 2.6.0",
