@@ -435,6 +435,8 @@ const FontFaceInternals = class FontFace extends IdentityConstructor {
 
 export class FontFace extends Object {
   constructor(family, source, descriptors = undefined) {
+    const prefix = "Failed to construct 'FontFace'";
+    requiredArguments(arguments.length, 2, prefix);
     family = convertDOMString(family);
     source = convertDOMStringOrBufferSource(source);
     descriptors = convertFontFaceDescriptors(descriptors);
