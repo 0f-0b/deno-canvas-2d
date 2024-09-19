@@ -14,7 +14,8 @@ mod state;
 mod text;
 mod wrap;
 
-use css::color::{AbsoluteColor, ComputedColor};
+use css::color::{AbsoluteColor, AbsoluteColorValue, ComputedColor};
+use cssparser::ToCss as _;
 use deno_core::anyhow;
 use deno_core::error::range_error;
 use euclid::default::{Point2D, Size2D};
@@ -95,16 +96,11 @@ fn resolve_color_for_canvas(computed: ComputedColor) -> AbsoluteColor {
 }
 
 fn serialize_color_for_canvas(color: AbsoluteColor) -> String {
-    let alpha = color.alpha;
-    let srgb = color.value.into_srgb();
-    let r = (srgb.red * 255.0).round() as u8;
-    let g = (srgb.green * 255.0).round() as u8;
-    let b = (srgb.blue * 255.0).round() as u8;
-    let a = (alpha * 1000.0).round() / 1000.0;
-    if a == 1.0 {
-        format!("#{r:02x}{g:02x}{b:02x}")
-    } else {
-        format!("rgba({r}, {g}, {b}, {a})")
+    match color.value {
+        AbsoluteColorValue::LegacyRgb(c) if color.alpha == 1.0 => {
+            format!("#{:02x}{:02x}{:02x}", c.red, c.green, c.blue)
+        }
+        _ => color.to_css_string(),
     }
 }
 

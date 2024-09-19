@@ -1,9 +1,10 @@
 pub mod encoding;
 
 use std::convert::Infallible;
+use std::fmt;
 
 use cssparser::color::PredefinedColorSpace;
-use cssparser::{ParseError, Parser};
+use cssparser::{ParseError, Parser, ToCss};
 use cssparser_color::{parse_color_with, ColorParser, FromParsedColor};
 use palette::chromatic_adaptation::AdaptInto as _;
 use palette::color_difference::EuclideanDistance as _;
@@ -72,7 +73,7 @@ where
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AbsoluteColorValue {
-    LegacyRgb(Srgb),
+    LegacyRgb(Srgb<u8>),
     Lab(Lab<D50>),
     Lch(Lch<D50>),
     Oklab(Oklab),
@@ -88,11 +89,11 @@ pub enum AbsoluteColorValue {
 }
 
 impl AbsoluteColorValue {
-    pub const BLACK: Self = Self::LegacyRgb(Rgb::new(0.0, 0.0, 0.0));
+    pub const BLACK: Self = Self::LegacyRgb(Rgb::new(0, 0, 0));
 
     pub fn into_oklch(self) -> Oklch {
         match self {
-            Self::LegacyRgb(c) => c.into_color_unclamped(),
+            Self::LegacyRgb(c) => c.into_linear().into_color_unclamped(),
             Self::Lab(c) => c.adapt_into(),
             Self::Lch(c) => c.adapt_into(),
             Self::Oklab(c) => c.into_color_unclamped(),
@@ -108,13 +109,6 @@ impl AbsoluteColorValue {
         }
     }
 
-    pub fn into_srgb(self) -> Srgb {
-        match self {
-            Self::LegacyRgb(c) => c,
-            _ => gamut_map_oklch_to_rgb(self.into_oklch()),
-        }
-    }
-
     pub fn into_linear_srgb(self) -> LinSrgb {
         match self {
             Self::LegacyRgb(c) => c.into_linear(),
@@ -124,7 +118,7 @@ impl AbsoluteColorValue {
 
     pub fn into_linear_display_p3(self) -> LinDisplayP3 {
         match self {
-            Self::LegacyRgb(c) => c.into_color_unclamped(),
+            Self::LegacyRgb(c) => c.into_linear().into_color_unclamped(),
             _ => gamut_map_oklch_to_rgb(self.into_oklch()),
         }
     }
@@ -147,6 +141,115 @@ impl AbsoluteColor {
     };
 }
 
+impl ToCss for AbsoluteColor {
+    fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
+        use cssparser::color::PredefinedColorSpace;
+        use cssparser_color::{ColorFunction, Lab, Lch, Oklab, Oklch, RgbaLegacy};
+
+        match self.value {
+            AbsoluteColorValue::LegacyRgb(c) => RgbaLegacy {
+                red: c.red,
+                green: c.green,
+                blue: c.blue,
+                alpha: self.alpha,
+            }
+            .to_css(dest),
+            AbsoluteColorValue::Lab(c) => Lab {
+                lightness: Some(c.l),
+                a: Some(c.a),
+                b: Some(c.b),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::Lch(c) => Lch {
+                lightness: Some(c.l),
+                chroma: Some(c.chroma),
+                hue: Some(c.hue.into_raw_degrees()),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::Oklab(c) => Oklab {
+                lightness: Some(c.l),
+                a: Some(c.a),
+                b: Some(c.b),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::Oklch(c) => Oklch {
+                lightness: Some(c.l),
+                chroma: Some(c.chroma),
+                hue: Some(c.hue.into_raw_degrees()),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::Srgb(c) => ColorFunction {
+                color_space: PredefinedColorSpace::Srgb,
+                c1: Some(c.red),
+                c2: Some(c.green),
+                c3: Some(c.blue),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::SrgbLinear(c) => ColorFunction {
+                color_space: PredefinedColorSpace::SrgbLinear,
+                c1: Some(c.red),
+                c2: Some(c.green),
+                c3: Some(c.blue),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::DisplayP3(c) => ColorFunction {
+                color_space: PredefinedColorSpace::DisplayP3,
+                c1: Some(c.red),
+                c2: Some(c.green),
+                c3: Some(c.blue),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::A98Rgb(c) => ColorFunction {
+                color_space: PredefinedColorSpace::A98Rgb,
+                c1: Some(c.red),
+                c2: Some(c.green),
+                c3: Some(c.blue),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::ProphotoRgb(c) => ColorFunction {
+                color_space: PredefinedColorSpace::ProphotoRgb,
+                c1: Some(c.red),
+                c2: Some(c.green),
+                c3: Some(c.blue),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::Rec2020(c) => ColorFunction {
+                color_space: PredefinedColorSpace::Rec2020,
+                c1: Some(c.red),
+                c2: Some(c.green),
+                c3: Some(c.blue),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::XyzD50(c) => ColorFunction {
+                color_space: PredefinedColorSpace::XyzD50,
+                c1: Some(c.x),
+                c2: Some(c.y),
+                c3: Some(c.z),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::XyzD65(c) => ColorFunction {
+                color_space: PredefinedColorSpace::XyzD65,
+                c1: Some(c.x),
+                c2: Some(c.y),
+                c3: Some(c.z),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ComputedColor {
     Absolute(AbsoluteColor),
@@ -160,7 +263,7 @@ impl FromParsedColor for ComputedColor {
 
     fn from_rgba(red: u8, green: u8, blue: u8, alpha: f32) -> Self {
         Self::Absolute(AbsoluteColor {
-            value: AbsoluteColorValue::LegacyRgb(Rgb::new(red, green, blue).into_format()),
+            value: AbsoluteColorValue::LegacyRgb(Rgb::new(red, green, blue)),
             alpha,
         })
     }
@@ -176,7 +279,9 @@ impl FromParsedColor for ComputedColor {
         let lightness = lightness.unwrap_or(0.0);
         let alpha = alpha.unwrap_or(0.0);
         Self::Absolute(AbsoluteColor {
-            value: AbsoluteColorValue::LegacyRgb(Hsl::new(hue, saturation, lightness).into_color()),
+            value: AbsoluteColorValue::LegacyRgb(Rgb::from_format(
+                Hsl::new(hue, saturation, lightness).into_color(),
+            )),
             alpha,
         })
     }
@@ -192,7 +297,9 @@ impl FromParsedColor for ComputedColor {
         let blackness = blackness.unwrap_or(0.0);
         let alpha = alpha.unwrap_or(0.0);
         Self::Absolute(AbsoluteColor {
-            value: AbsoluteColorValue::LegacyRgb(Hwb::new(hue, whiteness, blackness).into_color()),
+            value: AbsoluteColorValue::LegacyRgb(Rgb::from_format(
+                Hwb::new(hue, whiteness, blackness).into_color(),
+            )),
             alpha,
         })
     }
