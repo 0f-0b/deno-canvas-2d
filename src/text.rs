@@ -691,6 +691,7 @@ impl FontMetrics {
             ideographic_baseline,
         }
     }
+
     pub fn empty() -> Self {
         Self {
             ascent: 0.0,
