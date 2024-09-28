@@ -266,7 +266,6 @@ deno_core::extension!(
         text::op_canvas_2d_font_face_line_gap_override,
         text::op_canvas_2d_font_face_set_line_gap_override,
         text::op_canvas_2d_font_face_load,
-        text::op_canvas_2d_font_face_set_new,
         text::op_canvas_2d_font_face_set_insert,
         text::op_canvas_2d_font_face_set_remove,
         text::op_canvas_2d_font_face_set_clear,

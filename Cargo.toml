@@ -20,7 +20,7 @@ image = { version = "0.25.2", default-features = false, features = [
 itertools = "0.13.0"
 lyon_geom = "1.0.5"
 palette = { version = "0.7.6", default-features = false, features = ["std"] }
-png = "0.17.13"
+png = "0.17.14"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "bc86ee8882c17dd37296d4d7dd5c0df460a12812", default-features = false }
 strum_macros = "0.26.4"
 svgtypes = "0.15.2"

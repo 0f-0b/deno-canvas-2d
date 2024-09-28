@@ -21,7 +21,6 @@ export {
   op_canvas_2d_font_face_set_insert,
   op_canvas_2d_font_face_set_line_gap_override,
   op_canvas_2d_font_face_set_match,
-  op_canvas_2d_font_face_set_new,
   op_canvas_2d_font_face_set_remove,
   op_canvas_2d_font_face_set_stretch,
   op_canvas_2d_font_face_set_style,

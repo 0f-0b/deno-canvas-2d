@@ -129,6 +129,7 @@ export class ImageBitmapRenderingContext extends Object {
       ImageBitmapRenderingContextInternals.setBitmap(this, raw);
       return;
     }
+    // deno-lint-ignore prefer-primordials
     const raw = ImageBitmapInternals.transfer(bitmap);
     if (!raw) {
       throw new DOMException("Image is detached", "InvalidStateError");

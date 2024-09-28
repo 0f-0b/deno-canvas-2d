@@ -1437,12 +1437,6 @@ pub fn op_canvas_2d_font_face_load(
     })
 }
 
-#[op2]
-#[cppgc]
-pub fn op_canvas_2d_font_face_set_new() -> Wrap<Rc<RefCell<FontFaceSet>>> {
-    Wrap::new(Rc::new(RefCell::new(FontFaceSet::new())))
-}
-
 #[op2(fast)]
 pub fn op_canvas_2d_font_face_set_insert(
     #[cppgc] this: &Wrap<Rc<RefCell<FontFaceSet>>>,

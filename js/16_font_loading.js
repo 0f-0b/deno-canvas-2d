@@ -35,7 +35,6 @@ import {
   op_canvas_2d_font_face_set_insert,
   op_canvas_2d_font_face_set_line_gap_override,
   op_canvas_2d_font_face_set_match,
-  op_canvas_2d_font_face_set_new,
   op_canvas_2d_font_face_set_remove,
   op_canvas_2d_font_face_set_stretch,
   op_canvas_2d_font_face_set_style,
@@ -947,15 +946,9 @@ function makeSetlike(prototype, getSetEntries) {
 }
 
 export class FontFaceSet extends EventTarget {
-  constructor(initialFaces) {
-    initialFaces = convertSequenceOfFontFace(initialFaces);
-    const newTarget = capturePrototype(new.target, FontFaceSet);
-    const o = ReflectConstruct(EventTarget, [], newTarget);
-    new FontFaceSetInternals(o, op_canvas_2d_font_face_set_new());
-    for (const font of new SafeArrayIterator(initialFaces)) {
-      FontFaceSetInternals.add(o, font);
-    }
-    return o;
+  // deno-lint-ignore constructor-super
+  constructor() {
+    illegalConstructor();
   }
 
   add(font) {
