@@ -304,6 +304,7 @@ impl Debug for BoxedRenderFunction {
 pub enum FilterChain {
     Source {
         render: BoxedRenderFunction,
+        alpha: f32,
     },
     Passthrough {
         src: Rc<FilterChain>,
@@ -334,7 +335,7 @@ pub enum FilterChain {
 impl FilterChain {
     pub fn render(&self, size: Size2D<usize>, transform: &Transform2D<f32>) -> raqote::DrawTarget {
         match *self {
-            Self::Source { ref render } => {
+            Self::Source { ref render, alpha } => {
                 let mut result = raqote::DrawTarget::new(
                     size.width.try_into().unwrap(),
                     size.height.try_into().unwrap(),
@@ -344,6 +345,7 @@ impl FilterChain {
                     &mut result,
                     raqote::DrawOptions {
                         blend_mode: raqote::BlendMode::Src,
+                        alpha,
                         ..Default::default()
                     },
                 );
@@ -401,8 +403,8 @@ impl FilterChain {
         )
     }
 
-    pub fn new(render: BoxedRenderFunction) -> Rc<Self> {
-        Rc::new(Self::Source { render })
+    pub fn new(render: BoxedRenderFunction, alpha: f32) -> Rc<Self> {
+        Rc::new(Self::Source { render, alpha })
     }
 
     pub fn transform(self: Rc<Self>, mat: &Transform2D<f32>) -> Rc<Self> {
@@ -457,10 +459,11 @@ impl FilterChain {
 
 pub fn compile_filter(
     render: BoxedRenderFunction,
+    alpha: f32,
     computed: &ComputedFilter,
     destination_color_space: CanvasColorSpace,
 ) -> Rc<FilterChain> {
-    let source = FilterChain::new(render);
+    let source = FilterChain::new(render, alpha);
     let Some(ref list) = computed.filter_value_list else {
         return source;
     };

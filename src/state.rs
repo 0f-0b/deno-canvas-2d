@@ -845,7 +845,6 @@ impl CanvasState {
                     .current_drawing_state
                     .compositing_and_blending_operator
                     .to_raqote(self.alpha),
-                alpha: self.current_drawing_state.global_alpha as f32,
                 ..Default::default()
             },
         );
@@ -894,10 +893,11 @@ impl CanvasState {
         }
         let filter = compile_filter(
             BoxedRenderFunction(Box::new(prepare(self)?)),
+            self.current_drawing_state.global_alpha as f32,
             &self.current_drawing_state.filter,
             self.color_space,
         );
-        if let FilterChain::Source { ref render } = *filter {
+        if let FilterChain::Source { ref render, alpha } = *filter {
             match self.current_drawing_state.compositing_and_blending_operator {
                 BlendOrCompositeMode::Copy => {
                     if self.alpha {
@@ -912,7 +912,7 @@ impl CanvasState {
                                 .current_drawing_state
                                 .compositing_and_blending_operator
                                 .to_raqote(self.alpha),
-                            alpha: self.current_drawing_state.global_alpha as f32,
+                            alpha,
                             ..Default::default()
                         },
                     );
@@ -950,7 +950,7 @@ impl CanvasState {
                                 .current_drawing_state
                                 .compositing_and_blending_operator
                                 .to_raqote(self.alpha),
-                            alpha: self.current_drawing_state.global_alpha as f32,
+                            alpha,
                             ..Default::default()
                         },
                     );
