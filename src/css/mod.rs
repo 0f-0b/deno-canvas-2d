@@ -11,14 +11,14 @@ use cssparser::{
 use cssparser_color::NumberOrPercentage;
 use itertools::Itertools as _;
 
-pub mod angle;
-pub mod color;
-pub mod filter;
-pub mod font;
-pub mod length;
-pub mod transform;
+pub(crate) mod angle;
+pub(crate) mod color;
+pub(crate) mod filter;
+pub(crate) mod font;
+pub(crate) mod length;
+pub(crate) mod transform;
 
-pub trait FromCss: Sized {
+pub(crate) trait FromCss: Sized {
     type Err;
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>>;
@@ -125,7 +125,7 @@ impl FromCss for UnicodeRange {
 }
 
 #[derive(Clone, Debug)]
-pub struct UnicodeRangeSet {
+pub(crate) struct UnicodeRangeSet {
     bounds: Box<[u32]>,
 }
 
@@ -332,3 +332,44 @@ impl Display for SyntaxError {
 }
 
 impl Error for SyntaxError {}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ValueKind {
+    Color,
+    TransformList,
+    FontSource,
+    FontFamilyName,
+    FontStyleRange,
+    FontWeightRange,
+    FontWidthRange,
+    UnicodeRange,
+    FontFeatureSettings,
+    FontVariationSettings,
+    FontDisplayPolicy,
+    AscentOverride,
+    DescentOverride,
+    LineGapOverride,
+    Font,
+}
+
+impl Display for ValueKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            ValueKind::Color => f.write_str("color"),
+            ValueKind::TransformList => f.write_str("transform list"),
+            ValueKind::FontSource => f.write_str("font source"),
+            ValueKind::FontFamilyName => f.write_str("font family name"),
+            ValueKind::FontStyleRange => f.write_str("font style range"),
+            ValueKind::FontWeightRange => f.write_str("font weight range"),
+            ValueKind::FontWidthRange => f.write_str("font width range"),
+            ValueKind::UnicodeRange => f.write_str("unicode range"),
+            ValueKind::FontFeatureSettings => f.write_str("font feature settings"),
+            ValueKind::FontVariationSettings => f.write_str("font variation settings"),
+            ValueKind::FontDisplayPolicy => f.write_str("font display policy"),
+            ValueKind::AscentOverride => f.write_str("ascent override"),
+            ValueKind::DescentOverride => f.write_str("descent override"),
+            ValueKind::LineGapOverride => f.write_str("line gap override"),
+            ValueKind::Font => f.write_str("font"),
+        }
+    }
+}

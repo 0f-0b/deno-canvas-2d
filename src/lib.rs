@@ -1,6 +1,7 @@
 mod codec;
 mod convert;
-mod css;
+pub mod css;
+pub mod error;
 mod filter;
 mod gradient;
 mod harfbuzz_ext;
@@ -16,8 +17,7 @@ mod wrap;
 
 use css::color::{AbsoluteColor, AbsoluteColorValue, ComputedColor};
 use cssparser::ToCss as _;
-use deno_core::anyhow;
-use deno_core::error::range_error;
+use error::Canvas2DError;
 use euclid::default::{Point2D, Size2D};
 use euclid::{point2, size2};
 use palette::stimulus::IntoStimulus as _;
@@ -30,26 +30,22 @@ enum CanvasColorSpace {
     DisplayP3,
 }
 
-fn to_raqote_point(x: i64, y: i64) -> anyhow::Result<Point2D<i32>> {
-    let x = x
-        .try_into()
-        .map_err(|_| range_error(format!("Invalid x: {x}")))?;
-    let y = y
-        .try_into()
-        .map_err(|_| range_error(format!("Invalid y: {y}")))?;
+fn to_raqote_point(x: i64, y: i64) -> Result<Point2D<i32>, Canvas2DError> {
+    let x = x.try_into().map_err(|_| Canvas2DError::InvalidX { x })?;
+    let y = y.try_into().map_err(|_| Canvas2DError::InvalidY { y })?;
     Ok(point2(x, y))
 }
 
-fn to_raqote_size(width: u64, height: u64) -> anyhow::Result<Size2D<i32>> {
+fn to_raqote_size(width: u64, height: u64) -> Result<Size2D<i32>, Canvas2DError> {
     let width = width
         .try_into()
-        .map_err(|_| range_error(format!("Invalid width: {width}")))?;
+        .map_err(|_| Canvas2DError::InvalidWidth { width })?;
     let height = height
         .try_into()
-        .map_err(|_| range_error(format!("Invalid height: {height}")))?;
+        .map_err(|_| Canvas2DError::InvalidHeight { height })?;
     let size = width as u64 * height as u64;
     if size > i32::MAX as u64 {
-        return Err(range_error(format!("Invalid size: {size}")));
+        return Err(Canvas2DError::InvalidSize { size });
     }
     Ok(size2(width, height))
 }
@@ -325,16 +321,3 @@ deno_core::extension!(
         text::init(state);
     },
 );
-
-pub fn get_error_class_name(e: &anyhow::Error) -> Option<&'static str> {
-    if e.is::<css::SyntaxError>() {
-        return Some("DOMExceptionSyntaxError");
-    }
-    if e.is::<png::EncodingError>() {
-        return Some("DOMExceptionEncodingError");
-    }
-    if e.is::<image::ImageError>() {
-        return Some("DOMExceptionInvalidStateError");
-    }
-    None
-}

@@ -8,9 +8,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use cssparser::ToCss as _;
-use deno_core::anyhow::Context as _;
-use deno_core::error::{custom_error, type_error};
-use deno_core::{anyhow, op2, v8, GarbageCollected, OpState};
+use deno_core::{op2, v8, GarbageCollected, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2};
 use harfbuzz_rs as hb;
@@ -29,7 +27,8 @@ use super::css::font::{
     ComputedFamilyName, ComputedFont, ComputedFontStyle, ComputedFontVariantCaps,
     ComputedFontWeight, ComputedFontWidth, SpecifiedSpecificFamily,
 };
-use super::css::{FromCss as _, SyntaxError, UnicodeRangeSet};
+use super::css::{self, FromCss as _, UnicodeRangeSet};
+use super::error::Canvas2DError;
 use super::harfbuzz_ext::{FaceExt as _, FontExt as _};
 use super::path::Path;
 use super::state::{
@@ -279,10 +278,11 @@ impl FontFaceData {
         self.line_gap_override = value;
     }
 
-    pub fn load(&mut self, blob: &[u8]) -> anyhow::Result<()> {
+    pub fn load(&mut self, blob: &[u8], from_url: bool) -> Result<(), Canvas2DError> {
         match self.state {
             FontFaceState::Unloaded => {
-                let blob = fontsan::process(blob).map_err(|_| type_error("Invalid font data"))?;
+                let blob =
+                    fontsan::process(blob).map_err(|_| Canvas2DError::DecodeFont { from_url })?;
                 self.state = FontFaceState::Loaded(hb::Font::new(hb::Face::new(blob, 0)).into());
                 Ok(())
             }
@@ -1075,81 +1075,111 @@ pub fn prepare_text(
     (path, text_metrics)
 }
 
-fn parse_source_or_throw(css: &str) -> anyhow::Result<SpecifiedFontSources> {
-    SpecifiedFontSources::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font source '{css}'"))
+fn parse_source_or_throw(css: &str) -> Result<SpecifiedFontSources, Canvas2DError> {
+    SpecifiedFontSources::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontSource,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_family_or_throw(css: &str) -> anyhow::Result<SpecifiedSpecificFamily> {
-    SpecifiedSpecificFamily::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font family name '{css}'"))
+fn parse_family_or_throw(css: &str) -> Result<SpecifiedSpecificFamily, Canvas2DError> {
+    SpecifiedSpecificFamily::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontFamilyName,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_style_or_throw(css: &str) -> anyhow::Result<SpecifiedFontStyleRange> {
-    SpecifiedFontStyleRange::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font style range '{css}'"))
+fn parse_style_or_throw(css: &str) -> Result<SpecifiedFontStyleRange, Canvas2DError> {
+    SpecifiedFontStyleRange::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontStyleRange,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_weight_or_throw(css: &str) -> anyhow::Result<SpecifiedFontWeightRange> {
-    SpecifiedFontWeightRange::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font weight range '{css}'"))
+fn parse_weight_or_throw(css: &str) -> Result<SpecifiedFontWeightRange, Canvas2DError> {
+    SpecifiedFontWeightRange::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontWeightRange,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_stretch_or_throw(css: &str) -> anyhow::Result<SpecifiedFontWidthRange> {
-    SpecifiedFontWidthRange::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font width range '{css}'"))
+fn parse_stretch_or_throw(css: &str) -> Result<SpecifiedFontWidthRange, Canvas2DError> {
+    SpecifiedFontWidthRange::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontWidthRange,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_unicode_range_or_throw(css: &str) -> anyhow::Result<SpecifiedUnicodeRange> {
-    SpecifiedUnicodeRange::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid unicode range '{css}'"))
+fn parse_unicode_range_or_throw(css: &str) -> Result<SpecifiedUnicodeRange, Canvas2DError> {
+    SpecifiedUnicodeRange::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::UnicodeRange,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_feature_settings_or_throw(css: &str) -> anyhow::Result<SpecifiedFontFeatureSettings> {
-    SpecifiedFontFeatureSettings::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font feature settings '{css}'"))
+fn parse_feature_settings_or_throw(
+    css: &str,
+) -> Result<SpecifiedFontFeatureSettings, Canvas2DError> {
+    SpecifiedFontFeatureSettings::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontFeatureSettings,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_variation_settings_or_throw(css: &str) -> anyhow::Result<SpecifiedFontVariationSettings> {
-    SpecifiedFontVariationSettings::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font variation settings '{css}'"))
+fn parse_variation_settings_or_throw(
+    css: &str,
+) -> Result<SpecifiedFontVariationSettings, Canvas2DError> {
+    SpecifiedFontVariationSettings::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontVariationSettings,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_display_or_throw(css: &str) -> anyhow::Result<SpecifiedFontDisplay> {
-    SpecifiedFontDisplay::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font display policy '{css}'"))
+fn parse_display_or_throw(css: &str) -> Result<SpecifiedFontDisplay, Canvas2DError> {
+    SpecifiedFontDisplay::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::FontDisplayPolicy,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_ascent_override_or_throw(css: &str) -> anyhow::Result<SpecifiedMetricsOverride> {
-    SpecifiedMetricsOverride::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid ascent override '{css}'"))
+fn parse_ascent_override_or_throw(css: &str) -> Result<SpecifiedMetricsOverride, Canvas2DError> {
+    SpecifiedMetricsOverride::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::AscentOverride,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_descent_override_or_throw(css: &str) -> anyhow::Result<SpecifiedMetricsOverride> {
-    SpecifiedMetricsOverride::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid descent override '{css}'"))
+fn parse_descent_override_or_throw(css: &str) -> Result<SpecifiedMetricsOverride, Canvas2DError> {
+    SpecifiedMetricsOverride::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::DescentOverride,
+        details: css::SyntaxError::from(e),
+    })
 }
 
-fn parse_line_gap_override_or_throw(css: &str) -> anyhow::Result<SpecifiedMetricsOverride> {
-    SpecifiedMetricsOverride::from_css_string(css)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid line gap override '{css}'"))
+fn parse_line_gap_override_or_throw(css: &str) -> Result<SpecifiedMetricsOverride, Canvas2DError> {
+    SpecifiedMetricsOverride::from_css_string(css).map_err(|e| Canvas2DError::ParseCss {
+        css: css.to_owned(),
+        kind: css::ValueKind::LineGapOverride,
+        details: css::SyntaxError::from(e),
+    })
 }
 
 #[op2]
 #[string]
-pub fn op_canvas_2d_font_face_select_source(#[string] source: &str) -> anyhow::Result<String> {
+pub fn op_canvas_2d_font_face_select_source(
+    #[string] source: &str,
+) -> Result<String, Canvas2DError> {
     for source in parse_source_or_throw(source)?.font_source_list.iter() {
         match *source {
             SpecifiedFontSource::Url(ref url) => return Ok((**url).to_owned()),
@@ -1157,10 +1187,7 @@ pub fn op_canvas_2d_font_face_select_source(#[string] source: &str) -> anyhow::R
         }
     }
     // TODO implement local font fallback
-    Err(custom_error(
-        "DOMExceptionSyntaxError",
-        "Local font fallback is not supported",
-    ))
+    Err(Canvas2DError::UnsupportedLocalFontFallback)
 }
 
 #[op2]
@@ -1178,7 +1205,7 @@ pub fn op_canvas_2d_font_face_new(
     #[string] ascent_override: String,
     #[string] descent_override: String,
     #[string] line_gap_override: String,
-) -> anyhow::Result<Wrap<Rc<FontFace>>> {
+) -> Result<Wrap<Rc<FontFace>>, Canvas2DError> {
     Ok(Wrap::new(Rc::new(FontFace::new(FontFaceData::new(
         parse_family_or_throw(&family)?,
         parse_style_or_throw(&style)?,
@@ -1231,7 +1258,7 @@ pub fn op_canvas_2d_font_face_family(#[cppgc] this: &Wrap<Rc<FontFace>>) -> Stri
 pub fn op_canvas_2d_font_face_set_family(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_family_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_family(value);
@@ -1249,7 +1276,7 @@ pub fn op_canvas_2d_font_face_style(#[cppgc] this: &Wrap<Rc<FontFace>>) -> Strin
 pub fn op_canvas_2d_font_face_set_style(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_style_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_style(value);
@@ -1267,7 +1294,7 @@ pub fn op_canvas_2d_font_face_weight(#[cppgc] this: &Wrap<Rc<FontFace>>) -> Stri
 pub fn op_canvas_2d_font_face_set_weight(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_weight_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_weight(value);
@@ -1285,7 +1312,7 @@ pub fn op_canvas_2d_font_face_stretch(#[cppgc] this: &Wrap<Rc<FontFace>>) -> Str
 pub fn op_canvas_2d_font_face_set_stretch(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_stretch_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_width(value);
@@ -1303,7 +1330,7 @@ pub fn op_canvas_2d_font_face_unicode_range(#[cppgc] this: &Wrap<Rc<FontFace>>) 
 pub fn op_canvas_2d_font_face_set_unicode_range(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_unicode_range_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_unicode_range(value);
@@ -1321,7 +1348,7 @@ pub fn op_canvas_2d_font_face_feature_settings(#[cppgc] this: &Wrap<Rc<FontFace>
 pub fn op_canvas_2d_font_face_set_feature_settings(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_feature_settings_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_feature_settings(value);
@@ -1339,7 +1366,7 @@ pub fn op_canvas_2d_font_face_variation_settings(#[cppgc] this: &Wrap<Rc<FontFac
 pub fn op_canvas_2d_font_face_set_variation_settings(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_variation_settings_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_variation_settings(value);
@@ -1357,7 +1384,7 @@ pub fn op_canvas_2d_font_face_display(#[cppgc] this: &Wrap<Rc<FontFace>>) -> Str
 pub fn op_canvas_2d_font_face_set_display(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_display_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_display(value);
@@ -1375,7 +1402,7 @@ pub fn op_canvas_2d_font_face_ascent_override(#[cppgc] this: &Wrap<Rc<FontFace>>
 pub fn op_canvas_2d_font_face_set_ascent_override(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_ascent_override_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_ascent_override(value);
@@ -1393,7 +1420,7 @@ pub fn op_canvas_2d_font_face_descent_override(#[cppgc] this: &Wrap<Rc<FontFace>
 pub fn op_canvas_2d_font_face_set_descent_override(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_descent_override_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_descent_override(value);
@@ -1411,7 +1438,7 @@ pub fn op_canvas_2d_font_face_line_gap_override(#[cppgc] this: &Wrap<Rc<FontFace
 pub fn op_canvas_2d_font_face_set_line_gap_override(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[string] value: &str,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let value = parse_line_gap_override_or_throw(value)?;
     let mut data = this.data().borrow_mut();
     data.set_line_gap_override(value);
@@ -1423,18 +1450,9 @@ pub fn op_canvas_2d_font_face_load(
     #[cppgc] this: &Wrap<Rc<FontFace>>,
     #[anybuffer] source: &[u8],
     from_url: bool,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let mut data = this.data().borrow_mut();
-    data.load(source).map_err(|err| {
-        custom_error(
-            if from_url {
-                "DOMExceptionNetworkError"
-            } else {
-                "DOMExceptionSyntaxError"
-            },
-            format!("{}", err),
-        )
-    })
+    data.load(source, from_url)
 }
 
 #[op2(fast)]
@@ -1467,11 +1485,13 @@ pub fn op_canvas_2d_font_face_set_match<'a>(
     #[cppgc] this: &Wrap<Rc<RefCell<FontFaceSet>>>,
     #[string] font: &str,
     #[string] text: &str,
-) -> anyhow::Result<v8::Local<'a, v8::Set>> {
+) -> Result<v8::Local<'a, v8::Set>, Canvas2DError> {
     let this = this.borrow();
-    let font = ComputedFont::from_css_string(font)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid font '{font}'"))?;
+    let font = ComputedFont::from_css_string(font).map_err(|e| Canvas2DError::ParseCss {
+        css: font.to_owned(),
+        kind: css::ValueKind::Font,
+        details: css::SyntaxError::from(e),
+    })?;
     let family = font.family.family_list.as_ref();
     let attrs = FontAttributes {
         style: font.style,

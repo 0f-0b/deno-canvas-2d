@@ -1,8 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use deno_core::error::range_error;
-use deno_core::{anyhow, op2, GarbageCollected};
+use deno_core::{op2, GarbageCollected};
 use euclid::default::{Box2D, Point2D, Size2D, Transform2D};
 use euclid::size2;
 use strum_macros::FromRepr;
@@ -14,6 +13,7 @@ use super::convert::{
     premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_srgb, transform_argb32,
     unpack_argb32_to_rgba8,
 };
+use super::error::Canvas2DError;
 use super::image_data::{AlignedImageDataViewMut, ImageData, ImageDataView};
 use super::state::CanvasState;
 use super::wrap::Wrap;
@@ -53,7 +53,7 @@ pub fn aspect_resize(
     sh: u64,
     dw: Option<u32>,
     dh: Option<u32>,
-) -> anyhow::Result<Size2D<u32>> {
+) -> Result<Size2D<u32>, Canvas2DError> {
     let (dw, dh) = match (dw, dh) {
         (Some(dw), Some(dh)) => (dw as u128, dh as u128),
         (Some(dw), None) => (dw as u128, (sh as u128 * dw as u128).div_ceil(sw as u128)),
@@ -62,10 +62,10 @@ pub fn aspect_resize(
     };
     let dw = dw
         .try_into()
-        .map_err(|_| range_error(format!("Invalid bitmap width: {dw}")))?;
+        .map_err(|_| Canvas2DError::InvalidBitmapWidth { width: dw })?;
     let dh = dh
         .try_into()
-        .map_err(|_| range_error(format!("Invalid bitmap height: {dh}")))?;
+        .map_err(|_| Canvas2DError::InvalidBitmapHeight { height: dh })?;
     Ok(size2(dw, dh))
 }
 
@@ -119,7 +119,7 @@ impl ImageBitmap {
         y: i64,
         width: Option<u32>,
         height: Option<u32>,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Canvas2DError> {
         let image = src.as_raqote_image();
         let color_space = src.color_space();
         let width = width.unwrap_or(image.width as u32);
@@ -162,7 +162,7 @@ impl ImageBitmap {
         dh: Option<u32>,
         resize_quality: ResizeQuality,
         image_orientation: ImageOrientation,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Canvas2DError> {
         use image::imageops::replace;
         use image::{ImageBuffer, Rgba, RgbaImage};
 
@@ -266,7 +266,7 @@ impl ImageBitmap {
         height: u32,
         color_space: CanvasColorSpace,
         f: impl FnOnce(&mut raqote::DrawTarget<&mut [u32]>),
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Canvas2DError> {
         let size = to_raqote_size(width as u64, height as u64)?;
         let mut data = std::iter::repeat(0)
             .take((width * height) as usize)
@@ -313,7 +313,7 @@ impl ImageBitmap {
         }
     }
 
-    pub fn into_raqote_image(self) -> anyhow::Result<Option<raqote_ext::OwnedImage>> {
+    pub fn into_raqote_image(self) -> Result<Option<raqote_ext::OwnedImage>, Canvas2DError> {
         Ok(match self.data {
             Some(data) => {
                 let size = to_raqote_size(self.width as u64, self.height as u64)?;
@@ -327,7 +327,7 @@ impl ImageBitmap {
         })
     }
 
-    pub fn as_raqote_image(&self) -> anyhow::Result<Option<raqote::Image>> {
+    pub fn as_raqote_image(&self) -> Result<Option<raqote::Image>, Canvas2DError> {
         Ok(match self.data {
             Some(ref data) => {
                 let size = to_raqote_size(self.width as u64, self.height as u64)?;
@@ -341,7 +341,7 @@ impl ImageBitmap {
         })
     }
 
-    pub fn crop(&self, x: i64, y: i64, width: u32, height: u32) -> anyhow::Result<Self> {
+    pub fn crop(&self, x: i64, y: i64, width: u32, height: u32) -> Result<Self, Canvas2DError> {
         let color_space = self.color_space;
         if out_of_bounds(self.width, self.height, x, y, width, height) {
             return Ok(Self {
@@ -380,7 +380,7 @@ impl ImageBitmap {
         height: u32,
         quality: ResizeQuality,
         flip_y: bool,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Canvas2DError> {
         if width == self.width && height == self.height {
             return Ok(self.clone());
         }
@@ -430,7 +430,7 @@ impl ImageBitmap {
         mut dst: AlignedImageDataViewMut,
         x: i64,
         y: i64,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), Canvas2DError> {
         let Some(image) = self.as_raqote_image()? else {
             dst.data.fill(0);
             return Ok(());
@@ -514,7 +514,7 @@ pub fn op_canvas_2d_image_bitmap_from_canvas_state_crop(
     #[number] y: i64,
     width: u32,
     height: u32,
-) -> anyhow::Result<Wrap<RefCell<ImageBitmap>>> {
+) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
     let canvas_state = canvas_state.borrow();
     Ok(Wrap::new(RefCell::new(
         ImageBitmap::from_canvas_state_crop(
@@ -543,7 +543,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
     dh: u32,
     resize_quality: i32,
     image_orientation: i32,
-) -> anyhow::Result<Wrap<RefCell<ImageBitmap>>> {
+) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
     let src = ImageDataView {
         width: src_width,
         height: src_height,
@@ -584,7 +584,7 @@ pub fn op_canvas_2d_image_bitmap_empty_resize(
     #[number] sh: u64,
     dw: u32,
     dh: u32,
-) -> anyhow::Result<Wrap<RefCell<ImageBitmap>>> {
+) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
     let size = aspect_resize(sw, sh, non_zero_u32(dw), non_zero_u32(dh))?;
     Ok(Wrap::new(RefCell::new(ImageBitmap::empty(
         size.width,
@@ -627,7 +627,7 @@ pub fn op_canvas_2d_image_bitmap_crop(
     #[number] y: i64,
     width: u32,
     height: u32,
-) -> anyhow::Result<Wrap<RefCell<ImageBitmap>>> {
+) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
     let this = this.borrow();
     let width = non_zero_u32(width).unwrap_or(this.width);
     let height = non_zero_u32(height).unwrap_or(this.height);
@@ -642,7 +642,7 @@ pub fn op_canvas_2d_image_bitmap_resize(
     height: u32,
     quality: i32,
     image_orientation: i32,
-) -> anyhow::Result<Wrap<RefCell<ImageBitmap>>> {
+) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
     let this = this.take();
     let size = aspect_resize(
         this.width as u64,
@@ -669,7 +669,7 @@ pub fn op_canvas_2d_image_bitmap_get_image_data(
     dst_color_space: i32,
     #[number] x: i64,
     #[number] y: i64,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let this = this.borrow();
     let dst = AlignedImageDataViewMut {
         width: dst_width,

@@ -4,7 +4,7 @@ use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 use cssparser::ToCss as _;
-use deno_core::{anyhow, op2, v8, GarbageCollected, OpState};
+use deno_core::{op2, v8, GarbageCollected, OpState};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2, Angle};
 use strum_macros::FromRepr;
@@ -24,6 +24,7 @@ use super::css::font::{
 };
 use super::css::length::{ComputedLength, SpecifiedAbsoluteLength};
 use super::css::FromCss as _;
+use super::error::Canvas2DError;
 use super::filter::{compile_filter, BoxedRenderFunction, FilterChain};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
@@ -520,7 +521,7 @@ impl CanvasState {
         height: u64,
         alpha: bool,
         color_space: CanvasColorSpace,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Canvas2DError> {
         let size = to_raqote_size(width, height)?;
         let mut draw_target = raqote::DrawTarget::new(size.width, size.height);
         if !alpha {
@@ -570,7 +571,7 @@ impl CanvasState {
         }
     }
 
-    pub fn reset(&mut self, width: u64, height: u64) -> anyhow::Result<()> {
+    pub fn reset(&mut self, width: u64, height: u64) -> Result<(), Canvas2DError> {
         *self = Self::new(width, height, self.alpha, self.color_space)?;
         Ok(())
     }
@@ -1145,7 +1146,7 @@ impl CanvasState {
         dy: f64,
         dw: f64,
         dh: f64,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), Canvas2DError> {
         if sw == 0.0 || sh == 0.0 {
             return Ok(());
         }
@@ -1190,7 +1191,7 @@ impl CanvasState {
         mut dst: AlignedImageDataViewMut,
         x: i64,
         y: i64,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), Canvas2DError> {
         let dst_color_space = dst.color_space;
         let mut dst = dst.as_raqote_surface_rgba8()?;
         let src_origin = to_raqote_point(x, y)?;
@@ -1227,7 +1228,7 @@ impl CanvasState {
         sh: u64,
         dx: i64,
         dy: i64,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), Canvas2DError> {
         let src_color_space = src.color_space;
         let src = src.as_raqote_surface_rgba8()?;
         let src_origin = to_raqote_point(sx, sy)?;
@@ -1339,7 +1340,7 @@ pub fn op_canvas_2d_state_new(
     #[number] height: u64,
     alpha: bool,
     color_space: i32,
-) -> anyhow::Result<Wrap<RefCell<CanvasState>>> {
+) -> Result<Wrap<RefCell<CanvasState>>, Canvas2DError> {
     let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
     Ok(Wrap::new(RefCell::new(CanvasState::new(
         width,
@@ -1360,7 +1361,7 @@ pub fn op_canvas_2d_state_width(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> u
 pub fn op_canvas_2d_state_set_width(
     #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[number] width: u64,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let mut this = this.borrow_mut();
     let height = this.height();
     this.reset(width, height)
@@ -1377,7 +1378,7 @@ pub fn op_canvas_2d_state_height(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> 
 pub fn op_canvas_2d_state_set_height(
     #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[number] height: u64,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let mut this = this.borrow_mut();
     let width = this.width();
     this.reset(width, height)
@@ -1396,7 +1397,9 @@ pub fn op_canvas_2d_state_restore(#[cppgc] this: &Wrap<RefCell<CanvasState>>) {
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_state_reset(#[cppgc] this: &Wrap<RefCell<CanvasState>>) -> anyhow::Result<()> {
+pub fn op_canvas_2d_state_reset(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+) -> Result<(), Canvas2DError> {
     let mut this = this.borrow_mut();
     let width = this.width();
     let height = this.height();
@@ -2004,7 +2007,7 @@ pub fn op_canvas_2d_state_draw_image(
     dy: f64,
     dw: f64,
     dh: f64,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let mut this = this.borrow_mut();
     let image = image.take();
     if [sx, sy, sw, sh, dx, dy, dw, dh]
@@ -2025,7 +2028,7 @@ pub fn op_canvas_2d_state_get_image_data(
     dst_color_space: i32,
     #[number] x: i64,
     #[number] y: i64,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let this = this.borrow();
     let dst = AlignedImageDataViewMut {
         width: dst_width,
@@ -2050,7 +2053,7 @@ pub fn op_canvas_2d_state_put_image_data(
     #[number] sh: u64,
     #[number] dx: i64,
     #[number] dy: i64,
-) -> anyhow::Result<()> {
+) -> Result<(), Canvas2DError> {
     let mut this = this.borrow_mut();
     let src = AlignedImageDataView {
         width: src_width,

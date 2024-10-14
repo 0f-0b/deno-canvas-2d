@@ -24,6 +24,7 @@ png = "0.17.14"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "bc86ee8882c17dd37296d4d7dd5c0df460a12812", default-features = false }
 strum_macros = "0.26.4"
 svgtypes = "0.15.2"
+thiserror = "1.0.64"
 unicase = { git = "https://github.com/seanmonstar/unicase.git", rev = "8dc84ec6f13eae71c8d42e3b6e6d2c5ea249ed69" }
 unicode-bidi = "0.3.17"
 

@@ -1,5 +1,4 @@
-use deno_core::anyhow;
-
+use super::error::Canvas2DError;
 use super::{to_raqote_size, CanvasColorSpace};
 
 #[derive(Clone, Debug)]
@@ -27,7 +26,7 @@ pub struct AlignedImageDataView<'a> {
 }
 
 impl<'a> AlignedImageDataView<'a> {
-    pub fn as_raqote_surface_rgba8(&self) -> anyhow::Result<raqote::DrawTarget<&[u32]>> {
+    pub fn as_raqote_surface_rgba8(&self) -> Result<raqote::DrawTarget<&[u32]>, Canvas2DError> {
         let size = to_raqote_size(self.width as u64, self.height as u64)?;
         Ok(raqote::DrawTarget::from_backing(
             size.width,
@@ -46,7 +45,9 @@ pub struct AlignedImageDataViewMut<'a> {
 }
 
 impl<'a> AlignedImageDataViewMut<'a> {
-    pub fn as_raqote_surface_rgba8(&mut self) -> anyhow::Result<raqote::DrawTarget<&mut [u32]>> {
+    pub fn as_raqote_surface_rgba8(
+        &mut self,
+    ) -> Result<raqote::DrawTarget<&mut [u32]>, Canvas2DError> {
         let size = to_raqote_size(self.width as u64, self.height as u64)?;
         Ok(raqote::DrawTarget::from_backing(
             size.width,

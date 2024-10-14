@@ -2,13 +2,13 @@ use std::cell::RefCell;
 use std::f64::consts::TAU;
 use std::rc::Rc;
 
-use deno_core::anyhow::Context as _;
-use deno_core::{anyhow, op2, GarbageCollected};
+use deno_core::{op2, GarbageCollected};
 use euclid::default::Point2D;
 use euclid::{point2, Angle};
 
 use super::css::color::{AbsoluteColor, ComputedColor};
-use super::css::{FromCss as _, SyntaxError};
+use super::css::{self, FromCss as _};
+use super::error::Canvas2DError;
 use super::wrap::Wrap;
 use super::{raqote_ext, resolve_color_for_canvas, to_raqote_color, CanvasColorSpace};
 
@@ -195,10 +195,12 @@ pub fn op_canvas_2d_gradient_add_color_stop(
     #[cppgc] this: &Wrap<Rc<CanvasGradient>>,
     offset: f64,
     #[string] color: &str,
-) -> anyhow::Result<()> {
-    let color = ComputedColor::from_css_string(color)
-        .map_err(SyntaxError::from)
-        .with_context(|| format!("Invalid CSS color '{color}'"))?;
+) -> Result<(), Canvas2DError> {
+    let color = ComputedColor::from_css_string(color).map_err(|e| Canvas2DError::ParseCss {
+        css: color.to_owned(),
+        kind: css::ValueKind::Color,
+        details: css::SyntaxError::from(e),
+    })?;
     this.add_color_stop(offset, resolve_color_for_canvas(color));
     Ok(())
 }

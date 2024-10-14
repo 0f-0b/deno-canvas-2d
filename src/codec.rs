@@ -1,8 +1,11 @@
 use std::cell::RefCell;
 
-use deno_core::error::custom_error;
-use deno_core::{anyhow, op2};
+use deno_core::op2;
+use image::error::EncodingError;
+use image::imageops::replace;
+use image::{GenericImageView as _, ImageError, ImageFormat, RgbaImage};
 
+use super::error::Canvas2DError;
 use super::image_bitmap::{
     aspect_resize, non_zero_u32, out_of_bounds, same_size, ImageBitmap, ImageOrientation,
     ResizeQuality,
@@ -11,13 +14,11 @@ use super::image_data::ImageData;
 use super::wrap::Wrap;
 use super::CanvasColorSpace;
 
-#[op2]
-#[buffer]
-pub fn op_canvas_2d_encode_png(
-    #[buffer] data: &[u8],
-    #[number] width: u64,
-    #[number] height: u64,
-    color_space: i32,
+fn encode_png(
+    data: &[u8],
+    width: u64,
+    height: u64,
+    color_space: CanvasColorSpace,
 ) -> Result<Vec<u8>, png::EncodingError> {
     use png::EncodingError::LimitsExceeded;
 
@@ -28,7 +29,6 @@ pub fn op_canvas_2d_encode_png(
         pub const cICP: ChunkType = ChunkType(*b"cICP");
     }
 
-    let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
     let width = width.try_into().map_err(|_| LimitsExceeded)?;
     let height = height.try_into().map_err(|_| LimitsExceeded)?;
     let mut buf = Vec::new();
@@ -43,6 +43,23 @@ pub fn op_canvas_2d_encode_png(
     writer.write_image_data(data)?;
     writer.finish()?;
     Ok(buf)
+}
+
+#[op2]
+#[buffer]
+pub fn op_canvas_2d_encode_png(
+    #[buffer] data: &[u8],
+    #[number] width: u64,
+    #[number] height: u64,
+    color_space: i32,
+) -> Result<Vec<u8>, Canvas2DError> {
+    let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
+    encode_png(data, width, height, color_space).map_err(|e| {
+        Canvas2DError::EncodeImage(ImageError::Encoding(EncodingError::new(
+            ImageFormat::Png.into(),
+            e,
+        )))
+    })
 }
 
 fn mimesniff_image<'a>(header: &[u8], supplied_type: &'a str) -> &'a str {
@@ -74,10 +91,7 @@ fn decode_image(
     dh: Option<u32>,
     resize_quality: ResizeQuality,
     image_orientation: ImageOrientation,
-) -> anyhow::Result<ImageBitmap> {
-    use image::imageops::replace;
-    use image::{GenericImageView as _, ImageFormat, RgbaImage};
-
+) -> Result<ImageBitmap, Canvas2DError> {
     let format = {
         let essence = mime_type
             .split(';')
@@ -87,15 +101,11 @@ fn decode_image(
             .to_ascii_lowercase();
         match ImageFormat::from_mime_type(mimesniff_image(buf, &essence)) {
             Some(format) if format.reading_enabled() => format,
-            _ => {
-                return Err(custom_error(
-                    "DOMExceptionInvalidStateError",
-                    format!("Unsupported image format '{essence}'"),
-                ))
-            }
+            _ => return Err(Canvas2DError::UnsupportedImageFormat { mime_type: essence }),
         }
     };
-    let src = image::load_from_memory_with_format(buf, format)?;
+    let src =
+        image::load_from_memory_with_format(buf, format).map_err(Canvas2DError::DecodeImage)?;
     let (src_width, src_height) = src.dimensions();
     let sw = sw.unwrap_or(src_width);
     let sh = sh.unwrap_or(src_height);
@@ -147,7 +157,7 @@ pub fn op_canvas_2d_decode_image(
     dh: u32,
     resize_quality: i32,
     image_orientation: i32,
-) -> anyhow::Result<Wrap<RefCell<ImageBitmap>>> {
+) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
     Ok(Wrap::new(RefCell::new(decode_image(
