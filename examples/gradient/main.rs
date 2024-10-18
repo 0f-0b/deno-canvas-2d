@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     let blob = blob_store
         .get_object_url(Url::parse(&url).unwrap())
         .unwrap();
-    let png = blob.read_all().await?;
+    let png = blob.read_all().await;
     fs::write("gradient.png", png).await?;
     Ok(())
 }
