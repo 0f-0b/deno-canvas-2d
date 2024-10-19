@@ -9,7 +9,7 @@ cssparser-color = "0.1.0"
 deno_core = "0.314.2"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "8fbc406506cfd1f8ab60e625d1e926a0e72e1d8a" }
-harfbuzz_rs = { git = "https://github.com/harfbuzz/harfbuzz_rs.git", rev = "43f0fb57556b5385681bbb2dc89e5f22e958d9d8" }
+harfbuzz_rs = { git = "https://github.com/harfbuzz/harfbuzz_rs.git", rev = "30f0fec1744bb320ac554f9f62831b1ce1d2985d" }
 hashlink = "0.9.1"
 image = { version = "0.25.4", default-features = false, features = [
   "bmp",
@@ -25,7 +25,7 @@ raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "bc86ee8882c17dd37
 strum_macros = "0.26.4"
 svgtypes = "0.15.2"
 thiserror = "1.0.64"
-unicase = { git = "https://github.com/seanmonstar/unicase.git", rev = "8dc84ec6f13eae71c8d42e3b6e6d2c5ea249ed69" }
+unicase = "2.8.0"
 unicode-bidi = "0.3.17"
 
 [dev-dependencies]

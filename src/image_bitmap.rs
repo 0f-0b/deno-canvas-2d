@@ -69,14 +69,6 @@ pub fn aspect_resize(
     Ok(size2(dw, dh))
 }
 
-// TODO use `Rc::make_mut` when it's available for unsized types in stable
-fn rc_slice_make_mut<T: Clone>(rc: &mut Rc<[T]>) -> &mut [T] {
-    if Rc::strong_count(rc) != 1 || Rc::weak_count(rc) != 0 {
-        *rc = rc.as_ref().into();
-    }
-    Rc::get_mut(rc).unwrap()
-}
-
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
 pub enum ImageOrientation {
@@ -293,13 +285,13 @@ impl ImageBitmap {
                 | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {}
                 (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
                     transform_argb32(
-                        rc_slice_make_mut(data),
+                        Rc::make_mut(data),
                         premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
                     );
                 }
                 (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
                     transform_argb32(
-                        rc_slice_make_mut(data),
+                        Rc::make_mut(data),
                         premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
                     );
                 }
@@ -465,7 +457,7 @@ impl ImageBitmap {
     pub fn remove_alpha(self) -> Self {
         let data = match self.data {
             Some(mut data) => {
-                for pixel in rc_slice_make_mut(&mut data) {
+                for pixel in Rc::make_mut(&mut data) {
                     *pixel |= ARGB32_ALPHA_MASK;
                 }
                 data
