@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cssparser = "0.33.0"
-cssparser-color = "0.1.0"
+cssparser = "0.34.0"
+cssparser-color = "0.2.0"
 deno_core = "0.318.0"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "8fbc406506cfd1f8ab60e625d1e926a0e72e1d8a" }
@@ -24,16 +24,16 @@ png = "0.17.14"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "bc86ee8882c17dd37296d4d7dd5c0df460a12812", default-features = false }
 strum_macros = "0.26.4"
 svgtypes = "0.15.2"
-thiserror = "1.0.68"
+thiserror = "1.0.69"
 unicase = "2.8.0"
 unicode-bidi = "0.3.17"
 
 [dev-dependencies]
-deno_console = "0.176.0"
-deno_url = "0.176.0"
-deno_web = "0.207.0"
-deno_webidl = "0.176.0"
-tokio = { version = "1.41.0", features = ["fs", "rt", "macros"] }
+deno_console = "0.177.0"
+deno_url = "0.177.0"
+deno_web = "0.208.0"
+deno_webidl = "0.177.0"
+tokio = { version = "1.41.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
 undocumented_unsafe_blocks = "warn"
