@@ -1,7 +1,4 @@
 {
-  "exclude": [
-    "target"
-  ],
   "lint": {
     "rules": {
       "include": [
