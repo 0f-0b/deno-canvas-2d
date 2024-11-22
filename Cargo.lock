@@ -345,9 +345,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.178.0"
+version = "0.179.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c089fa43086276cac2be3a6be1c043e70fd7fae924e57a200b4cdc9521a1e49b"
+checksum = "2e09f2bbb2d842329b602da25dbab5cd4a342f9a8adcb7c02509fc322f796e79"
 dependencies = [
  "deno_core",
 ]
@@ -421,9 +421,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.38.0"
+version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04361d1ccef17a260e6091df5ea4d031661bd7f266e5d6ee99c251e23b425194"
+checksum = "14e822f98185ab3ddf06104b2407681e0008af52361af32f1cd171b7eda5aa59"
 dependencies = [
  "deno_core",
  "deno_path_util",
@@ -461,9 +461,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.178.0"
+version = "0.179.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5771e1128be398242354e5fc4aff266622addf4b99c88a8b7fc19953ed4e7cf8"
+checksum = "ad9a108794e505f2b07665e19ff336c1bcba6adcf7182c90c1d3a6c741d7fcd0"
 dependencies = [
  "deno_core",
  "thiserror",
@@ -472,9 +472,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.209.0"
+version = "0.210.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "723b018bf89d54741848785798a221ee450cc2be9d0b7092ac4b0977d680d347"
+checksum = "7679087bcc41f7ae3385f8c12d43bc81cfc54cb9b1ef73983d20f5e39fa4e0da"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -492,9 +492,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.178.0"
+version = "0.179.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59989bbea84855ed9dcbf18f72e22ba24c67b4b9e8c89596b24b9ecaa638fe03"
+checksum = "5b55d845e3d64f8de7eff67aaa4b6fe1b23bbc2efe967c984f8c64c8dd85fad4"
 dependencies = [
  "deno_core",
 ]
@@ -1405,9 +1405,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.89"
+version = "1.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f139b0662de085916d1fb67d2b4169d1addddda1919e696f3252b740b629986e"
+checksum = "37d3544b3f2748c54e147655edb5025752e2303145b5aefb3c3ea2c78b973bb0"
 dependencies = [
  "unicode-ident",
 ]
@@ -1760,9 +1760,9 @@ source = "git+https://github.com/0f-0b/sw-composite.git?rev=4f8ea31e249fd77ae7e9
 
 [[package]]
 name = "syn"
-version = "2.0.87"
+version = "2.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d"
+checksum = "44d46482f1c1c87acd84dea20c1bf5ebff4c757009ed6bf19cfd36fb10e92c4e"
 dependencies = [
  "proc-macro2",
  "quote",
