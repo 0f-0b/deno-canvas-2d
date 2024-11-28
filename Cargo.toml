@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 cssparser = "0.34.0"
 cssparser-color = "0.2.0"
-deno_core = "0.321.0"
+deno_core = "0.323.0"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "8fbc406506cfd1f8ab60e625d1e926a0e72e1d8a" }
 harfbuzz_rs = { git = "https://github.com/harfbuzz/harfbuzz_rs.git", rev = "30f0fec1744bb320ac554f9f62831b1ce1d2985d" }
@@ -24,15 +24,15 @@ png = "0.17.14"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "bc86ee8882c17dd37296d4d7dd5c0df460a12812", default-features = false }
 strum_macros = "0.26.4"
 svgtypes = "0.15.2"
-thiserror = "1.0.69"
+thiserror = "2.0.3"
 unicase = "2.8.0"
 unicode-bidi = "0.3.17"
 
 [dev-dependencies]
-deno_console = "0.179.0"
-deno_url = "0.179.0"
-deno_web = "0.210.0"
-deno_webidl = "0.179.0"
+deno_console = "0.180.0"
+deno_url = "0.180.0"
+deno_web = "0.211.0"
+deno_webidl = "0.180.0"
 tokio = { version = "1.41.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
