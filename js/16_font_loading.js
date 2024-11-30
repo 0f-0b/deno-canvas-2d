@@ -51,9 +51,9 @@ import {
 import { capturePrototype } from "./01_capture_prototype.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
 import {
+  aggregateSpeciesSafePromises,
   makeSpeciesSafePromise,
   newFromSpeciesSafePromise,
-  safePromiseAll,
 } from "./01_promise.js";
 import { requireObject } from "./01_require_object.js";
 import { isArrayBuffer } from "./02_is_array_buffer.js";
@@ -70,6 +70,7 @@ import { EventHandler, readEventInitMembers } from "./15_event.js";
 
 const {
   ArrayPrototypeEvery,
+  ArrayPrototypeMap,
   ArrayPrototypePush,
   FunctionPrototype,
   Object,
@@ -80,7 +81,6 @@ const {
   ObjectSetPrototypeOf,
   PromiseReject,
   ReflectConstruct,
-  SafeArrayIterator,
   SafeSet,
   Set,
   SetPrototypeEntries,
@@ -878,7 +878,7 @@ const FontFaceSetInternals = class FontFaceSet extends IdentityConstructor {
 
   static findMatchingFontFaces(o, font, text) {
     const matchIds = op_canvas_2d_font_face_set_match(o.#raw, font, text);
-    const matches = [];
+    const matches = ObjectSetPrototypeOf([], null);
     // deno-lint-ignore prefer-primordials
     for (const font of o.#setEntries) {
       const id = op_canvas_2d_font_face_id(FontFaceInternals.getRaw(font));
@@ -1016,13 +1016,10 @@ export class FontFaceSet extends EventTarget {
       requiredArguments(arguments.length, 1, prefix);
       font = convertDOMString(font);
       text = convertDOMString(text);
-      const fonts = FontFaceSetInternals
-        .findMatchingFontFaces(this, font, text);
-      const promises = [];
-      for (const font of new SafeArrayIterator(fonts)) {
-        ArrayPrototypePush(promises, FontFaceInternals.load(font));
-      }
-      return safePromiseAll(promises);
+      return aggregateSpeciesSafePromises(ArrayPrototypeMap(
+        FontFaceSetInternals.findMatchingFontFaces(this, font, text),
+        FontFaceInternals.load,
+      ));
     } catch (e) {
       return PromiseReject(e);
     }
@@ -1034,9 +1031,8 @@ export class FontFaceSet extends EventTarget {
     requiredArguments(arguments.length, 1, prefix);
     font = convertDOMString(font);
     text = convertDOMString(text);
-    const fonts = FontFaceSetInternals.findMatchingFontFaces(this, font, text);
     return ArrayPrototypeEvery(
-      fonts,
+      FontFaceSetInternals.findMatchingFontFaces(this, font, text),
       (font) => FontFaceInternals.getStatus(font) === "loaded",
     );
   }

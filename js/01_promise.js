@@ -3,6 +3,7 @@ import { primordials } from "ext:core/mod.js";
 const {
   ArrayPrototypePush,
   ObjectDefineProperty,
+  ObjectSetPrototypeOf,
   Promise,
   PromisePrototypeThen,
   SafeArrayIterator,
@@ -30,8 +31,8 @@ export function newFromSpeciesSafePromise(promise) {
   );
 }
 
-export function safePromiseAll(promises) {
-  const safePromises = [];
+export function aggregateSpeciesSafePromises(promises) {
+  const safePromises = ObjectSetPrototypeOf([], null);
   for (const promise of new SafeArrayIterator(promises)) {
     ArrayPrototypePush(
       safePromises,

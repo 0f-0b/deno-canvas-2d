@@ -968,7 +968,7 @@ const OffscreenCanvasRenderingContext2DInternals =
     #canvas;
     #state;
     #colorSpace;
-    #cachedDrawingStateStack = [];
+    #cachedDrawingStateStack = ObjectSetPrototypeOf([], null);
     #cachedFont = null;
     #cachedLetterSpacing = null;
     #cachedWordSpacing = null;
