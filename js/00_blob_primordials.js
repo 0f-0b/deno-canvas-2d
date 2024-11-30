@@ -4,6 +4,6 @@ import { Blob } from "ext:deno_web/09_file.js";
 const { ObjectGetOwnPropertyDescriptors, uncurryThis } = primordials;
 export const BlobPrototype = Blob.prototype;
 const proto = ObjectGetOwnPropertyDescriptors(BlobPrototype);
-export const BlobPrototypeArrayBuffer = uncurryThis(proto.arrayBuffer.value);
+export const BlobPrototypeBytes = uncurryThis(proto.bytes.value);
 export const BlobPrototypeGetSize = uncurryThis(proto.size.get);
 export const BlobPrototypeGetType = uncurryThis(proto.type.get);

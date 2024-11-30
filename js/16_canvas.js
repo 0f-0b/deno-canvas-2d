@@ -1,8 +1,8 @@
 import { primordials } from "ext:core/mod.js";
+import { op_defer } from "ext:core/ops";
 import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import { EventTarget } from "ext:deno_web/02_event.js";
-import { defer } from "ext:deno_web/02_timers.js";
 import { Blob } from "ext:deno_web/09_file.js";
 import {
   configureInterface,
@@ -11,7 +11,7 @@ import {
   type,
 } from "ext:deno_webidl/00_webidl.js";
 import {
-  BlobPrototypeArrayBuffer,
+  BlobPrototypeBytes,
   BlobPrototypeGetType,
 } from "./00_blob_primordials.js";
 import {
@@ -55,7 +55,6 @@ const {
   ObjectFreeze,
   ObjectGetPrototypeOf,
   ObjectSetPrototypeOf,
-  Promise,
   PromiseReject,
   RangeError,
   ReflectConstruct,
@@ -255,7 +254,7 @@ export const OffscreenCanvasInternals = class OffscreenCanvas
       const { data, type } = OffscreenCanvasInternals.encode(o, options.type);
       return new Blob(new SafeArrayIterator([data]), { __proto__: null, type });
     } finally {
-      await makeSafePromise(new Promise(defer));
+      await makeSafePromise(op_defer());
     }
   }
 
@@ -637,7 +636,7 @@ async function checkUsabilityAndCropWithFormatting(
   }
   if (isBlob(image)) {
     return op_canvas_2d_decode_image(
-      new Uint8Array(await makeSafePromise(BlobPrototypeArrayBuffer(image))),
+      await makeSafePromise(BlobPrototypeBytes(image)),
       BlobPrototypeGetType(image),
       sx,
       sy,
