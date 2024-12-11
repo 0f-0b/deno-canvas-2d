@@ -17,7 +17,7 @@ pub struct VariationAxisInfo {
     pub max_value: f32,
 }
 
-extern "C" {
+unsafe extern "C" {
     fn hb_font_set_synthetic_bold(
         font: *mut <hb::Font as HarfbuzzObject>::Raw,
         x_embolden: f32,
