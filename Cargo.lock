@@ -85,7 +85,7 @@ dependencies = [
  "addr2line",
  "cfg-if",
  "libc",
- "miniz_oxide 0.8.1",
+ "miniz_oxide 0.8.2",
  "object",
  "rustc-demangle",
  "windows-targets",
@@ -186,9 +186,9 @@ checksum = "64fa3c856b712db6612c019f14756e64e4bcea13337a6b33b696333a9eaa2d06"
 
 [[package]]
 name = "bytemuck"
-version = "1.20.0"
+version = "1.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b37c88a63ffd85d15b406896cc343916d7cf57838a847b3a6f2ca5d39a5695a"
+checksum = "ef657dfab802224e671f5818e9a4935f9b1957ed18e58292690cc39e7a4092a3"
 
 [[package]]
 name = "byteorder-lite"
@@ -225,7 +225,7 @@ dependencies = [
  "raqote",
  "strum_macros 0.26.4",
  "svgtypes",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
  "tokio",
  "unicase",
  "unicode-bidi",
@@ -242,9 +242,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.4"
+version = "1.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9157bbaa6b165880c27a4293a474c91cdcf265cc68cc829bf10be0964a391caf"
+checksum = "c31a0499c1dc64f458ad13872de75c0eb7e3fdb0e67964610c914b034fc5956e"
 dependencies = [
  "jobserver",
  "libc",
@@ -348,9 +348,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.183.0"
+version = "0.184.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d3d0b597f2ed796c24d07d4133db551ba94969fc333f441924ad42b8f40e228"
+checksum = "10f16c92ce3aeedf4cd57f70d2728174c5d6eb5491db4db6fce41c422a24cfc5"
 dependencies = [
  "deno_core",
 ]
@@ -442,7 +442,7 @@ checksum = "b02c7d341e1b2cf089daff0f4fb2b4be8f3b5511b1d96040b3f7ed63a66c737b"
 dependencies = [
  "deno_error",
  "percent-encoding",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
  "url",
 ]
 
@@ -462,7 +462,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "serde",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
  "which 4.4.2",
  "winapi",
 ]
@@ -490,20 +490,20 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.183.0"
+version = "0.184.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7badf01b5840257fbed0563163c26c5cdc77cbbe817fc616b31836e26cfd658"
+checksum = "a24ef55a0efe6c56fe861703d3848f0a832822dd44b3f368e1e9366a71e73ebe"
 dependencies = [
  "deno_core",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
  "urlpattern",
 ]
 
 [[package]]
 name = "deno_web"
-version = "0.214.0"
+version = "0.215.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ba0fef6c3329260d1a8e12889072377d576727e7841c8e45fba27bf3cee782a"
+checksum = "966deb81b47c34110d868814593a3b1c23abf0d529034e505355e278ceb7d202"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -514,16 +514,16 @@ dependencies = [
  "flate2",
  "futures",
  "serde",
- "thiserror 2.0.7",
+ "thiserror 2.0.8",
  "tokio",
  "uuid",
 ]
 
 [[package]]
 name = "deno_webidl"
-version = "0.183.0"
+version = "0.184.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce49597bf7229e79130d8f18f8b20817bc2fb9bd85119cba54d86f59712be266"
+checksum = "308d49c1e74dd9959cbe9b9a0073974e17a6af5cbb1d11408a36773ff17b7402"
 dependencies = [
  "deno_core",
 ]
@@ -616,14 +616,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c936bfdafb507ebbf50b8074c54fa31c5be9a1e7e5f467dd659697041407d07c"
 dependencies = [
  "crc32fast",
- "miniz_oxide 0.8.1",
+ "miniz_oxide 0.8.2",
 ]
 
 [[package]]
 name = "foldhash"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f81ec6369c545a7d40e4589b5597581fa1c441fe1cce96dd1de43159910a36a2"
+checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
 
 [[package]]
 name = "fontsan"
@@ -1054,9 +1054,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.168"
+version = "0.2.169"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aaeb2981e0606ca11d79718f8bb01164f1d6ed75080182d3abf017e6d244b6d"
+checksum = "b5aba8db14291edd000dfcc4d620c7ebfb122c613afb886ca8803fa4e128a20a"
 
 [[package]]
 name = "libloading"
@@ -1155,9 +1155,9 @@ dependencies = [
 
 [[package]]
 name = "miniz_oxide"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2ef2593ffb6958c941575cee70c8e257438749971869c4ae5acf6f91a168a61"
+checksum = "4ffbe83022cedc1d264172192511ae958937694cd57ce297164951b8b3568394"
 dependencies = [
  "adler2",
  "simd-adler32",
@@ -1381,15 +1381,15 @@ checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
 
 [[package]]
 name = "png"
-version = "0.17.15"
+version = "0.17.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b67582bd5b65bdff614270e2ea89a1cf15bef71245cc1e5f7ea126977144211d"
+checksum = "82151a2fc869e011c153adc57cf2789ccb8d9906ce52c0b39a6b5697749d7526"
 dependencies = [
  "bitflags 1.3.2",
  "crc32fast",
  "fdeflate",
  "flate2",
- "miniz_oxide 0.8.1",
+ "miniz_oxide 0.8.2",
 ]
 
 [[package]]
@@ -1828,11 +1828,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.7"
+version = "2.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93605438cbd668185516ab499d589afb7ee1859ea3d5fc8f6b0755e1c7443767"
+checksum = "08f5383f3e0071702bf93ab5ee99b52d26936be9dedd9413067cbdcddcb6141a"
 dependencies = [
- "thiserror-impl 2.0.7",
+ "thiserror-impl 2.0.8",
 ]
 
 [[package]]
@@ -1848,9 +1848,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.7"
+version = "2.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1d8749b4531af2117677a5fcd12b1348a3fe2b81e36e61ffeac5c4aa3273e36"
+checksum = "f2f357fcec90b3caef6623a099691be676d033b40a058ac95d2a6ade6fa0c943"
 dependencies = [
  "proc-macro2",
  "quote",
