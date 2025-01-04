@@ -82,7 +82,6 @@ const {
   PromiseReject,
   ReflectConstruct,
   SafeSet,
-  Set,
   SetPrototypeEntries,
   SetPrototypeForEach,
   SetPrototypeGetSize,
@@ -891,7 +890,7 @@ const FontFaceSetInternals = class FontFaceSet extends IdentityConstructor {
 
   static inspect(inspect, options) {
     return inspect(
-      new class FontFaceSet extends Set {
+      new class FontFaceSet extends SafeSet {
         onloading;
         onloadingdone;
         onloadingerror;
@@ -899,7 +898,11 @@ const FontFaceSetInternals = class FontFaceSet extends IdentityConstructor {
         status;
 
         constructor(o) {
-          super(o.#setEntries);
+          super();
+          // deno-lint-ignore prefer-primordials
+          for (const font of o.#setEntries) {
+            this.add(font);
+          }
           this.onloading = o.#onloading.value;
           this.onloadingdone = o.#onloadingdone.value;
           this.onloadingerror = o.#onloadingerror.value;
