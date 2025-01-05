@@ -2151,6 +2151,7 @@ export class DOMMatrix extends DOMMatrixReadOnly {
   }
 
   setMatrixValue(transformList) {
+    DOMMatrixInternals.checkInstance(this);
     const prefix = "Failed to execute 'setMatrixValue' on 'DOMMatrix'";
     requiredArguments(arguments.length, 1, prefix);
     transformList = convertDOMString(transformList);
