@@ -40,11 +40,7 @@ const {
 } = primordials;
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const RAD_PER_DEG = 0.017453292519943295;
-
-function radians(degrees) {
-  return degrees * RAD_PER_DEG;
-}
-
+const radians = (degrees) => degrees * RAD_PER_DEG;
 const DOMPointReadOnlyInternals = class DOMPointReadOnly
   extends IdentityConstructor {
   #brand() {}
@@ -1474,6 +1470,7 @@ export class DOMMatrixReadOnly extends Object {
   }
 
   toString() {
+    DOMMatrixReadOnlyInternals.checkInstance(this);
     const m11 = DOMMatrixReadOnlyInternals.getM11(this);
     const m12 = DOMMatrixReadOnlyInternals.getM12(this);
     const m13 = DOMMatrixReadOnlyInternals.getM13(this);
