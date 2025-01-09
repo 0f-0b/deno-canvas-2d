@@ -145,7 +145,6 @@ fn decode_image(
 
 #[op2]
 #[cppgc]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_decode_image(
     #[buffer] buf: &[u8],
     #[string] mime_type: &str,

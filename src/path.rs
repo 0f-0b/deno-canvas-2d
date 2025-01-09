@@ -512,7 +512,6 @@ pub fn op_canvas_2d_path_clear(#[cppgc] this: &Wrap<RefCell<Path>>) {
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_path_extend(
     #[cppgc] this: &Wrap<RefCell<Path>>,
     #[cppgc] path: &Wrap<RefCell<Path>>,
@@ -600,7 +599,6 @@ pub fn op_canvas_2d_path_arc_to(
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_path_ellipse(
     #[cppgc] this: &Wrap<RefCell<Path>>,
     x: f64,
@@ -630,7 +628,6 @@ pub fn op_canvas_2d_path_rect(#[cppgc] this: &Wrap<RefCell<Path>>, x: f64, y: f6
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_path_round_rect(
     #[cppgc] this: &Wrap<RefCell<Path>>,
     x: f64,

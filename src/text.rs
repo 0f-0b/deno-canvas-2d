@@ -281,8 +281,13 @@ impl FontFaceData {
     pub fn load(&mut self, blob: &[u8], from_url: bool) -> Result<(), Canvas2DError> {
         match self.state {
             FontFaceState::Unloaded => {
-                let blob =
-                    fontsan::process(blob).map_err(|_| Canvas2DError::DecodeFont { from_url })?;
+                let blob = fontsan::process(blob).map_err(|_| {
+                    if from_url {
+                        Canvas2DError::DecodeFontFromUrl
+                    } else {
+                        Canvas2DError::DecodeFont
+                    }
+                })?;
                 self.state = FontFaceState::Loaded(hb::Font::new(hb::Face::new(blob, 0)).into());
                 Ok(())
             }
@@ -1192,7 +1197,6 @@ pub fn op_canvas_2d_font_face_select_source(
 
 #[op2]
 #[cppgc]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_font_face_new(
     #[string] family: String,
     #[string] style: String,

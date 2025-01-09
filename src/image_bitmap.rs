@@ -521,7 +521,6 @@ pub fn op_canvas_2d_image_bitmap_from_canvas_state_crop(
 
 #[op2]
 #[cppgc]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
     #[buffer] src_data: &[u8],
     src_width: u32,

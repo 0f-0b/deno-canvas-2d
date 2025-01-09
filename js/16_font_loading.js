@@ -1083,7 +1083,7 @@ export function setFetchFont(fn) {
 }
 
 let fonts;
-export const getFonts = {
+export const { "get fonts": getFonts } = {
   "get fonts"() {
     if (this !== null && this !== undefined && this !== globalThis) {
       throw new TypeError("Illegal invocation");
@@ -1091,4 +1091,4 @@ export const getFonts = {
     fonts ??= createFontFaceSetFromRaw(op_canvas_2d_font_source());
     return fonts;
   },
-}["get fonts"];
+};

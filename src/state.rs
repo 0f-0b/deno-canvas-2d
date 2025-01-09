@@ -1995,7 +1995,6 @@ pub fn op_canvas_2d_state_is_point_in_stroke(
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_draw_image(
     #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[cppgc] image: &Wrap<RefCell<ImageBitmap>>,
@@ -2040,7 +2039,6 @@ pub fn op_canvas_2d_state_get_image_data(
 }
 
 #[op2(fast)]
-#[allow(clippy::too_many_arguments)]
 pub fn op_canvas_2d_state_put_image_data(
     #[cppgc] this: &Wrap<RefCell<CanvasState>>,
     #[buffer] src_data: &[u32],
