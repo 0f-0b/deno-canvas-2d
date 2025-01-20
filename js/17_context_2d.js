@@ -967,7 +967,10 @@ const OffscreenCanvasRenderingContext2DInternals =
 
     #canvas;
     #state;
+    #alpha;
     #colorSpace;
+    #desynchronized;
+    #willReadFrequently;
     #cachedDrawingStateStack = ObjectSetPrototypeOf([], null);
     #cachedFont = null;
     #cachedLetterSpacing = null;
@@ -978,11 +981,22 @@ const OffscreenCanvasRenderingContext2DInternals =
     #cachedShadowColor = null;
     #cachedFilter = "none";
 
-    constructor(o, canvas, state, colorSpace) {
+    constructor(
+      o,
+      canvas,
+      state,
+      alpha,
+      colorSpace,
+      desynchronized,
+      willReadFrequently,
+    ) {
       super(o);
       this.#canvas = canvas;
       this.#state = state;
+      this.#alpha = alpha;
       this.#colorSpace = colorSpace;
+      this.#desynchronized = desynchronized;
+      this.#willReadFrequently = willReadFrequently;
     }
 
     static hasInstance(o) {
@@ -1004,6 +1018,15 @@ const OffscreenCanvasRenderingContext2DInternals =
 
     static getColorSpace(o) {
       return o.#colorSpace;
+    }
+
+    static getSettings(o) {
+      return {
+        alpha: o.#alpha,
+        colorSpace: o.#colorSpace,
+        desynchronized: o.#desynchronized,
+        willReadFrequently: o.#willReadFrequently,
+      };
     }
 
     static save(o) {
@@ -1427,6 +1450,11 @@ export class OffscreenCanvasRenderingContext2D extends Object {
 
   get canvas() {
     return OffscreenCanvasRenderingContext2DInternals.getCanvas(this);
+  }
+
+  getContextAttributes() {
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getSettings(this);
   }
 
   save() {
@@ -2916,9 +2944,24 @@ export class OffscreenCanvasRenderingContext2D extends Object {
   }
 }
 
-function createOffscreenCanvasRenderingContext2D(canvas, state, colorSpace) {
+function createOffscreenCanvasRenderingContext2D(
+  canvas,
+  state,
+  alpha,
+  colorSpace,
+  desynchronized,
+  willReadFrequently,
+) {
   const o = ObjectCreate(OffscreenCanvasRenderingContext2D.prototype);
-  new OffscreenCanvasRenderingContext2DInternals(o, canvas, state, colorSpace);
+  new OffscreenCanvasRenderingContext2DInternals(
+    o,
+    canvas,
+    state,
+    alpha,
+    colorSpace,
+    desynchronized,
+    willReadFrequently,
+  );
   return o;
 }
 
@@ -2933,7 +2976,10 @@ registerCanvasContextMode("2d", {
         settings.alpha,
         colorSpaceToRepr[settings.colorSpace],
       ),
+      settings.alpha,
       settings.colorSpace,
+      settings.desynchronized,
+      settings.willReadFrequently,
     );
   },
   hasInstance(ctx) {
