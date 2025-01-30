@@ -369,18 +369,18 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.187.0"
+version = "0.188.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c06157908d854c0f10043f8034d63957e1e1b20148727ae669bb58df9d4ca45d"
+checksum = "d0813d230d2de9bd85a486557cc34c59fa3ad92de76ace34fe5f8cab8303153b"
 dependencies = [
  "deno_core",
 ]
 
 [[package]]
 name = "deno_core"
-version = "0.331.0"
+version = "0.333.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce2d1779358cad2bc56d71176298767be628d707bb75585f6f8a4be2da8ccda1"
+checksum = "2e67f6f874401f3b8fb3e851743c40ee14014648db6685b233b34f783f6959e8"
 dependencies = [
  "anyhow",
  "az",
@@ -393,6 +393,7 @@ dependencies = [
  "deno_core_icudata",
  "deno_error",
  "deno_ops",
+ "deno_path_util",
  "deno_unsync",
  "futures",
  "indexmap",
@@ -447,9 +448,9 @@ dependencies = [
 
 [[package]]
 name = "deno_ops"
-version = "0.207.0"
+version = "0.209.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96f000a21f6969b4c945bc8e9e785aa439f11ca4fd3fbddcd5bebc102167eb37"
+checksum = "fbda741ba267a252bad86153d16c859c3a8e1b219b300a1b4f0a2632c0a465cf"
 dependencies = [
  "indexmap",
  "proc-macro-rules",
@@ -464,9 +465,9 @@ dependencies = [
 
 [[package]]
 name = "deno_path_util"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "420e8211aaba7fde83ccaa9a5dad855c3b940ed988d70c95159acd600a70dc87"
+checksum = "c87b8996966ae1b13ee9c20219b1d10fc53905b9570faae6adfa34614fd15224"
 dependencies = [
  "deno_error",
  "percent-encoding",
@@ -477,9 +478,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.46.0"
+version = "0.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2be862e1eed74aabb90dd3d960bac8dc88cbfe46645faff48fc4a5c3970ac9ab"
+checksum = "028f467fb14266ff5be759eae4d8bc0869bc6c247c39f660b5054df9758a4444"
 dependencies = [
  "capacity_builder 0.5.0",
  "deno_core",
@@ -520,9 +521,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.187.0"
+version = "0.188.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1191ba8454853320f5dfb672fd0f1504c99c496860d93ce154580957d329bb1b"
+checksum = "597f511727c4b17fb2481d53def7a720c95e78ffece147392c4926d7d45b9f60"
 dependencies = [
  "deno_core",
  "deno_error",
@@ -532,9 +533,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.218.0"
+version = "0.219.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fe7b7382aac8a546b5a64a15f219cf132f8b390d894b8fe96de9e7ee577937d"
+checksum = "4beb7408a93ff98295b920ce34521e791091d7b14fec31ff40557b4445e5d1c8"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -553,9 +554,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.187.0"
+version = "0.188.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c67b12f4c92dfdea8c1d09bd90c4fc96708144aa90868eb154e3e84a40f39be5"
+checksum = "ce186fa452178243a3a40d6acc2901de7afcb73e223e82c1f3aabe281998754c"
 dependencies = [
  "deno_core",
 ]
@@ -1596,9 +1597,9 @@ checksum = "f7c45b9784283f1b2e7fb61b42047c2fd678ef0960d4f6f1eba131594cc369d4"
 
 [[package]]
 name = "ryu"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
+checksum = "6ea1a2d0a644769cc99faa24c3ad26b379b786fe7c36fd3c546254801650e6dd"
 
 [[package]]
 name = "scopeguard"
@@ -1643,9 +1644,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.137"
+version = "1.0.138"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "930cfb6e6abf99298aaad7d29abbef7a9999a9a8806a40088f55f0dcec03146b"
+checksum = "d434192e7da787e94a6ea7e9670b26a036d0ca41e0b7efb2676dd32bae872949"
 dependencies = [
  "indexmap",
  "itoa",
@@ -1656,9 +1657,9 @@ dependencies = [
 
 [[package]]
 name = "serde_v8"
-version = "0.240.0"
+version = "0.242.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd0494d74c40ab94f53a19485de359ea6a55f05341b817b93440b673c1ce8ec6"
+checksum = "aa9d64ec1fdc3316cb65ca60ccbb5a3a914f014ccb0b5f71fc9280506fd28247"
 dependencies = [
  "deno_error",
  "num-bigint",
@@ -1840,9 +1841,9 @@ dependencies = [
 
 [[package]]
 name = "sys_traits"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b46ac05dfbe9fd3a9703eff20e17f5b31e7b6a54daf27a421dcd56c7a27ecdd"
+checksum = "638f0e61b5134e56b2abdf4c704fd44672603f15ca09013f314649056f3fee4d"
 
 [[package]]
 name = "tap"
@@ -1985,9 +1986,9 @@ checksum = "2f322b60f6b9736017344fa0635d64be2f458fbc04eef65f6be22976dd1ffd5b"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.14"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adb9e6ca4f869e1180728b7950e35922a7fc6397f7b641499e8f3ef06e50dc83"
+checksum = "a210d160f08b701c8721ba1c726c11662f877ea6b7094007e1ca9a1041945034"
 
 [[package]]
 name = "url"
