@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 cssparser = "0.34.0"
 cssparser-color = "0.2.0"
-deno_core = "0.336.0"
+deno_core = "0.338.0"
 deno_error = "0.5.5"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "8fbc406506cfd1f8ab60e625d1e926a0e72e1d8a" }
@@ -23,17 +23,17 @@ lyon_geom = "1.0.6"
 palette = { version = "0.7.6", default-features = false, features = ["std"] }
 png = "0.17.16"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "64eea3e319d49bba74b283ee32ed5ae8b6945ad5", default-features = false }
-strum_macros = "0.27.0"
+strum_macros = "0.27.1"
 svgtypes = "0.15.3"
 thiserror = "2.0.11"
 unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.190.0"
-deno_url = "0.190.0"
-deno_web = "0.221.0"
-deno_webidl = "0.190.0"
+deno_console = "0.191.0"
+deno_url = "0.191.0"
+deno_web = "0.222.0"
+deno_webidl = "0.191.0"
 tokio = { version = "1.43.0", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
