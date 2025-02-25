@@ -422,7 +422,7 @@ impl FromCss for ComputedColor {
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>> {
         struct BasicColorParser;
 
-        impl<'i> ColorParser<'i> for BasicColorParser {
+        impl ColorParser<'_> for BasicColorParser {
             type Output = ComputedColor;
             type Error = Infallible;
         }

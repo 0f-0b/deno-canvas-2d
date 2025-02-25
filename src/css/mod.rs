@@ -180,13 +180,13 @@ display_css!(impl ['a] for CssString<'a>);
 display_css!(impl [T: ?Sized] for CssNumber<T>);
 display_css!(impl [T: ?Sized] for CssPercentage<T>);
 
-impl<'a, T: ToCss + ?Sized> ToCss for CssValue<'a, T> {
+impl<T: ToCss + ?Sized> ToCss for CssValue<'_, T> {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         self.0.to_css(dest)
     }
 }
 
-impl<'a> ToCss for CssString<'a> {
+impl ToCss for CssString<'_> {
     fn to_css<W: fmt::Write>(&self, dest: &mut W) -> fmt::Result {
         serialize_string(self.0, dest)
     }

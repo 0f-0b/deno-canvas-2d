@@ -25,7 +25,7 @@ pub struct AlignedImageDataView<'a> {
     pub data: &'a [u32],
 }
 
-impl<'a> AlignedImageDataView<'a> {
+impl AlignedImageDataView<'_> {
     pub fn as_raqote_surface_rgba8(&self) -> Result<raqote::DrawTarget<&[u32]>, Canvas2DError> {
         let size = to_raqote_size(self.width as u64, self.height as u64)?;
         Ok(raqote::DrawTarget::from_backing(
@@ -44,7 +44,7 @@ pub struct AlignedImageDataViewMut<'a> {
     pub data: &'a mut [u32],
 }
 
-impl<'a> AlignedImageDataViewMut<'a> {
+impl AlignedImageDataViewMut<'_> {
     pub fn as_raqote_surface_rgba8(
         &mut self,
     ) -> Result<raqote::DrawTarget<&mut [u32]>, Canvas2DError> {

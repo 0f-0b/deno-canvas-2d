@@ -71,7 +71,7 @@ impl SpecifiedAngle {
     ) -> Result<Self, ParseError<'i, Infallible>> {
         let location = input.current_source_location();
         Ok(match *input.next()? {
-            Token::Number { value, .. } if value == 0.0 => Self::zero(),
+            Token::Number { value: 0.0, .. } => Self::zero(),
             Token::Dimension {
                 value, ref unit, ..
             } => Self::from_dimension(value, unit)
