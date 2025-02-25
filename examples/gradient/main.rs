@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use deno_core::url::Url;
-use deno_core::{anyhow, v8, JsRuntime, RuntimeOptions};
+use deno_core::{JsRuntime, RuntimeOptions, anyhow, v8};
 use deno_web::{BlobStore, TimersPermission};
 use tokio::fs;
 

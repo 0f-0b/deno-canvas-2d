@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use deno_core::{op2, GarbageCollected};
+use deno_core::{GarbageCollected, op2};
 use euclid::default::{Box2D, Point2D, Size2D, Transform2D};
 use euclid::size2;
 use strum_macros::FromRepr;
@@ -17,7 +17,7 @@ use super::error::Canvas2DError;
 use super::image_data::{AlignedImageDataViewMut, ImageData, ImageDataView};
 use super::state::CanvasState;
 use super::wrap::Wrap;
-use super::{raqote_ext, to_raqote_point, to_raqote_size, CanvasColorSpace, ARGB32_ALPHA_MASK};
+use super::{ARGB32_ALPHA_MASK, CanvasColorSpace, raqote_ext, to_raqote_point, to_raqote_size};
 
 pub fn non_zero_u32(x: u32) -> Option<u32> {
     (x != 0).then_some(x)
@@ -207,8 +207,8 @@ impl ImageBitmap {
         quality: ResizeQuality,
         flip_y: bool,
     ) -> Self {
-        use image::imageops::{flip_vertical_in_place, resize, FilterType};
         use image::RgbaImage;
+        use image::imageops::{FilterType, flip_vertical_in_place, resize};
 
         let color_space = src.color_space;
         let mut tmp = RgbaImage::from_vec(src.width, src.height, src.data).unwrap();

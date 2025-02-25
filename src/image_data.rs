@@ -1,5 +1,5 @@
 use super::error::Canvas2DError;
-use super::{to_raqote_size, CanvasColorSpace};
+use super::{CanvasColorSpace, to_raqote_size};
 
 #[derive(Clone, Debug)]
 pub struct ImageData {

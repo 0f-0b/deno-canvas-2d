@@ -5,8 +5,8 @@ use std::ops::RangeBounds;
 use std::rc::Rc;
 
 use cssparser::{
-    match_ignore_ascii_case, serialize_string, BasicParseError, ParseError, Parser, ParserInput,
-    SourceLocation, ToCss, Token, UnicodeRange,
+    BasicParseError, ParseError, Parser, ParserInput, SourceLocation, ToCss, Token, UnicodeRange,
+    match_ignore_ascii_case, serialize_string,
 };
 use cssparser_color::NumberOrPercentage;
 use itertools::Itertools as _;

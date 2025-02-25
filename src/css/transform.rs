@@ -1,13 +1,13 @@
 use std::convert::Infallible;
 use std::rc::Rc;
 
-use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
+use cssparser::{ParseError, Parser, Token, match_ignore_ascii_case};
 use euclid::default::{Transform2D, Transform3D, Vector3D};
 
 use super::super::matrix::Matrix;
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_number, parse_number_or_percentage, parse_one_or_more, FromCss};
+use super::{FromCss, parse_number, parse_number_or_percentage, parse_one_or_more};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ComputedTransformFunction {

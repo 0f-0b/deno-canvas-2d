@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::f64::consts::TAU;
 
-use deno_core::{op2, GarbageCollected};
+use deno_core::{GarbageCollected, op2};
 use euclid::default::{Box2D, Point2D, Transform2D};
-use euclid::{point2, size2, vec2, Angle};
+use euclid::{Angle, point2, size2, vec2};
 use lyon_geom::{Arc, ArcFlags, SvgArc};
 use strum_macros::FromRepr;
 
@@ -370,11 +370,7 @@ impl Path {
         direction: f64,
     ) {
         fn get_sweep_angle(x: f64) -> f64 {
-            if x < 0.0 {
-                x % TAU + TAU
-            } else {
-                x.min(TAU)
-            }
+            if x < 0.0 { x % TAU + TAU } else { x.min(TAU) }
         }
 
         let arc = Arc {

@@ -5,7 +5,7 @@ use std::fmt;
 
 use cssparser::color::PredefinedColorSpace;
 use cssparser::{ParseError, Parser, ToCss};
-use cssparser_color::{parse_color_with, ColorParser, FromParsedColor};
+use cssparser_color::{ColorParser, FromParsedColor, parse_color_with};
 use palette::chromatic_adaptation::AdaptInto as _;
 use palette::color_difference::EuclideanDistance as _;
 use palette::convert::{FromColorUnclamped, IntoColorUnclamped as _};

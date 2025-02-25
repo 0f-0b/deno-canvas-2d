@@ -1,12 +1,12 @@
 use std::convert::Infallible;
 use std::rc::Rc;
 
-use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
+use cssparser::{ParseError, Parser, Token, match_ignore_ascii_case};
 
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::color::ComputedColor;
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::{parse_number_or_percentage_with_range, parse_one_or_more, parse_url, FromCss};
+use super::{FromCss, parse_number_or_percentage_with_range, parse_one_or_more, parse_url};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Shadow {

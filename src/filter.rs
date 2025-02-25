@@ -8,9 +8,9 @@ use euclid::default::{Box2D, Point2D, SideOffsets2D, Size2D, Transform2D};
 use euclid::{size2, vec2};
 use palette::stimulus::IntoStimulus as _;
 
-use super::convert::{transform_argb32, Rgba};
+use super::convert::{Rgba, transform_argb32};
 use super::css::filter::{ComputedFilter, ComputedFilterFunction, ComputedFilterValue};
-use super::{premultiply, resolve_color_for_canvas, to_raqote_color, CanvasColorSpace};
+use super::{CanvasColorSpace, premultiply, resolve_color_for_canvas, to_raqote_color};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Color {

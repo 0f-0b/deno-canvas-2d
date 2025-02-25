@@ -8,7 +8,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use cssparser::ToCss as _;
-use deno_core::{op2, v8, GarbageCollected, OpState};
+use deno_core::{GarbageCollected, OpState, op2, v8};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
 use euclid::{point2, size2, vec2};
 use harfbuzz_rs as hb;
@@ -546,11 +546,7 @@ enum Direction {
 
 impl Direction {
     fn from_bidi_level(level: bidi::Level) -> Self {
-        if level.is_rtl() {
-            Self::Rtl
-        } else {
-            Self::Ltr
-        }
+        if level.is_rtl() { Self::Rtl } else { Self::Ltr }
     }
 
     fn to_bidi_level(self) -> bidi::Level {

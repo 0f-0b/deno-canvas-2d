@@ -1,9 +1,9 @@
 use std::convert::Infallible;
 use std::ops::RangeBounds;
 
-use cssparser::{match_ignore_ascii_case, ParseError, Parser, Token};
+use cssparser::{ParseError, Parser, Token, match_ignore_ascii_case};
 
-use super::{impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension, FromCss};
+use super::{FromCss, impl_to_css_for_computed_dimension, impl_to_css_for_specified_dimension};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SpecifiedAbsoluteLength {

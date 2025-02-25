@@ -3,13 +3,13 @@ use std::rc::Rc;
 use std::{fmt, str};
 
 use cssparser::{
-    match_ignore_ascii_case, serialize_string, ParseError, Parser, ToCss, Token, UnicodeRange,
+    ParseError, Parser, ToCss, Token, UnicodeRange, match_ignore_ascii_case, serialize_string,
 };
 
 use super::super::angle::{ComputedAngle, SpecifiedAngle};
 use super::super::{
-    parse_integer_with_range, parse_number, parse_url, try_match_next_ident_ignore_ascii_case,
-    CssNumber, CssPercentage, CssString, CssValue, FromCss,
+    CssNumber, CssPercentage, CssString, CssValue, FromCss, parse_integer_with_range, parse_number,
+    parse_url, try_match_next_ident_ignore_ascii_case,
 };
 use super::{ComputedSpecificFamily, SpecifiedAbsoluteFontWeight, SpecifiedFontWidth};
 

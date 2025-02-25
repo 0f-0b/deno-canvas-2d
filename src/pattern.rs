@@ -1,13 +1,13 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use deno_core::{op2, GarbageCollected};
+use deno_core::{GarbageCollected, op2};
 use euclid::default::Transform2D;
 use strum_macros::FromRepr;
 
 use super::image_bitmap::ImageBitmap;
 use super::wrap::Wrap;
-use super::{raqote_ext, CanvasColorSpace};
+use super::{CanvasColorSpace, raqote_ext};
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]

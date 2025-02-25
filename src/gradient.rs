@@ -2,15 +2,15 @@ use std::cell::RefCell;
 use std::f64::consts::TAU;
 use std::rc::Rc;
 
-use deno_core::{op2, GarbageCollected};
+use deno_core::{GarbageCollected, op2};
 use euclid::default::Point2D;
-use euclid::{point2, Angle};
+use euclid::{Angle, point2};
 
 use super::css::color::{AbsoluteColor, ComputedColor};
 use super::css::{self, FromCss as _};
 use super::error::Canvas2DError;
 use super::wrap::Wrap;
-use super::{raqote_ext, resolve_color_for_canvas, to_raqote_color, CanvasColorSpace};
+use super::{CanvasColorSpace, raqote_ext, resolve_color_for_canvas, to_raqote_color};
 
 #[derive(Clone, Copy, Debug)]
 pub enum CanvasGradientStyle {

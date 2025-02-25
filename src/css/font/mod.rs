@@ -4,13 +4,13 @@ use std::convert::Infallible;
 use std::fmt;
 use std::rc::Rc;
 
-use cssparser::{match_ignore_ascii_case, serialize_string, ParseError, Parser, ToCss, Token};
+use cssparser::{ParseError, Parser, ToCss, Token, match_ignore_ascii_case, serialize_string};
 
 use super::angle::{ComputedAngle, SpecifiedAngle};
 use super::length::{ComputedLength, SpecifiedAbsoluteLength};
 use super::{
-    parse_string, try_match_next_ident_ignore_ascii_case, CssNumber, CssPercentage, CssValue,
-    FromCss,
+    CssNumber, CssPercentage, CssValue, FromCss, parse_string,
+    try_match_next_ident_ignore_ascii_case,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]

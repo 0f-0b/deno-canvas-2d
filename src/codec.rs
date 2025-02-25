@@ -5,14 +5,14 @@ use image::error::EncodingError;
 use image::imageops::replace;
 use image::{GenericImageView as _, ImageError, ImageFormat, RgbaImage};
 
+use super::CanvasColorSpace;
 use super::error::Canvas2DError;
 use super::image_bitmap::{
-    aspect_resize, non_zero_u32, out_of_bounds, same_size, ImageBitmap, ImageOrientation,
-    ResizeQuality,
+    ImageBitmap, ImageOrientation, ResizeQuality, aspect_resize, non_zero_u32, out_of_bounds,
+    same_size,
 };
 use super::image_data::ImageData;
 use super::wrap::Wrap;
-use super::CanvasColorSpace;
 
 fn encode_png(
     data: &[u8],
@@ -70,9 +70,23 @@ fn mimesniff_image<'a>(header: &[u8], supplied_type: &'a str) -> &'a str {
         [0x00, 0x00, 0x01 | 0x02, 0x00, ..] => "image/x-icon",
         [0x42, 0x4d, ..] => "image/bmp",
         [0x47, 0x49, 0x46, 0x38, 0x37 | 0x39, 0x61, ..] => "image/gif",
-        [0x52, 0x49, 0x46, 0x46, _, _, _, _, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, ..] => {
-            "image/webp"
-        }
+        [
+            0x52,
+            0x49,
+            0x46,
+            0x46,
+            _,
+            _,
+            _,
+            _,
+            0x57,
+            0x45,
+            0x42,
+            0x50,
+            0x56,
+            0x50,
+            ..,
+        ] => "image/webp",
         [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ..] => "image/png",
         [0xff, 0xd8, 0xff, ..] => "image/jpeg",
         _ => supplied_type,

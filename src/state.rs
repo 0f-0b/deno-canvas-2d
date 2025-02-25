@@ -4,9 +4,9 @@ use std::fmt::{self, Debug};
 use std::rc::Rc;
 
 use cssparser::ToCss as _;
-use deno_core::{op2, v8, GarbageCollected, OpState};
+use deno_core::{GarbageCollected, OpState, op2, v8};
 use euclid::default::{Box2D, Point2D, Transform2D, Vector2D};
-use euclid::{point2, size2, vec2, Angle};
+use euclid::{Angle, point2, size2, vec2};
 use strum_macros::FromRepr;
 
 use super::convert::{
@@ -15,6 +15,7 @@ use super::convert::{
     premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_display_p3,
     srgb_to_premultiplied_linear_srgb, unpack_argb32_to_rgba8,
 };
+use super::css::FromCss as _;
 use super::css::color::{AbsoluteColor, ComputedColor};
 use super::css::filter::ComputedFilter;
 use super::css::font::{
@@ -23,19 +24,19 @@ use super::css::font::{
     ComputedGenericFamily, ComputedLineHeight,
 };
 use super::css::length::{ComputedLength, SpecifiedAbsoluteLength};
-use super::css::FromCss as _;
 use super::error::Canvas2DError;
-use super::filter::{compile_filter, BoxedRenderFunction, FilterChain};
+use super::filter::{BoxedRenderFunction, FilterChain, compile_filter};
 use super::gradient::CanvasGradient;
 use super::image_bitmap::ImageBitmap;
 use super::image_data::{AlignedImageDataView, AlignedImageDataViewMut};
 use super::path::{CanvasFillRule, Path};
 use super::pattern::CanvasPattern;
-use super::text::{prepare_text, FontFaceSet, TextMetrics};
+use super::text::{FontFaceSet, TextMetrics, prepare_text};
 use super::wrap::Wrap;
 use super::{
-    raqote_ext, resolve_color_for_canvas, serialize_color_for_canvas, to_raqote_color,
-    to_raqote_point, to_raqote_size, to_raqote_solid_source, CanvasColorSpace, ARGB32_ALPHA_MASK,
+    ARGB32_ALPHA_MASK, CanvasColorSpace, raqote_ext, resolve_color_for_canvas,
+    serialize_color_for_canvas, to_raqote_color, to_raqote_point, to_raqote_size,
+    to_raqote_solid_source,
 };
 
 const TRANSPARENT_SOLID_SOURCE: raqote::SolidSource = raqote::SolidSource {
