@@ -122,6 +122,7 @@ export {
   op_canvas_2d_state_set_height,
   op_canvas_2d_state_set_image_smoothing_enabled,
   op_canvas_2d_state_set_image_smoothing_quality,
+  op_canvas_2d_state_set_lang,
   op_canvas_2d_state_set_letter_spacing,
   op_canvas_2d_state_set_line_cap,
   op_canvas_2d_state_set_line_dash_offset,

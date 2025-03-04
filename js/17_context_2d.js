@@ -15,6 +15,12 @@ import {
   ImageDataPrototypeGetWidth,
 } from "./00_image_data_primordials.js";
 import {
+  IntlLocale,
+  IntlLocalePrototypeGetBaseName,
+  IntlLocalePrototypeGetScript,
+  IntlLocalePrototypeMaximize,
+} from "./00_intl_locale_primordials.js";
+import {
   op_canvas_2d_gradient_add_color_stop,
   op_canvas_2d_gradient_new_conic,
   op_canvas_2d_gradient_new_linear,
@@ -93,6 +99,7 @@ import {
   op_canvas_2d_state_set_height,
   op_canvas_2d_state_set_image_smoothing_enabled,
   op_canvas_2d_state_set_image_smoothing_quality,
+  op_canvas_2d_state_set_lang,
   op_canvas_2d_state_set_letter_spacing,
   op_canvas_2d_state_set_line_cap,
   op_canvas_2d_state_set_line_dash_offset,
@@ -972,6 +979,7 @@ const OffscreenCanvasRenderingContext2DInternals =
     #desynchronized;
     #willReadFrequently;
     #cachedDrawingStateStack = ObjectSetPrototypeOf([], null);
+    #cachedLang = "inherit";
     #cachedFont = null;
     #cachedLetterSpacing = null;
     #cachedWordSpacing = null;
@@ -1032,6 +1040,7 @@ const OffscreenCanvasRenderingContext2DInternals =
     static save(o) {
       op_canvas_2d_state_save(o.#state);
       ArrayPrototypePush(o.#cachedDrawingStateStack, {
+        lang: o.#cachedLang,
         font: o.#cachedFont,
         letterSpacing: o.#cachedLetterSpacing,
         wordSpacing: o.#cachedWordSpacing,
@@ -1049,6 +1058,7 @@ const OffscreenCanvasRenderingContext2DInternals =
         return;
       }
       op_canvas_2d_state_restore(o.#state);
+      o.#cachedLang = cache.lang;
       o.#cachedFont = cache.font;
       o.#cachedLetterSpacing = cache.letterSpacing;
       o.#cachedWordSpacing = cache.wordSpacing;
@@ -1149,6 +1159,26 @@ const OffscreenCanvasRenderingContext2DInternals =
       } else {
         o.#cachedDefaultPath = op_canvas_2d_path_new();
       }
+    }
+
+    static getLang(o) {
+      return o.#cachedLang;
+    }
+
+    static setLang(o, value) {
+      let locale;
+      if (value !== "" && value !== "inherit") {
+        try {
+          locale = new IntlLocale(value);
+          locale = IntlLocalePrototypeMaximize(locale);
+        } catch {
+          // ignored
+        }
+      }
+      const lang = locale && IntlLocalePrototypeGetBaseName(locale);
+      const script = locale && IntlLocalePrototypeGetScript(locale);
+      op_canvas_2d_state_set_lang(o.#state, lang ?? "", script ?? "");
+      o.#cachedLang = value;
     }
 
     static getFont(o) {
@@ -2473,6 +2503,20 @@ export class OffscreenCanvasRenderingContext2D extends Object {
       OffscreenCanvasRenderingContext2DInternals.getState(this),
       value,
     );
+  }
+
+  get lang() {
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    return OffscreenCanvasRenderingContext2DInternals.getLang(this);
+  }
+
+  set lang(value) {
+    OffscreenCanvasRenderingContext2DInternals.checkInstance(this);
+    const prefix =
+      "Failed to set 'lang' on 'OffscreenCanvasRenderingContext2D'";
+    requiredArguments(arguments.length, 1, prefix);
+    value = convertDOMString(value);
+    OffscreenCanvasRenderingContext2DInternals.setLang(this, value);
   }
 
   get font() {

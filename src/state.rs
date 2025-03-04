@@ -396,6 +396,8 @@ pub struct DrawingState {
     miter_limit: f64,
     dash_list: Option<Rc<[f64]>>,
     line_dash_offset: f64,
+    pub lang: String,
+    pub script: u32,
     pub font_style: ComputedFontStyle,
     pub font_weight: ComputedFontWeight,
     pub font_size: ComputedFontSize,
@@ -432,6 +434,8 @@ impl Default for DrawingState {
             miter_limit: 10.0,
             dash_list: None,
             line_dash_offset: 0.0,
+            lang: String::new(),
+            script: 0,
             font_style: ComputedFontStyle::Normal,
             font_weight: ComputedFontWeight(400.0),
             font_size: ComputedFontSize(ComputedLength { px: 10.0 }),
@@ -638,6 +642,14 @@ impl CanvasState {
 
     pub fn set_line_dash_offset(&mut self, value: f64) {
         self.current_drawing_state.line_dash_offset = value;
+    }
+
+    pub fn set_lang(&mut self, value: String) {
+        self.current_drawing_state.lang = value;
+    }
+
+    pub fn set_script(&mut self, value: u32) {
+        self.current_drawing_state.script = value;
     }
 
     pub fn font(&self) -> Option<ComputedFont> {
@@ -1508,6 +1520,18 @@ pub fn op_canvas_2d_state_set_line_dash_offset(
     if value.is_finite() {
         this.set_line_dash_offset(value);
     }
+}
+
+#[op2(fast)]
+pub fn op_canvas_2d_state_set_lang(
+    #[cppgc] this: &Wrap<RefCell<CanvasState>>,
+    #[string] lang: String,
+    #[string] script: &str,
+) {
+    let mut this = this.borrow_mut();
+    let script = script.as_bytes().try_into().map_or(0, u32::from_be_bytes);
+    this.set_lang(lang);
+    this.set_script(script);
 }
 
 #[op2]

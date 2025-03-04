@@ -3,9 +3,9 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::num::NonZeroU64;
 use std::ops::Range;
-use std::process;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::{process, ptr};
 
 use cssparser::ToCss as _;
 use deno_core::{GarbageCollected, OpState, op2, v8};
@@ -822,6 +822,11 @@ pub fn prepare_text(
         return (Path::new(), TextMetrics::empty());
     }
     let text = replace_ascii_whitespace(text);
+    let lang = drawing_state
+        .lang
+        .parse()
+        .unwrap_or(hb::Language(ptr::null()));
+    let script = hb::Tag(drawing_state.script);
     let font_size = drawing_state.font_size.0;
     let font_family = drawing_state.font_family.family_list.as_ref();
     let font_attrs = FontAttributes {
@@ -976,7 +981,9 @@ pub fn prepare_text(
         let scale = font_size.px / font.face().upem() as f32;
         let buf = buf
             .add_str_item(&text, &text[run.range])
-            .set_direction(run.direction.to_harfbuzz());
+            .set_direction(run.direction.to_harfbuzz())
+            .set_script(script)
+            .set_language(lang);
         let buf = hb::shape(font, buf, features);
         let positions = buf.get_glyph_positions();
         let infos = buf.get_glyph_infos();
