@@ -260,9 +260,7 @@ impl ImageBitmap {
         f: impl FnOnce(&mut raqote::DrawTarget<&mut [u32]>),
     ) -> Result<Self, Canvas2DError> {
         let size = to_raqote_size(width as u64, height as u64)?;
-        let mut data = std::iter::repeat(0)
-            .take((width * height) as usize)
-            .collect::<Rc<[_]>>();
+        let mut data = std::iter::repeat_n(0, (width * height) as usize).collect::<Rc<[_]>>();
         let mut dst = raqote::DrawTarget::from_backing(
             size.width,
             size.height,
@@ -464,7 +462,7 @@ impl ImageBitmap {
             }
             None => {
                 let size = (self.width as u64 * self.height as u64).try_into().unwrap();
-                std::iter::repeat(ARGB32_ALPHA_MASK).take(size).collect()
+                std::iter::repeat_n(ARGB32_ALPHA_MASK, size).collect()
             }
         };
         Self {
