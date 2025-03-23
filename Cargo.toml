@@ -22,7 +22,7 @@ itertools = "0.14.0"
 lyon_geom = "1.0.6"
 palette = { version = "0.7.6", default-features = false, features = ["std"] }
 png = "0.17.16"
-raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "64eea3e319d49bba74b283ee32ed5ae8b6945ad5", default-features = false }
+raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "a28779053baa6f574fb67f0cfc6fed8badbb397c", default-features = false }
 strum_macros = "0.27.1"
 svgtypes = "0.15.3"
 thiserror = "2.0.12"

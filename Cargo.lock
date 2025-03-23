@@ -1515,7 +1515,7 @@ checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 [[package]]
 name = "raqote"
 version = "0.8.5"
-source = "git+https://github.com/0f-0b/raqote.git?rev=64eea3e319d49bba74b283ee32ed5ae8b6945ad5#64eea3e319d49bba74b283ee32ed5ae8b6945ad5"
+source = "git+https://github.com/0f-0b/raqote.git?rev=a28779053baa6f574fb67f0cfc6fed8badbb397c#a28779053baa6f574fb67f0cfc6fed8badbb397c"
 dependencies = [
  "euclid",
  "lyon_geom",
@@ -1827,7 +1827,7 @@ dependencies = [
 [[package]]
 name = "sw-composite"
 version = "0.7.16"
-source = "git+https://github.com/0f-0b/sw-composite.git?rev=4f8ea31e249fd77ae7e91bbdb80e694b559c6b7c#4f8ea31e249fd77ae7e91bbdb80e694b559c6b7c"
+source = "git+https://github.com/0f-0b/sw-composite.git?rev=e18fa301505d95d2b56092e8fa63045a00b6d402#e18fa301505d95d2b56092e8fa63045a00b6d402"
 
 [[package]]
 name = "syn"
