@@ -12,7 +12,7 @@ euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "8fbc406506cfd1f8ab60e625d1e926a0e72e1d8a" }
 harfbuzz_rs = { git = "https://github.com/harfbuzz/harfbuzz_rs.git", rev = "30f0fec1744bb320ac554f9f62831b1ce1d2985d" }
 hashlink = "0.10.0"
-image = { version = "0.25.5", default-features = false, features = [
+image = { version = "0.25.6", default-features = false, features = [
   "bmp",
   "gif",
   "jpeg",
@@ -30,10 +30,10 @@ unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.196.0"
-deno_url = "0.196.0"
-deno_web = "0.227.0"
-deno_webidl = "0.196.0"
+deno_console = "0.197.0"
+deno_url = "0.197.0"
+deno_web = "0.228.0"
+deno_webidl = "0.197.0"
 tokio = { version = "1.44.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]

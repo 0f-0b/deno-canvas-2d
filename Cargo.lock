@@ -369,9 +369,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.196.0"
+version = "0.197.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcd928e08fe3b83291c6b164f91e845a3a9f0a3496c1690cc70a954e14599fce"
+checksum = "12f3b8f44cf27a6018981d146b6fe4bc484d6e51343631a2320e4f0934065a7b"
 dependencies = [
  "deno_core",
 ]
@@ -478,9 +478,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.55.0"
+version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "272249f6f8dac69a90e3bee1651bcfa6c62003149be58d35cb0558b2be957e86"
+checksum = "c39abb994261b39df8a4746d34a3a77a91b0627cf948ec6cbaec8990ce7b4d00"
 dependencies = [
  "capacity_builder 0.5.0",
  "deno_core",
@@ -521,9 +521,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.196.0"
+version = "0.197.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b86e5df2cf909e31a89b8c005f750e43751171ea7dfe04c8fc1e9bf5e05e06ac"
+checksum = "9bc385f7e5c897c2d16fe0cc5e6f43701193c69d7c848d484a308bc290f6f600"
 dependencies = [
  "deno_core",
  "deno_error",
@@ -532,9 +532,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.227.0"
+version = "0.228.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0522f3017e42069cdcaa18c6adc52e1652f8c0c33d6fa61ee80c245699cc694"
+checksum = "2398a9c7fbafab194449ec82cb0d79229575e43f874c779a00b2e8036efd3602"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -553,9 +553,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.196.0"
+version = "0.197.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b7412e8f2ecdaf6c4f5a227dbc8182fd3c8b47b36a23a96373c524e76692661"
+checksum = "f7c7e7705bcd81b404f28e39385116bb5abe74a2677314cc612b74911c0ec31f"
 dependencies = [
  "deno_core",
 ]
@@ -594,9 +594,9 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "encoding_rs"
-version = "0.8.33"
+version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7268b386296a025e474d5140678f75d6de9493ae55a5d709eeb9dd08149945e1"
+checksum = "75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3"
 dependencies = [
  "cfg-if",
 ]
@@ -921,9 +921,9 @@ dependencies = [
 
 [[package]]
 name = "icu_locid_transform_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdc8ff3388f852bede6b579ad4e978ab004f139284d7b28715f773507b946f6e"
+checksum = "7515e6d781098bf9f7205ab3fc7e9709d34554ae0b21ddbcb5febfa4bc7df11d"
 
 [[package]]
 name = "icu_normalizer"
@@ -945,9 +945,9 @@ dependencies = [
 
 [[package]]
 name = "icu_normalizer_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8cafbf7aa791e9b22bec55a167906f9e1215fd475cd22adfcf660e03e989516"
+checksum = "c5e8338228bdc8ab83303f16b797e177953730f601a96c25d10cb3ab0daa0cb7"
 
 [[package]]
 name = "icu_properties"
@@ -966,9 +966,9 @@ dependencies = [
 
 [[package]]
 name = "icu_properties_data"
-version = "1.5.0"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67a8effbc3dd3e4ba1afa8ad918d5684b8868b3b26500753effea8d2eed19569"
+checksum = "85fb8799753b75aee8d2a21d7c14d9f38921b54b3dbda10f5a3c7a7b82dba5e2"
 
 [[package]]
 name = "icu_provider"
@@ -1027,9 +1027,9 @@ checksum = "cb56e1aa765b4b4f3aadfab769793b7087bb03a4ea4920644a6d238e2df5b9ed"
 
 [[package]]
 name = "image"
-version = "0.25.5"
+version = "0.25.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd6f44aed642f18953a158afeb30206f4d50da59fbc66ecb53c66488de73563b"
+checksum = "db35664ce6b9810857a38a906215e75a9c879f0696556a39f59c62829710251a"
 dependencies = [
  "bytemuck",
  "byteorder-lite",
@@ -1140,9 +1140,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.26"
+version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30bde2b3dc3671ae49d8e2e9f044c7c005836e7a023ee57cffa25ab82764bb9e"
+checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "lyon_geom"
@@ -1267,9 +1267,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.21.1"
+version = "1.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d75b0bedcc4fe52caa0e03d9f1151a323e4aa5e2d78ba3580400cd3c9e2bc4bc"
+checksum = "c2806eaa3524762875e21c3dcd057bc4b7bfa01ce4da8d46be1cd43649e1cc6b"
 
 [[package]]
 name = "outref"
@@ -2050,9 +2050,9 @@ dependencies = [
 
 [[package]]
 name = "v8"
-version = "135.0.0"
+version = "135.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc24d3e68c7e9b581fce2f0ceb9d1ad61565bf783a36d80d530ccf2be212a295"
+checksum = "5861d62596971e448da865320a9ac547e2526fdf9eaf4fb40bf8a9f465bccecb"
 dependencies = [
  "bindgen",
  "bitflags 2.9.0",
@@ -2060,7 +2060,6 @@ dependencies = [
  "gzip-header",
  "home",
  "miniz_oxide 0.7.4",
- "once_cell",
  "paste",
  "which",
 ]
