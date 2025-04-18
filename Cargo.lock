@@ -360,9 +360,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.201.0"
+version = "0.202.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c130619973c05a06d4e71d12f712f3f3dc3829b8ebbdf0c4afbc1b585b16f06"
+checksum = "fc52cdb286a7e2a694ea289c90692f79f560d0a8d29dcdb022a94bb8c7f42472"
 dependencies = [
  "deno_core",
 ]
@@ -468,9 +468,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.60.0"
+version = "0.61.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fb68a72eb33a3c2f7d736e2d46a39777427fc16a0ecc70936906d4841251124"
+checksum = "203c1302d9df2379b31d07daf6daf801dcff112eaca17b46a3a65c79b75f1eea"
 dependencies = [
  "capacity_builder",
  "deno_core",
@@ -511,9 +511,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.201.0"
+version = "0.202.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aeb6e2ff51ccba0e9d9ba63de53070b1a0aaa397bc4ef6d391bc4a7e34fb6edf"
+checksum = "8e8f1350b48dcde008df0b85b665fcda349c94c848a0d2ef7068c54fd01c442d"
 dependencies = [
  "deno_core",
  "deno_error",
@@ -522,9 +522,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.232.0"
+version = "0.233.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25a15b9a307691951ddf176f93eb106de649c0d868ab098857ac900d72393b9a"
+checksum = "35c14f1f97a098655f8dde49ce2635b0fbf63b935bbcce953b3c1aba9d7e6661"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -543,9 +543,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.201.0"
+version = "0.202.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a64c8b01ebf711b4af79a2e8e736907f99f5431f8bbda1c31237c662e331510"
+checksum = "71d69f2b549d331987b9dedef677cc30e5093af298aa807924a4353cb45f5fb9"
 dependencies = [
  "deno_core",
 ]
@@ -1445,9 +1445,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.94"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a31971752e70b8b2686d7e46ec17fb38dad4051d94024c88df49b667caea9c84"
+checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
 ]
