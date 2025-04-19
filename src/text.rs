@@ -1028,7 +1028,7 @@ pub fn prepare_text(
     let width = cursor.x;
     let compression = (max_width / width).min(1.0);
     let width = width * compression;
-    let bounds = bounds * compression;
+    let bounds = bounds.scale(compression, 1.0);
     let font_metrics = match fonts.first_available_font(font_family, font_attrs) {
         Some(ref font) => {
             let data = font.data.borrow();
@@ -1042,8 +1042,7 @@ pub fn prepare_text(
                         SpecifiedMetricsOverrideValue::Normal => None,
                         SpecifiedMetricsOverrideValue::Percentage(v) => Some(v),
                     };
-                    FontMetrics::new(font, ascent_override, descent_override)
-                        .scale(font_size.px * compression)
+                    FontMetrics::new(font, ascent_override, descent_override).scale(font_size.px)
                 }
                 _ => FontMetrics::empty(),
             }
@@ -1063,9 +1062,9 @@ pub fn prepare_text(
         CanvasTextBaseline::Ideographic => font_metrics.ideographic_baseline,
         CanvasTextBaseline::Bottom => font_metrics.em_descent,
     };
-    let path = path_builder.path.transform(
-        &Transform2D::new(compression, 0.0, 0.0, compression, -anchor_x, -anchor_y).cast(),
-    );
+    let path = path_builder
+        .path
+        .transform(&Transform2D::new(compression, 0.0, 0.0, 1.0, -anchor_x, -anchor_y).cast());
     let text_metrics = TextMetrics {
         width,
         actual_bounding_box_left: anchor_x - bounds.min.x,
