@@ -254,9 +254,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.19"
+version = "1.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e3a13707ac958681c13b39b458c073d0d9bc8a22cb1b2f4c8e55eb72c13f362"
+checksum = "04da6a0d40b948dfc4fa8f5bbf402b0fc1a64a28dbf7d12ffd683550f2c1b63a"
 dependencies = [
  "jobserver",
  "libc",
@@ -360,9 +360,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.202.0"
+version = "0.203.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc52cdb286a7e2a694ea289c90692f79f560d0a8d29dcdb022a94bb8c7f42472"
+checksum = "999171b0fc7255971eec7adfc49b2bf18832e86e4a86746c3c58633373d16cdb"
 dependencies = [
  "deno_core",
 ]
@@ -468,9 +468,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.61.0"
+version = "0.62.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "203c1302d9df2379b31d07daf6daf801dcff112eaca17b46a3a65c79b75f1eea"
+checksum = "f7c3c0785bcb458cd010c47d7f77cae26594a5160ebfc4fecb6f9e5ea36483fc"
 dependencies = [
  "capacity_builder",
  "deno_core",
@@ -511,9 +511,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.202.0"
+version = "0.203.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e8f1350b48dcde008df0b85b665fcda349c94c848a0d2ef7068c54fd01c442d"
+checksum = "0961e3e844191cac261eba5efdf52e2a5dd3aeeac7ebb09c1bbe3f8b04ef31cd"
 dependencies = [
  "deno_core",
  "deno_error",
@@ -522,9 +522,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.233.0"
+version = "0.234.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35c14f1f97a098655f8dde49ce2635b0fbf63b935bbcce953b3c1aba9d7e6661"
+checksum = "2ec73d866d485bed1bd520f3a413a94b5c9a69de09d8561697d2bd83a79c795c"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -543,9 +543,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.202.0"
+version = "0.203.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71d69f2b549d331987b9dedef677cc30e5093af298aa807924a4353cb45f5fb9"
+checksum = "cb50836af90d078b1f30f4df0e3398d557a74633b9b4740e10a299a83f12d054"
 dependencies = [
  "deno_core",
 ]
@@ -1097,9 +1097,9 @@ dependencies = [
 
 [[package]]
 name = "libm"
-version = "0.2.11"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
+checksum = "c9627da5196e5d8ed0b0495e61e518847578da83483c37288316d9b2e03a7f72"
 
 [[package]]
 name = "linux-raw-sys"
@@ -1665,9 +1665,9 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.2"
+version = "1.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
+checksum = "9203b8055f63a2a00e2f593bb0510367fe707d7ff1e5c872de2f537b339e5410"
 dependencies = [
  "libc",
 ]
