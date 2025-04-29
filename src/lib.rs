@@ -4,7 +4,6 @@ pub mod css;
 pub mod error;
 mod filter;
 mod gradient;
-mod harfbuzz_ext;
 mod image_bitmap;
 mod image_data;
 mod matrix;

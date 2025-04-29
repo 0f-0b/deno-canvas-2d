@@ -29,7 +29,6 @@ use super::css::font::{
 };
 use super::css::{self, FromCss as _, UnicodeRangeSet};
 use super::error::Canvas2DError;
-use super::harfbuzz_ext::{FaceExt as _, FontExt as _};
 use super::path::Path;
 use super::state::{
     CanvasDirection, CanvasFontKerning, CanvasTextAlign, CanvasTextBaseline, CanvasTextRendering,
@@ -670,18 +669,21 @@ impl FontMetrics {
         let em_scale = 1.0 / (os2_ascent - os2_descent);
         let em_ascent = os2_ascent * em_scale;
         let em_descent = os2_descent * em_scale;
-        let hanging_baseline = match font.get_generic_baseline(b"hang") {
-            Some(v) => v as f32,
-            None => ascent * 0.8,
-        };
-        let alphabetic_baseline = match font.get_generic_baseline(b"romn") {
-            Some(v) => v as f32,
-            None => 0.0,
-        };
-        let ideographic_baseline = match font.get_generic_baseline(b"ideo") {
-            Some(v) => v as f32,
-            None => descent,
-        };
+        let hanging_baseline =
+            match font.get_baseline(b"hang", hb::Direction::Ltr, b"DFLT", b"dflt") {
+                Some(v) => v as f32,
+                None => ascent * 0.8,
+            };
+        let alphabetic_baseline =
+            match font.get_baseline(b"romn", hb::Direction::Ltr, b"DFLT", b"dflt") {
+                Some(v) => v as f32,
+                None => 0.0,
+            };
+        let ideographic_baseline =
+            match font.get_baseline(b"ideo", hb::Direction::Ltr, b"DFLT", b"dflt") {
+                Some(v) => v as f32,
+                None => descent,
+            };
         Self {
             ascent,
             descent,
@@ -826,7 +828,7 @@ pub fn prepare_text(
         .lang
         .parse()
         .unwrap_or(hb::Language(ptr::null()));
-    let script = hb::Tag(drawing_state.script);
+    let script = hb::Script::from_iso15924_tag(hb::Tag(drawing_state.script));
     let font_size = drawing_state.font_size.0;
     let font_family = drawing_state.font_family.family_list.as_ref();
     let font_attrs = FontAttributes {
@@ -870,9 +872,7 @@ pub fn prepare_text(
             let data = font.data.borrow();
             match data.state {
                 FontFaceState::Loaded(ref font) => {
-                    // TODO `set_synthetic_bold` does not work on subfonts
-                    // let mut font = hb::Font::create_sub_font(font.clone());
-                    let mut font = hb::Font::new(font.face());
+                    let mut font = hb::Font::create_sub_font(font.clone());
                     let face = font.face();
                     let mut features = HashMap::<hb::Tag, _>::new();
                     if optimize_speed {
@@ -933,27 +933,27 @@ pub fn prepare_text(
                     let mut variations = HashMap::new();
                     let weight = drawing_state.font_weight.0;
                     if let Some(info) = face.find_variation_axis_info(b"wght") {
-                        variations.insert(info.tag, weight);
+                        variations.insert(hb::Tag(info.0.tag), weight);
                     } else {
                         let embolden = (weight - data.weight.computed.1).max(0.0) * (1.0 / 14400.0);
                         font.set_synthetic_bold(embolden, embolden, false);
                     }
                     let width = drawing_state.font_stretch.modernize().0;
                     if let Some(info) = face.find_variation_axis_info(b"wdth") {
-                        variations.insert(info.tag, width * 100.0);
+                        variations.insert(hb::Tag(info.0.tag), width * 100.0);
                     }
                     match drawing_state.font_style {
                         ComputedFontStyle::Normal => {}
                         ComputedFontStyle::Italic => {
                             if let Some(info) = face.find_variation_axis_info(b"ital") {
-                                variations.insert(info.tag, 1.0);
+                                variations.insert(hb::Tag(info.0.tag), 1.0);
                             } else if data.style.computed == ComputedFontStyleRange::Normal {
                                 font.set_synthetic_slant(0.25);
                             }
                         }
                         ComputedFontStyle::Oblique(angle) => {
                             if let Some(info) = face.find_variation_axis_info(b"slnt") {
-                                variations.insert(info.tag, -angle.deg);
+                                variations.insert(hb::Tag(info.0.tag), -angle.deg);
                             } else if data.style.computed == ComputedFontStyleRange::Normal {
                                 font.set_synthetic_slant(angle.radians().tan());
                             }
@@ -962,7 +962,7 @@ pub fn prepare_text(
                     if let Some(ref list) = data.variation_settings.variation_value_list {
                         for entry in list.iter() {
                             if let Some(info) = face.find_variation_axis_info(&entry.tag) {
-                                variations.insert(info.tag, entry.value);
+                                variations.insert(hb::Tag(info.0.tag), entry.value);
                             }
                         }
                     }
@@ -994,7 +994,6 @@ pub fn prepare_text(
             let offset = vec2(position.x_offset, position.y_offset).cast() * scale;
             let pos = cursor + offset;
             path_builder.transform = Transform2D::new(scale, 0.0, 0.0, scale, pos.x, pos.y);
-            #[allow(clippy::unnecessary_mut_passed)]
             font.draw_glyph(glyph, &mut path_builder);
             if let Some(mut extents) = font.get_glyph_extents(glyph) {
                 extents.y_bearing += extents.height;
