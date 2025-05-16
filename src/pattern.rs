@@ -1,4 +1,5 @@
 use std::cell::{Cell, RefCell};
+use std::ffi::CStr;
 use std::rc::Rc;
 
 use deno_core::{GarbageCollected, op2};
@@ -73,7 +74,11 @@ impl CanvasPattern {
     }
 }
 
-impl GarbageCollected for Wrap<Rc<CanvasPattern>> {}
+impl GarbageCollected for Wrap<Rc<CanvasPattern>> {
+    fn get_name(&self) -> &'static CStr {
+        c"CanvasPattern"
+    }
+}
 
 #[op2]
 #[cppgc]

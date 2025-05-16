@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::convert::Infallible;
+use std::ffi::CStr;
 use std::fmt::{self, Debug};
 use std::rc::Rc;
 
@@ -1344,7 +1345,11 @@ impl CanvasState {
     }
 }
 
-impl GarbageCollected for Wrap<RefCell<CanvasState>> {}
+impl GarbageCollected for Wrap<RefCell<CanvasState>> {
+    fn get_name(&self) -> &'static CStr {
+        c"CanvasState"
+    }
+}
 
 #[op2]
 #[cppgc]

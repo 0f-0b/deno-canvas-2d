@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::f64::consts::TAU;
+use std::ffi::CStr;
 
 use deno_core::{GarbageCollected, op2};
 use euclid::default::{Box2D, Point2D, Transform2D};
@@ -481,7 +482,11 @@ impl Path {
     }
 }
 
-impl GarbageCollected for Wrap<RefCell<Path>> {}
+impl GarbageCollected for Wrap<RefCell<Path>> {
+    fn get_name(&self) -> &'static CStr {
+        c"CanvasPath"
+    }
+}
 
 #[op2]
 #[cppgc]

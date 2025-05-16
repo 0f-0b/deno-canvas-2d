@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ffi::CStr;
 use std::num::NonZeroU64;
 use std::ops::Range;
 use std::rc::Rc;
@@ -318,7 +319,11 @@ impl FontFace {
     }
 }
 
-impl GarbageCollected for Wrap<Rc<FontFace>> {}
+impl GarbageCollected for Wrap<Rc<FontFace>> {
+    fn get_name(&self) -> &'static CStr {
+        c"FontFace"
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct FontAttributes {
@@ -535,7 +540,11 @@ impl FontFaceSet {
     }
 }
 
-impl GarbageCollected for Wrap<Rc<RefCell<FontFaceSet>>> {}
+impl GarbageCollected for Wrap<Rc<RefCell<FontFaceSet>>> {
+    fn get_name(&self) -> &'static CStr {
+        c"FontFaceSet"
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 enum Direction {

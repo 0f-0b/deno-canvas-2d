@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ffi::CStr;
 use std::rc::Rc;
 
 use deno_core::{GarbageCollected, op2};
@@ -485,7 +486,11 @@ impl Default for ImageBitmap {
     }
 }
 
-impl GarbageCollected for Wrap<RefCell<ImageBitmap>> {}
+impl GarbageCollected for Wrap<RefCell<ImageBitmap>> {
+    fn get_name(&self) -> &'static CStr {
+        c"ImageBitmap"
+    }
+}
 
 #[op2]
 #[cppgc]

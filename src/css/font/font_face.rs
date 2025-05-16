@@ -1,6 +1,6 @@
 use std::convert::Infallible;
+use std::fmt;
 use std::rc::Rc;
-use std::{fmt, str};
 
 use cssparser::{
     ParseError, Parser, ToCss, Token, UnicodeRange, match_ignore_ascii_case, serialize_string,

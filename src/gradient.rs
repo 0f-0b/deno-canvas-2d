@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::f64::consts::TAU;
+use std::ffi::CStr;
 use std::rc::Rc;
 
 use deno_core::{GarbageCollected, op2};
@@ -154,7 +155,11 @@ impl CanvasGradient {
     }
 }
 
-impl GarbageCollected for Wrap<Rc<CanvasGradient>> {}
+impl GarbageCollected for Wrap<Rc<CanvasGradient>> {
+    fn get_name(&self) -> &'static CStr {
+        c"CanvasGradient"
+    }
+}
 
 #[op2]
 #[cppgc]
