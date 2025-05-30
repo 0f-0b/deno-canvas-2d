@@ -6,8 +6,8 @@ edition = "2024"
 [dependencies]
 cssparser = "0.35.0"
 cssparser-color = "0.3.0"
-deno_core = "0.347.0"
-deno_error = "0.5.6"
+deno_core = "0.349.0"
+deno_error = "0.6.0"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "138bdb0451c4ea02a303caddc1a6c1fd654ae927" }
 harfbuzz_rs = { git = "https://github.com/0f-0b/harfbuzz_rs.git", rev = "ee361c2c5f6c624cace9922ba144d766e206be8f" }
@@ -30,11 +30,11 @@ unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.205.0"
-deno_url = "0.205.0"
-deno_web = "0.236.0"
-deno_webidl = "0.205.0"
-tokio = { version = "1.45.0", features = ["fs", "rt", "macros"] }
+deno_console = "0.206.0"
+deno_url = "0.206.0"
+deno_web = "0.237.0"
+deno_webidl = "0.206.0"
+tokio = { version = "1.45.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
 undocumented_unsafe_blocks = "warn"
