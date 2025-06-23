@@ -6,10 +6,10 @@ edition = "2024"
 [dependencies]
 cssparser = "0.35.0"
 cssparser-color = "0.3.0"
-deno_core = "0.350.0"
+deno_core = "0.351.0"
 deno_error = "0.6.1"
 euclid = "0.22.11"
-fontsan = { git = "https://github.com/servo/fontsan.git", rev = "c0d0b5333117901e1c31bc3c502c384115b93e6f" }
+fontsan = { git = "https://github.com/servo/fontsan.git", rev = "212f15c9e36f701597847de94e1dafc9636bdf07" }
 harfbuzz_rs = { git = "https://github.com/0f-0b/harfbuzz_rs.git", rev = "ee361c2c5f6c624cace9922ba144d766e206be8f" }
 hashlink = "0.10.0"
 image = { version = "0.25.6", default-features = false, features = [
@@ -30,10 +30,10 @@ unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.207.0"
-deno_url = "0.207.0"
-deno_web = "0.238.0"
-deno_webidl = "0.207.0"
+deno_console = "0.208.0"
+deno_url = "0.208.0"
+deno_web = "0.239.0"
+deno_webidl = "0.208.0"
 tokio = { version = "1.45.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
