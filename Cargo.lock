@@ -190,9 +190,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.18.1"
+version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793db76d6187cd04dff33004d8e6c9cc4e05cd330500379d2394209271b4aeee"
+checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
 
 [[package]]
 name = "by_address"
@@ -376,18 +376,18 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.208.0"
+version = "0.209.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b57b384f83fc698835ac152995205e331dce0d5627e5e582f918f4e3dca57d0c"
+checksum = "66c0b8a65dcb7b38c22e5969c6454b3cb0839b7dcfb7a4f0d904de871a4c4416"
 dependencies = [
  "deno_core",
 ]
 
 [[package]]
 name = "deno_core"
-version = "0.351.0"
+version = "0.352.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4301eb6d378f3ae81fbac4cde14c3f467379efd7d46043268d76905effe3611d"
+checksum = "f79c49675a4356068f4dfae6513f7e0097e1ee8548c098a68f5bbf9a93330c51"
 dependencies = [
  "anyhow",
  "az",
@@ -454,9 +454,9 @@ dependencies = [
 
 [[package]]
 name = "deno_ops"
-version = "0.227.0"
+version = "0.228.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bab1eaf578a8cc0ae6fb933e91dc3388b41df22e5974d5891c17ba66b3a0bbb"
+checksum = "714adefbea6c347318737207f00eaf42c68c14ef51c040a96a6324b831ca59df"
 dependencies = [
  "indexmap",
  "proc-macro-rules",
@@ -484,9 +484,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.67.0"
+version = "0.68.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "914f7cb4715044df26223f3d981436b02eb5c283ebb8866901b9135824420e77"
+checksum = "baa14d9c3fbba59836ffbaac7f736a2f48d4a5fc209a2103d1e1b898915232a5"
 dependencies = [
  "capacity_builder",
  "deno_error",
@@ -494,6 +494,7 @@ dependencies = [
  "deno_terminal",
  "deno_unsync",
  "fqdn",
+ "ipnetwork",
  "libc",
  "log",
  "nix",
@@ -533,9 +534,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.208.0"
+version = "0.209.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7873db8b139057d78f76b792ca18fb6ed5a139b7c8bb5b6d255baa954d54d58e"
+checksum = "8cccbb10fb59f29b04161055a65f7fe83364f9e8317d4d2ce3bd7979faf63a87"
 dependencies = [
  "deno_core",
  "deno_error",
@@ -544,9 +545,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.239.0"
+version = "0.240.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16ae66e9dd522c70a1cff32ffe0b08abbcde85e61d4d455a7722fce890345dd5"
+checksum = "1d6b8a97cc90b6aaea20fe200cfa7e5b6953dd33ecda0af50d6d360387c33df4"
 dependencies = [
  "async-trait",
  "base64-simd",
@@ -565,9 +566,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.208.0"
+version = "0.209.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1145382d5ef0aab50acb2e6e11ea6ccc3862ba4025813842890b30afd592d48e"
+checksum = "a20bbfac0cf15918f7cbd0b55c366ac20ad65c825f362fa684c3104984254d3b"
 dependencies = [
  "deno_core",
 ]
@@ -1027,12 +1028,21 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.9.0"
+version = "2.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
+checksum = "fe4cd85333e22411419a0bcae1297d25e58c9443848b11dc6a86fefe8c78a661"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "ipnetwork"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf466541e9d546596ee94f9f69590f89473455f88372423e0008fc1a7daf100e"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -1632,9 +1642,9 @@ dependencies = [
 
 [[package]]
 name = "serde_v8"
-version = "0.260.0"
+version = "0.261.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4f284b4d521591b17ddee01aff830dd005a04476f7862aca9298c038d00fb7e"
+checksum = "5390adb1572a22916f7cff2e89e603053f2f1e1c7644e5c83fdaefb5ea1cb82b"
 dependencies = [
  "deno_error",
  "num-bigint",
