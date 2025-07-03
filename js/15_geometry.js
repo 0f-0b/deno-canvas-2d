@@ -210,8 +210,6 @@ export class DOMPoint extends DOMPointReadOnly {
 
   set x(value) {
     DOMPointInternals.checkInstance(this);
-    const prefix = "Failed to set 'x' on 'DOMPoint'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMPointReadOnlyInternals.setX(this, value);
   }
@@ -223,8 +221,6 @@ export class DOMPoint extends DOMPointReadOnly {
 
   set y(value) {
     DOMPointInternals.checkInstance(this);
-    const prefix = "Failed to set 'y' on 'DOMPoint'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMPointReadOnlyInternals.setY(this, value);
   }
@@ -236,8 +232,6 @@ export class DOMPoint extends DOMPointReadOnly {
 
   set z(value) {
     DOMPointInternals.checkInstance(this);
-    const prefix = "Failed to set 'z' on 'DOMPoint'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMPointReadOnlyInternals.setZ(this, value);
   }
@@ -249,8 +243,6 @@ export class DOMPoint extends DOMPointReadOnly {
 
   set w(value) {
     DOMPointInternals.checkInstance(this);
-    const prefix = "Failed to set 'w' on 'DOMPoint'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMPointReadOnlyInternals.setW(this, value);
   }
@@ -527,8 +519,6 @@ export class DOMRect extends DOMRectReadOnly {
 
   set x(value) {
     DOMRectInternals.checkInstance(this);
-    const prefix = "Failed to set 'x' on 'DOMRect'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMRectReadOnlyInternals.setX(this, value);
   }
@@ -540,8 +530,6 @@ export class DOMRect extends DOMRectReadOnly {
 
   set y(value) {
     DOMRectInternals.checkInstance(this);
-    const prefix = "Failed to set 'y' on 'DOMRect'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMRectReadOnlyInternals.setY(this, value);
   }
@@ -553,8 +541,6 @@ export class DOMRect extends DOMRectReadOnly {
 
   set width(value) {
     DOMRectInternals.checkInstance(this);
-    const prefix = "Failed to set 'width' on 'DOMRect'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMRectReadOnlyInternals.setWidth(this, value);
   }
@@ -566,8 +552,6 @@ export class DOMRect extends DOMRectReadOnly {
 
   set height(value) {
     DOMRectInternals.checkInstance(this);
-    const prefix = "Failed to set 'height' on 'DOMRect'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMRectReadOnlyInternals.setHeight(this, value);
   }
@@ -1692,8 +1676,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set a(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'a' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM11(this, value);
   }
@@ -1705,8 +1687,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set b(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'b' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM12(this, value);
   }
@@ -1718,8 +1698,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set c(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'c' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM21(this, value);
   }
@@ -1731,8 +1709,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set d(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'd' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM22(this, value);
   }
@@ -1744,8 +1720,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set e(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'e' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM41(this, value);
   }
@@ -1757,8 +1731,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set f(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'f' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM42(this, value);
   }
@@ -1770,8 +1742,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m11(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm11' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM11(this, value);
   }
@@ -1783,8 +1753,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m12(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm12' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM12(this, value);
   }
@@ -1796,8 +1764,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m13(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm13' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM13(this, value);
     if (value !== 0) {
@@ -1812,8 +1778,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m14(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm14' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM14(this, value);
     if (value !== 0) {
@@ -1828,8 +1792,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m21(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm21' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM21(this, value);
   }
@@ -1841,8 +1803,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m22(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm22' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM22(this, value);
   }
@@ -1854,8 +1814,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m23(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm23' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM23(this, value);
     if (value !== 0) {
@@ -1870,8 +1828,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m24(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm24' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM24(this, value);
     if (value !== 0) {
@@ -1886,8 +1842,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m31(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm31' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM31(this, value);
     if (value !== 0) {
@@ -1902,8 +1856,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m32(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm32' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM32(this, value);
     if (value !== 0) {
@@ -1918,8 +1870,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m33(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm33' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM33(this, value);
     if (value !== 1) {
@@ -1934,8 +1884,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m34(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm34' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM34(this, value);
     if (value !== 0) {
@@ -1950,8 +1898,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m41(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm41' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM41(this, value);
   }
@@ -1963,8 +1909,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m42(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm42' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM42(this, value);
   }
@@ -1976,8 +1920,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m43(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm43' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM43(this, value);
     if (value !== 0) {
@@ -1992,8 +1934,6 @@ export class DOMMatrix extends DOMMatrixReadOnly {
 
   set m44(value) {
     DOMMatrixInternals.checkInstance(this);
-    const prefix = "Failed to set 'm44' on 'DOMMatrix'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertUnrestrictedDouble(value);
     DOMMatrixReadOnlyInternals.setM44(this, value);
     if (value !== 1) {

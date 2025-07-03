@@ -288,8 +288,6 @@ export class OffscreenCanvas extends EventTarget {
 
   set width(value) {
     OffscreenCanvasInternals.checkInstance(this);
-    const prefix = "Failed to set 'width' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertEnforceRangeUnsignedLongLong(value);
     OffscreenCanvasInternals.setWidth(this, value);
   }
@@ -300,8 +298,6 @@ export class OffscreenCanvas extends EventTarget {
 
   set height(value) {
     OffscreenCanvasInternals.checkInstance(this);
-    const prefix = "Failed to set 'height' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertEnforceRangeUnsignedLongLong(value);
     OffscreenCanvasInternals.setHeight(this, value);
   }
@@ -357,8 +353,6 @@ export class OffscreenCanvas extends EventTarget {
 
   set oncontextlost(value) {
     OffscreenCanvasInternals.checkInstance(this);
-    const prefix = "Failed to set 'oncontextlost' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertEventHandler(value);
     OffscreenCanvasInternals.getOnContextLost(this).update(value);
   }
@@ -369,8 +363,6 @@ export class OffscreenCanvas extends EventTarget {
 
   set oncontextrestored(value) {
     OffscreenCanvasInternals.checkInstance(this);
-    const prefix = "Failed to set 'oncontextrestored' on 'OffscreenCanvas'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertEventHandler(value);
     OffscreenCanvasInternals.getOnContextRestored(this).update(value);
   }

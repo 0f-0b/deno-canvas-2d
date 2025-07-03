@@ -465,8 +465,6 @@ export class FontFace extends Object {
 
   set family(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'family' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setFamily(this, value);
   }
@@ -478,8 +476,6 @@ export class FontFace extends Object {
 
   set style(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'style' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setStyle(this, value);
   }
@@ -491,8 +487,6 @@ export class FontFace extends Object {
 
   set weight(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'weight' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setWeight(this, value);
   }
@@ -504,8 +498,6 @@ export class FontFace extends Object {
 
   set stretch(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'stretch' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setStretch(this, value);
   }
@@ -517,8 +509,6 @@ export class FontFace extends Object {
 
   set unicodeRange(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'unicodeRange' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setUnicodeRange(this, value);
   }
@@ -530,8 +520,6 @@ export class FontFace extends Object {
 
   set featureSettings(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'featureSettings' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setFeatureSettings(this, value);
   }
@@ -543,8 +531,6 @@ export class FontFace extends Object {
 
   set variationSettings(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'variationSettings' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setVariationSettings(this, value);
   }
@@ -556,8 +542,6 @@ export class FontFace extends Object {
 
   set display(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'display' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setDisplay(this, value);
   }
@@ -569,8 +553,6 @@ export class FontFace extends Object {
 
   set ascentOverride(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'ascentOverride' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setAscentOverride(this, value);
   }
@@ -582,8 +564,6 @@ export class FontFace extends Object {
 
   set descentOverride(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'descentOverride' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setDescentOverride(this, value);
   }
@@ -595,8 +575,6 @@ export class FontFace extends Object {
 
   set lineGapOverride(value) {
     FontFaceInternals.checkInstance(this);
-    const prefix = "Failed to set 'lineGapOverride' on 'FontFace'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertDOMString(value);
     FontFaceInternals.setLineGapOverride(this, value);
   }
@@ -982,8 +960,6 @@ export class FontFaceSet extends EventTarget {
 
   set onloading(value) {
     FontFaceSetInternals.checkInstance(this);
-    const prefix = "Failed to set 'onloading' on 'FontFaceSet'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertEventHandler(value);
     FontFaceSetInternals.getOnLoading(this).update(value);
   }
@@ -994,8 +970,6 @@ export class FontFaceSet extends EventTarget {
 
   set onloadingdone(value) {
     FontFaceSetInternals.checkInstance(this);
-    const prefix = "Failed to set 'onloadingdone' on 'FontFaceSet'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertEventHandler(value);
     FontFaceSetInternals.getOnLoadingDone(this).update(value);
   }
@@ -1006,8 +980,6 @@ export class FontFaceSet extends EventTarget {
 
   set onloadingerror(value) {
     FontFaceSetInternals.checkInstance(this);
-    const prefix = "Failed to set 'onloadingerror' on 'FontFaceSet'";
-    requiredArguments(arguments.length, 1, prefix);
     value = convertEventHandler(value);
     FontFaceSetInternals.getOnLoadingError(this).update(value);
   }
