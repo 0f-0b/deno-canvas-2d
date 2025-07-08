@@ -376,9 +376,9 @@ dependencies = [
 
 [[package]]
 name = "deno_console"
-version = "0.209.0"
+version = "0.210.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66c0b8a65dcb7b38c22e5969c6454b3cb0839b7dcfb7a4f0d904de871a4c4416"
+checksum = "4c510232a443e1c54c145ca5eda3376497dc24b23f589d6cb2ab71a4fb0ce4d2"
 dependencies = [
  "deno_core",
 ]
@@ -484,9 +484,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.68.0"
+version = "0.69.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baa14d9c3fbba59836ffbaac7f736a2f48d4a5fc209a2103d1e1b898915232a5"
+checksum = "e47a9b5ff68cab3d692a94c903e0365f3ec86b58a11659c849e2cdd6fd654bfb"
 dependencies = [
  "capacity_builder",
  "deno_error",
@@ -534,9 +534,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.209.0"
+version = "0.210.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cccbb10fb59f29b04161055a65f7fe83364f9e8317d4d2ce3bd7979faf63a87"
+checksum = "5062f2c2cf5af128a5a7f2cb6680f0953a068859247bab72a643d0407372bc29"
 dependencies = [
  "deno_core",
  "deno_error",
@@ -545,9 +545,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.240.0"
+version = "0.241.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d6b8a97cc90b6aaea20fe200cfa7e5b6953dd33ecda0af50d6d360387c33df4"
+checksum = "a3e3e3564785b309405e2cd22ea837d72daf3ddadcd1e33b1db606a8c2147a02"
 dependencies = [
  "async-trait",
  "base64-simd",
@@ -566,9 +566,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.209.0"
+version = "0.210.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a20bbfac0cf15918f7cbd0b55c366ac20ad65c825f362fa684c3104984254d3b"
+checksum = "9b218fca03fbf61745a02fa4abf8ab2b7092a9d618eaad84692a691507bef343"
 dependencies = [
  "deno_core",
 ]
@@ -1034,6 +1034,17 @@ checksum = "fe4cd85333e22411419a0bcae1297d25e58c9443848b11dc6a86fefe8c78a661"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "io-uring"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b86e202f00093dcba4275d4636b93ef9dd75d025ae560d2521b45ea28ab49013"
+dependencies = [
+ "bitflags 2.9.1",
+ "cfg-if",
+ "libc",
 ]
 
 [[package]]
@@ -1874,17 +1885,19 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.45.1"
+version = "1.46.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75ef51a33ef1da925cea3e4eb122833cb377c61439ca401b770f54902b806779"
+checksum = "0cc3a2344dafbe23a245241fe8b09735b521110d30fcefbbd5feb1797ca35d17"
 dependencies = [
  "backtrace",
  "bytes",
+ "io-uring",
  "libc",
  "mio",
  "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
+ "slab",
  "socket2",
  "tokio-macros",
  "windows-sys 0.52.0",
