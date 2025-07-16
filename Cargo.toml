@@ -5,7 +5,7 @@ edition = "2024"
 [dependencies]
 cssparser = "0.35.0"
 cssparser-color = "0.3.0"
-deno_core = "0.352.0"
+deno_core = "0.352.1"
 deno_error = "0.6.1"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "212f15c9e36f701597847de94e1dafc9636bdf07" }
@@ -29,10 +29,10 @@ unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.210.0"
-deno_url = "0.210.0"
-deno_web = "0.241.0"
-deno_webidl = "0.210.0"
+deno_console = "0.211.0"
+deno_url = "0.211.0"
+deno_web = "0.242.0"
+deno_webidl = "0.211.0"
 tokio = { version = "1.46.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
