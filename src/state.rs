@@ -554,7 +554,7 @@ impl CanvasState {
         self.color_space
     }
 
-    pub fn as_raqote_image(&self) -> raqote::Image {
+    pub fn as_raqote_image(&self) -> raqote::Image<'_> {
         raqote::Image {
             width: self.draw_target.width(),
             height: self.draw_target.height(),

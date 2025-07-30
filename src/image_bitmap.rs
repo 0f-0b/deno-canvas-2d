@@ -318,7 +318,7 @@ impl ImageBitmap {
         })
     }
 
-    pub fn as_raqote_image(&self) -> Result<Option<raqote::Image>, Canvas2DError> {
+    pub fn as_raqote_image(&self) -> Result<Option<raqote::Image<'_>>, Canvas2DError> {
         Ok(match self.data {
             Some(ref data) => {
                 let size = to_raqote_size(self.width as u64, self.height as u64)?;

@@ -12,7 +12,7 @@ pub struct OwnedImage {
 }
 
 impl OwnedImage {
-    pub fn borrow(&self) -> Image {
+    pub fn borrow(&self) -> Image<'_> {
         Image {
             width: self.width,
             height: self.height,
@@ -95,7 +95,7 @@ impl OwnedSource {
         }
     }
 
-    pub fn borrow(&self) -> Source {
+    pub fn borrow(&self) -> Source<'_> {
         match *self {
             Self::Solid(color) => Source::Solid(color),
             Self::Image(ref image, extend, filter, transform, extend_x, extend_y) => Source::Image(

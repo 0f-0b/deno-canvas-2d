@@ -623,7 +623,7 @@ impl hb::DrawFuncs for TextPathBuilder {
     }
 }
 
-fn replace_ascii_whitespace(s: &str) -> Cow<str> {
+fn replace_ascii_whitespace(s: &str) -> Cow<'_, str> {
     fn should_replace(b: u8) -> bool {
         matches!(b, b'\t' | b'\n' | b'\r' | b'\x0c')
     }

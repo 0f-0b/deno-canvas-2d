@@ -23,7 +23,7 @@ pub(crate) trait FromCss: Sized {
 
     fn from_css<'i>(input: &mut Parser<'i, '_>) -> Result<Self, ParseError<'i, Self::Err>>;
 
-    fn from_css_string(css: &str) -> Result<Self, ParseError<Self::Err>> {
+    fn from_css_string(css: &str) -> Result<Self, ParseError<'_, Self::Err>> {
         let mut input = ParserInput::new(css);
         let mut parser = Parser::new(&mut input);
         parser.parse_entirely(Self::from_css)

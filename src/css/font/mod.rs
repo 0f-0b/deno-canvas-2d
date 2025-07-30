@@ -633,29 +633,29 @@ impl FromCss for ComputedFont {
                 max_attrs -= 1;
                 continue;
             }
-            if style.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontStyle::from_css) {
-                    style = Some(v);
-                    max_attrs -= 1;
-                    continue;
-                }
+            if style.is_none()
+                && let Ok(v) = input.try_parse(ComputedFontStyle::from_css)
+            {
+                style = Some(v);
+                max_attrs -= 1;
+                continue;
             }
-            if variant.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontVariantCss2::from_css) {
-                    variant = Some(v);
-                    max_attrs -= 1;
-                    continue;
-                }
+            if variant.is_none()
+                && let Ok(v) = input.try_parse(ComputedFontVariantCss2::from_css)
+            {
+                variant = Some(v);
+                max_attrs -= 1;
+                continue;
             }
-            if weight.is_none() {
-                if let Ok(v) = input.try_parse(ComputedFontWeight::from_css) {
-                    weight = Some(v);
-                    max_attrs -= 1;
-                    continue;
-                }
+            if weight.is_none()
+                && let Ok(v) = input.try_parse(ComputedFontWeight::from_css)
+            {
+                weight = Some(v);
+                max_attrs -= 1;
+                continue;
             }
-            if stretch.is_none() {
-                if let Ok(v) = input.try_parse(|input| {
+            if stretch.is_none()
+                && let Ok(v) = input.try_parse(|input| {
                     try_match_next_ident_ignore_ascii_case! { input,
                         "normal" => ComputedFontStretchCss3::Normal,
                         "ultra-condensed" => ComputedFontStretchCss3::UltraCondensed,
@@ -667,11 +667,11 @@ impl FromCss for ComputedFont {
                         "extra-expanded" => ComputedFontStretchCss3::ExtraExpanded,
                         "ultra-expanded" => ComputedFontStretchCss3::UltraExpanded,
                     }
-                }) {
-                    stretch = Some(v);
-                    max_attrs -= 1;
-                    continue;
-                }
+                })
+            {
+                stretch = Some(v);
+                max_attrs -= 1;
+                continue;
             }
             break;
         }
