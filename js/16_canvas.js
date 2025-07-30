@@ -599,37 +599,76 @@ async function checkUsabilityAndCropWithFormatting(
     if (width === 0 || height === 0) {
       throw new DOMException("Canvas has no pixels", "InvalidStateError");
     }
-    const mode = getOffscreenCanvasContextMode(ctx);
-    const result = mode.cropToImageBitmap(ctx, sx, sy, sw, sh, dw, dh);
-    let bitmap = result.bitmap;
-    if (result.needResize) {
-      bitmap = op_canvas_2d_image_bitmap_resize(
-        bitmap,
-        dw ?? 0,
-        dh ?? 0,
-        resizeQualityToRepr[resizeQuality],
-        imageOrientationToRepr[imageOrientation],
-      );
+    try {
+      const mode = getOffscreenCanvasContextMode(ctx);
+      const result = mode.cropToImageBitmap(ctx, sx, sy, sw, sh, dw, dh);
+      let bitmap = result.bitmap;
+      if (result.needResize) {
+        bitmap = op_canvas_2d_image_bitmap_resize(
+          bitmap,
+          dw ?? 0,
+          dh ?? 0,
+          resizeQualityToRepr[resizeQuality],
+          imageOrientationToRepr[imageOrientation],
+        );
+      }
+      return bitmap;
+    } finally {
+      await makeSafePromise(op_defer());
     }
-    return bitmap;
   }
   if (ImageBitmapInternals.hasInstance(image)) {
     const raw = ImageBitmapInternals.getRaw(image);
     if (!raw) {
       throw new DOMException("Image is detached", "InvalidStateError");
     }
-    return op_canvas_2d_image_bitmap_resize(
-      op_canvas_2d_image_bitmap_crop(raw, sx, sy, sw ?? 0, sh ?? 0),
-      dw ?? 0,
-      dh ?? 0,
-      resizeQualityToRepr[resizeQuality],
-      imageOrientationToRepr[imageOrientation],
-    );
+    try {
+      return op_canvas_2d_image_bitmap_resize(
+        op_canvas_2d_image_bitmap_crop(raw, sx, sy, sw ?? 0, sh ?? 0),
+        dw ?? 0,
+        dh ?? 0,
+        resizeQualityToRepr[resizeQuality],
+        imageOrientationToRepr[imageOrientation],
+      );
+    } finally {
+      await makeSafePromise(op_defer());
+    }
   }
   if (isBlob(image)) {
-    return op_canvas_2d_decode_image(
-      await makeSafePromise(BlobPrototypeBytes(image)),
-      BlobPrototypeGetType(image),
+    try {
+      return op_canvas_2d_decode_image(
+        await makeSafePromise(BlobPrototypeBytes(image)),
+        BlobPrototypeGetType(image),
+        sx,
+        sy,
+        sw ?? 0,
+        sh ?? 0,
+        dw ?? 0,
+        dh ?? 0,
+        resizeQualityToRepr[resizeQuality],
+        imageOrientationToRepr[imageOrientation],
+      );
+    } finally {
+      await makeSafePromise(op_defer());
+    }
+  }
+  const data = ImageDataPrototypeGetData(image);
+  if (TypedArrayPrototypeGetLength(data) === 0) {
+    throw new DOMException("Image data is detached", "InvalidStateError");
+  }
+  const width = ImageDataPrototypeGetWidth(image);
+  const height = ImageDataPrototypeGetHeight(image);
+  const colorSpace = ImageDataPrototypeGetColorSpace(image);
+  try {
+    return op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
+      new Uint8Array(
+        TypedArrayPrototypeGetBuffer(data),
+        TypedArrayPrototypeGetByteOffset(data),
+        TypedArrayPrototypeGetByteLength(data),
+      ),
+      width,
+      height,
+      colorSpaceToRepr[colorSpace],
       sx,
       sy,
       sw ?? 0,
@@ -639,32 +678,9 @@ async function checkUsabilityAndCropWithFormatting(
       resizeQualityToRepr[resizeQuality],
       imageOrientationToRepr[imageOrientation],
     );
+  } finally {
+    await makeSafePromise(op_defer());
   }
-  const data = ImageDataPrototypeGetData(image);
-  if (TypedArrayPrototypeGetLength(data) === 0) {
-    throw new DOMException("Image data is detached", "InvalidStateError");
-  }
-  const width = ImageDataPrototypeGetWidth(image);
-  const height = ImageDataPrototypeGetHeight(image);
-  const colorSpace = ImageDataPrototypeGetColorSpace(image);
-  return op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
-    new Uint8Array(
-      TypedArrayPrototypeGetBuffer(data),
-      TypedArrayPrototypeGetByteOffset(data),
-      TypedArrayPrototypeGetByteLength(data),
-    ),
-    width,
-    height,
-    colorSpaceToRepr[colorSpace],
-    sx,
-    sy,
-    sw ?? 0,
-    sh ?? 0,
-    dw ?? 0,
-    dh ?? 0,
-    resizeQualityToRepr[resizeQuality],
-    imageOrientationToRepr[imageOrientation],
-  );
 }
 
 async function createImageBitmapInner(image, sx, sy, sw, sh, options) {
