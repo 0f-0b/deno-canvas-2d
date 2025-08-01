@@ -11,6 +11,7 @@ import { defer } from "ext:deno_web/02_timers.js";
 import { Deferred } from "ext:deno_web/06_streams.js";
 import {
   configureInterface,
+  illegalConstructor,
   requiredArguments,
   type,
 } from "ext:deno_webidl/00_webidl.js";
