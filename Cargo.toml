@@ -9,7 +9,7 @@ deno_core = "0.355.0"
 deno_error = "0.7.0"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "212f15c9e36f701597847de94e1dafc9636bdf07" }
-harfbuzz_rs = { git = "https://github.com/0f-0b/harfbuzz_rs.git", rev = "ee361c2c5f6c624cace9922ba144d766e206be8f" }
+harfbuzz_rs = { git = "https://github.com/0f-0b/harfbuzz_rs.git", rev = "8713514173372c0a8a705abd6da6324ccf119465" }
 hashlink = "0.10.0"
 image = { version = "0.25.6", default-features = false, features = [
   "bmp",
