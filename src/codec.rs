@@ -21,13 +21,7 @@ fn encode_png(
     color_space: CanvasColorSpace,
 ) -> Result<Vec<u8>, png::EncodingError> {
     use png::EncodingError::LimitsExceeded;
-
-    mod chunk {
-        #![allow(non_upper_case_globals)]
-        use png::chunk::*;
-
-        pub const cICP: ChunkType = ChunkType(*b"cICP");
-    }
+    use png::chunk;
 
     let width = width.try_into().map_err(|_| LimitsExceeded)?;
     let height = height.try_into().map_err(|_| LimitsExceeded)?;

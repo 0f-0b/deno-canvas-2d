@@ -11,7 +11,7 @@ euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "212f15c9e36f701597847de94e1dafc9636bdf07" }
 harfbuzz_rs = { git = "https://github.com/0f-0b/harfbuzz_rs.git", rev = "8713514173372c0a8a705abd6da6324ccf119465" }
 hashlink = "0.10.0"
-image = { version = "0.25.6", default-features = false, features = [
+image = { version = "0.25.8", default-features = false, features = [
   "bmp",
   "gif",
   "jpeg",
@@ -20,7 +20,7 @@ image = { version = "0.25.6", default-features = false, features = [
 itertools = "0.14.0"
 lyon_geom = "1.0.6"
 palette = { version = "0.7.6", default-features = false, features = ["std"] }
-png = "0.17.16"
+png = "0.18.0"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "a28779053baa6f574fb67f0cfc6fed8badbb397c", default-features = false }
 strum_macros = "0.27.2"
 svgtypes = "0.15.3"
