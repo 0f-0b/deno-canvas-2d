@@ -6,10 +6,7 @@ use deno_core::op2;
 use image::error::EncodingError;
 use image::imageops::replace;
 use image::metadata::Orientation;
-use image::{
-    DynamicImage, GenericImageView as _, ImageDecoder, ImageError, ImageFormat, ImageReader,
-    RgbaImage,
-};
+use image::{DynamicImage, ImageDecoder, ImageError, ImageFormat, ImageReader, RgbaImage};
 use strum_macros::FromRepr;
 
 use super::CanvasColorSpace;
@@ -147,11 +144,26 @@ fn decode_image(
         .map_err(Canvas2DError::DecodeImage)?;
     let profile = decoder.icc_profile().map_err(Canvas2DError::DecodeImage)?;
     let orientation = decoder.orientation().map_err(Canvas2DError::DecodeImage)?;
+    let orientation = match image_orientation {
+        ImageOrientation::FromImage => orientation,
+        ImageOrientation::FlipY => Orientation::FlipVertical,
+    };
     let image = DynamicImage::from_decoder(decoder).map_err(Canvas2DError::DecodeImage)?;
-    let (width, height) = image.dimensions();
+    let width = image.width();
+    let height = image.height();
     let sw = sw.unwrap_or(width);
     let sh = sh.unwrap_or(height);
     let (dw, dh) = aspect_resize(sw as u64, sh as u64, dw, dh)?.to_tuple();
+    let (dw, dh) = match orientation {
+        Orientation::NoTransforms
+        | Orientation::Rotate180
+        | Orientation::FlipHorizontal
+        | Orientation::FlipVertical => (dw, dh),
+        Orientation::Rotate90
+        | Orientation::Rotate270
+        | Orientation::Rotate90FlipH
+        | Orientation::Rotate270FlipH => (dh, dw),
+    };
     if out_of_bounds(width, height, sx, sy, sw, sh) {
         return Ok(ImageBitmap {
             width: dw,
@@ -167,21 +179,21 @@ fn decode_image(
         replace(&mut tmp, &image, -sx, -sy);
         tmp
     };
-    match image_orientation {
-        ImageOrientation::FromImage => image.apply_orientation(orientation),
-        ImageOrientation::FlipY => image.apply_orientation(Orientation::FlipVertical),
-    }
+    image.apply_orientation(orientation);
     let mut image = image.into_rgba8();
     match color_space {
         ColorSpace::FromImage => transform_to_srgb(&mut image, profile.as_deref()),
         ColorSpace::Srgb => {}
     }
+    let sw = image.width();
+    let sh = image.height();
+    let data = image.into_vec();
     Ok(ImageBitmap::from_image_data_resize(
         ImageData {
             width: sw,
             height: sh,
             color_space: CanvasColorSpace::Srgb,
-            data: image.into_vec(),
+            data,
         },
         dw,
         dh,
