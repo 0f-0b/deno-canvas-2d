@@ -570,6 +570,11 @@ const imageOrientationToRepr = ObjectFreeze({
   "from-image": 0,
   "flipY": 1,
 });
+const colorSpaceConversionToRepr = ObjectFreeze({
+  __proto__: null,
+  "default": 0,
+  "none": 1,
+});
 const resizeQualityToRepr = ObjectFreeze({
   __proto__: null,
   "pixelated": 0,
@@ -588,6 +593,7 @@ async function checkUsabilityAndCropWithFormatting(
   dh,
   resizeQuality,
   imageOrientation,
+  colorSpaceConversion,
 ) {
   if (OffscreenCanvasInternals.hasInstance(image)) {
     const ctx = OffscreenCanvasInternals.getContext(image);
@@ -647,6 +653,7 @@ async function checkUsabilityAndCropWithFormatting(
         dh ?? 0,
         resizeQualityToRepr[resizeQuality],
         imageOrientationToRepr[imageOrientation],
+        colorSpaceConversionToRepr[colorSpaceConversion],
       );
     } finally {
       await makeSafePromise(op_defer());
@@ -689,6 +696,7 @@ async function createImageBitmapInner(image, sx, sy, sw, sh, options) {
     resizeHeight,
     resizeQuality,
     imageOrientation,
+    colorSpaceConversion,
   } = options;
   if (resizeWidth === 0) {
     throw new DOMException(
@@ -712,6 +720,7 @@ async function createImageBitmapInner(image, sx, sy, sw, sh, options) {
     resizeHeight,
     resizeQuality,
     imageOrientation,
+    colorSpaceConversion,
   ));
   return createImageBitmapFromRaw(bitmap);
 }

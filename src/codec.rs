@@ -1,9 +1,16 @@
 use std::cell::RefCell;
+use std::io::Cursor;
+use std::sync::LazyLock;
 
 use deno_core::op2;
 use image::error::EncodingError;
 use image::imageops::replace;
-use image::{GenericImageView as _, ImageError, ImageFormat, RgbaImage};
+use image::metadata::Orientation;
+use image::{
+    DynamicImage, GenericImageView as _, ImageDecoder, ImageError, ImageFormat, ImageReader,
+    RgbaImage,
+};
+use strum_macros::FromRepr;
 
 use super::CanvasColorSpace;
 use super::error::Canvas2DError;
@@ -87,6 +94,28 @@ fn mimesniff_image<'a>(header: &[u8], supplied_type: &'a str) -> &'a str {
     }
 }
 
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub enum ColorSpace {
+    FromImage,
+    Srgb,
+}
+
+fn transform_to_srgb(image: &mut RgbaImage, profile: Option<&[u8]>) {
+    use qcms::{DataType, Intent, Profile, Transform};
+
+    static SRGB: LazyLock<Profile> = LazyLock::new(|| {
+        let mut profile = *Profile::new_sRGB();
+        profile.precache_output_transform();
+        profile
+    });
+    if let Some(profile) = profile.and_then(|buf| Profile::new_from_slice(buf, false))
+        && let Some(transform) = Transform::new(&profile, &SRGB, DataType::RGBA8, Intent::default())
+    {
+        transform.apply(image);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn decode_image(
     buf: &[u8],
@@ -99,6 +128,7 @@ fn decode_image(
     dh: Option<u32>,
     resize_quality: ResizeQuality,
     image_orientation: ImageOrientation,
+    color_space: ColorSpace,
 ) -> Result<ImageBitmap, Canvas2DError> {
     let format = {
         let essence = mime_type
@@ -112,13 +142,17 @@ fn decode_image(
             _ => return Err(Canvas2DError::UnsupportedImageFormat { mime_type: essence }),
         }
     };
-    let src =
-        image::load_from_memory_with_format(buf, format).map_err(Canvas2DError::DecodeImage)?;
-    let (src_width, src_height) = src.dimensions();
-    let sw = sw.unwrap_or(src_width);
-    let sh = sh.unwrap_or(src_height);
+    let mut decoder = ImageReader::with_format(Cursor::new(buf), format)
+        .into_decoder()
+        .map_err(Canvas2DError::DecodeImage)?;
+    let profile = decoder.icc_profile().map_err(Canvas2DError::DecodeImage)?;
+    let orientation = decoder.orientation().map_err(Canvas2DError::DecodeImage)?;
+    let image = DynamicImage::from_decoder(decoder).map_err(Canvas2DError::DecodeImage)?;
+    let (width, height) = image.dimensions();
+    let sw = sw.unwrap_or(width);
+    let sh = sh.unwrap_or(height);
     let (dw, dh) = aspect_resize(sw as u64, sh as u64, dw, dh)?.to_tuple();
-    if out_of_bounds(src_width, src_height, sx, sy, sw, sh) {
+    if out_of_bounds(width, height, sx, sy, sw, sh) {
         return Ok(ImageBitmap {
             width: dw,
             height: dh,
@@ -126,28 +160,33 @@ fn decode_image(
             data: None,
         });
     }
-    let flip_y = match image_orientation {
-        ImageOrientation::FromImage => false,
-        ImageOrientation::FlipY => true,
-    };
-    let cropped = if same_size(src_width, src_height, sx, sy, sw, sh) {
-        src.into_rgba8()
+    let mut image = if same_size(width, height, sx, sy, sw, sh) {
+        image
     } else {
-        let mut tmp = RgbaImage::new(sw, sh);
-        replace(&mut tmp, &src, -sx, -sy);
+        let mut tmp = DynamicImage::new(sw, sh, image.color());
+        replace(&mut tmp, &image, -sx, -sy);
         tmp
     };
+    match image_orientation {
+        ImageOrientation::FromImage => image.apply_orientation(orientation),
+        ImageOrientation::FlipY => image.apply_orientation(Orientation::FlipVertical),
+    }
+    let mut image = image.into_rgba8();
+    match color_space {
+        ColorSpace::FromImage => transform_to_srgb(&mut image, profile.as_deref()),
+        ColorSpace::Srgb => {}
+    }
     Ok(ImageBitmap::from_image_data_resize(
         ImageData {
             width: sw,
             height: sh,
             color_space: CanvasColorSpace::Srgb,
-            data: cropped.into_vec(),
+            data: image.into_vec(),
         },
         dw,
         dh,
         resize_quality,
-        flip_y,
+        false,
     ))
 }
 
@@ -164,9 +203,11 @@ pub fn op_canvas_2d_decode_image(
     dh: u32,
     resize_quality: i32,
     image_orientation: i32,
+    color_space: i32,
 ) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
+    let color_space = ColorSpace::from_repr(color_space).unwrap();
     Ok(Wrap::new(RefCell::new(decode_image(
         buf,
         mime_type,
@@ -178,5 +219,6 @@ pub fn op_canvas_2d_decode_image(
         non_zero_u32(dh),
         resize_quality,
         image_orientation,
+        color_space,
     )?)))
 }
