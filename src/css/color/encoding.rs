@@ -2,7 +2,7 @@ use palette::bool_mask::LazySelect;
 use palette::encoding::gamma::{GammaFn, Number};
 use palette::encoding::{FromLinear, IntoLinear, Srgb};
 use palette::luma::LumaStandard;
-use palette::num::{Arithmetics, MulAdd, MulSub, PartialCmp, Powf, Real};
+use palette::num::{Arithmetics, PartialCmp, Powf, Real};
 use palette::rgb::{Primaries, RgbSpace, RgbStandard};
 use palette::white_point::{Any, D50, D65};
 use palette::{Mat3, Yxy};
@@ -283,57 +283,12 @@ impl RgbSpace for Rec2020 {
 
 impl RgbStandard for Rec2020 {
     type Space = Rec2020;
-    type TransferFn = Rec2020;
+    type TransferFn = GammaFn<F5_12>;
 }
 
 impl LumaStandard for Rec2020 {
     type WhitePoint = D65;
-    type TransferFn = Rec2020;
-}
-
-impl Rec2020 {
-    const ALPHA_M1: f64 = 5.5 * Self::BETA;
-    const BETA: f64 = 0.018053968510807806;
-}
-
-impl<T> IntoLinear<T, T> for Rec2020
-where
-    T: Real + Powf + MulAdd + Arithmetics + PartialCmp + Clone,
-    T::Mask: LazySelect<T>,
-{
-    #[inline]
-    fn into_linear(x: T) -> T {
-        x.lt_eq(&T::from_f64(Self::BETA * 4.5)).lazy_select(
-            || T::from_f64(1.0 / 4.5) * &x,
-            || {
-                x.clone()
-                    .mul_add(
-                        T::from_f64(1.0 / (1.0 + Self::ALPHA_M1)),
-                        T::from_f64(Self::ALPHA_M1 / (1.0 + Self::ALPHA_M1)),
-                    )
-                    .powf(T::from_f64(1.0 / 0.45))
-            },
-        )
-    }
-}
-
-impl<T> FromLinear<T, T> for Rec2020
-where
-    T: Real + Powf + MulSub + Arithmetics + PartialCmp + Clone,
-    T::Mask: LazySelect<T>,
-{
-    #[inline]
-    fn from_linear(x: T) -> T {
-        x.lt_eq(&T::from_f64(Self::BETA)).lazy_select(
-            || T::from_f64(4.5) * &x,
-            || {
-                x.clone().powf(T::from_f64(0.45)).mul_sub(
-                    T::from_f64(1.0 + Self::ALPHA_M1),
-                    T::from_f64(Self::ALPHA_M1),
-                )
-            },
-        )
-    }
+    type TransferFn = GammaFn<F5_12>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -341,4 +296,11 @@ pub struct F256_563;
 
 impl Number for F256_563 {
     const VALUE: f64 = 256.0 / 563.0;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct F5_12;
+
+impl Number for F5_12 {
+    const VALUE: f64 = 5.0 / 12.0;
 }
