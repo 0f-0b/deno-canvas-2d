@@ -2,7 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::ffi::CStr;
 use std::rc::Rc;
 
-use deno_core::{GarbageCollected, op2};
+use deno_core::{GarbageCollected, op2, v8};
 use euclid::default::Transform2D;
 use strum_macros::FromRepr;
 
@@ -74,10 +74,13 @@ impl CanvasPattern {
     }
 }
 
-impl GarbageCollected for Wrap<Rc<CanvasPattern>> {
+// SAFETY: this type has no members.
+unsafe impl GarbageCollected for Wrap<Rc<CanvasPattern>> {
     fn get_name(&self) -> &'static CStr {
         c"CanvasPattern"
     }
+
+    fn trace(&self, _: &mut v8::cppgc::Visitor) {}
 }
 
 #[op2]

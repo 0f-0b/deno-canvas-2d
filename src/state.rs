@@ -1345,10 +1345,13 @@ impl CanvasState {
     }
 }
 
-impl GarbageCollected for Wrap<RefCell<CanvasState>> {
+// SAFETY: this type has no members.
+unsafe impl GarbageCollected for Wrap<RefCell<CanvasState>> {
     fn get_name(&self) -> &'static CStr {
         c"CanvasState"
     }
+
+    fn trace(&self, _: &mut v8::cppgc::Visitor) {}
 }
 
 #[op2]

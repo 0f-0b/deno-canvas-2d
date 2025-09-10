@@ -318,11 +318,13 @@ impl FontFace {
         &self.data
     }
 }
-
-impl GarbageCollected for Wrap<Rc<FontFace>> {
+// SAFETY: this type has no members.
+unsafe impl GarbageCollected for Wrap<Rc<FontFace>> {
     fn get_name(&self) -> &'static CStr {
         c"FontFace"
     }
+
+    fn trace(&self, _: &mut v8::cppgc::Visitor) {}
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -539,11 +541,13 @@ impl FontFaceSet {
             .collect()
     }
 }
-
-impl GarbageCollected for Wrap<Rc<RefCell<FontFaceSet>>> {
+// SAFETY: this type has no members.
+unsafe impl GarbageCollected for Wrap<Rc<RefCell<FontFaceSet>>> {
     fn get_name(&self) -> &'static CStr {
         c"FontFaceSet"
     }
+
+    fn trace(&self, _: &mut v8::cppgc::Visitor) {}
 }
 
 #[derive(Clone, Copy, Debug)]

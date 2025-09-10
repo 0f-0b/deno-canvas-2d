@@ -3,7 +3,7 @@ use std::f64::consts::TAU;
 use std::ffi::CStr;
 use std::rc::Rc;
 
-use deno_core::{GarbageCollected, op2};
+use deno_core::{GarbageCollected, op2, v8};
 use euclid::default::Point2D;
 use euclid::{Angle, point2};
 
@@ -154,11 +154,13 @@ impl CanvasGradient {
         }
     }
 }
-
-impl GarbageCollected for Wrap<Rc<CanvasGradient>> {
+// SAFETY: this type has no members.
+unsafe impl GarbageCollected for Wrap<Rc<CanvasGradient>> {
     fn get_name(&self) -> &'static CStr {
         c"CanvasGradient"
     }
+
+    fn trace(&self, _: &mut v8::cppgc::Visitor) {}
 }
 
 #[op2]

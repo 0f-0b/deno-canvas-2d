@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::f64::consts::TAU;
 use std::ffi::CStr;
 
-use deno_core::{GarbageCollected, op2};
+use deno_core::{GarbageCollected, op2, v8};
 use euclid::default::{Box2D, Point2D, Transform2D};
 use euclid::{Angle, point2, size2, vec2};
 use lyon_geom::{Arc, ArcFlags, SvgArc};
@@ -481,11 +481,13 @@ impl Path {
         }
     }
 }
-
-impl GarbageCollected for Wrap<RefCell<Path>> {
+// SAFETY: this type has no members.
+unsafe impl GarbageCollected for Wrap<RefCell<Path>> {
     fn get_name(&self) -> &'static CStr {
         c"CanvasPath"
     }
+
+    fn trace(&self, _: &mut v8::cppgc::Visitor) {}
 }
 
 #[op2]
