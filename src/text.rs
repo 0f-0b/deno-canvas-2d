@@ -41,6 +41,7 @@ use super::wrap::Wrap;
 pub struct FontFaceId(NonZeroU64);
 
 impl FontFaceId {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         static NEXT: AtomicU64 = AtomicU64::new(1);
         Self(
@@ -318,6 +319,7 @@ impl FontFace {
         &self.data
     }
 }
+
 // SAFETY: this type has no members.
 unsafe impl GarbageCollected for Wrap<Rc<FontFace>> {
     fn get_name(&self) -> &'static CStr {
@@ -541,6 +543,7 @@ impl FontFaceSet {
             .collect()
     }
 }
+
 // SAFETY: this type has no members.
 unsafe impl GarbageCollected for Wrap<Rc<RefCell<FontFaceSet>>> {
     fn get_name(&self) -> &'static CStr {

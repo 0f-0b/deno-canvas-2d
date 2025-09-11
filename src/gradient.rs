@@ -154,6 +154,7 @@ impl CanvasGradient {
         }
     }
 }
+
 // SAFETY: this type has no members.
 unsafe impl GarbageCollected for Wrap<Rc<CanvasGradient>> {
     fn get_name(&self) -> &'static CStr {

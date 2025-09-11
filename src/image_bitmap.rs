@@ -485,6 +485,7 @@ impl Default for ImageBitmap {
         }
     }
 }
+
 // SAFETY: this type has no members.
 unsafe impl GarbageCollected for Wrap<RefCell<ImageBitmap>> {
     fn get_name(&self) -> &'static CStr {

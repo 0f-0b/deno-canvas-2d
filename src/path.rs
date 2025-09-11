@@ -69,7 +69,7 @@ impl PathOp {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Path {
     ops: Vec<PathOp>,
     first_point_in_subpath: Point2D<f64>,
@@ -77,10 +77,7 @@ pub struct Path {
 
 impl Path {
     pub fn new() -> Self {
-        Self {
-            ops: Vec::new(),
-            first_point_in_subpath: Point2D::zero(),
-        }
+        Self::default()
     }
 
     pub fn from_svg(path_data: &str) -> Self {
@@ -481,6 +478,7 @@ impl Path {
         }
     }
 }
+
 // SAFETY: this type has no members.
 unsafe impl GarbageCollected for Wrap<RefCell<Path>> {
     fn get_name(&self) -> &'static CStr {
