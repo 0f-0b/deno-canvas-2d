@@ -309,6 +309,7 @@ deno_core::extension!(
         "05_convert_image_data.js",
         "05_convert_legacy_null_to_empty_string_dom_string.js",
         "05_convert_long.js",
+        "05_convert_predefined_color_space.js",
         "05_convert_typed_array.js",
         "05_convert_unrestricted_double.js",
         "15_event.js",

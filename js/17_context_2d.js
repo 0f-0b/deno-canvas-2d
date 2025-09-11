@@ -148,6 +148,7 @@ import { convertDouble } from "./05_convert_double.js";
 import { convertEnforceRangeLong } from "./05_convert_enforce_range_long.js";
 import { convertImageData } from "./05_convert_image_data.js";
 import { convertLegacyNullToEmptyStringDOMString } from "./05_convert_legacy_null_to_empty_string_dom_string.js";
+import { convertPredefinedColorSpace } from "./05_convert_predefined_color_space.js";
 import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
 import {
   convertDOMMatrix2DInit,
@@ -198,10 +199,6 @@ const convertCanvasImageSource = (value) => {
   }
   throw new TypeError("Expected CanvasImageSource");
 };
-const convertPredefinedColorSpace = createEnumConverter(
-  "PredefinedColorSpace",
-  ["srgb", "display-p3"],
-);
 const convertCanvasFillRule = createEnumConverter(
   "CanvasFillRule",
   ["nonzero", "evenodd"],
