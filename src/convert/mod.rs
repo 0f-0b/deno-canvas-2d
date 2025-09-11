@@ -18,9 +18,33 @@ pub fn pack_rgba8_to_argb32(pixels: &mut [u32], f: impl Fn(Rgba) -> Rgba) {
     }
 }
 
+pub fn pack_bgra8_to_argb32(pixels: &mut [u32], f: impl Fn(Rgba) -> Rgba) {
+    for pixel in pixels {
+        let [b, g, r, a] = pixel.to_ne_bytes();
+        let (r, g, b, a) = f((r, g, b, a));
+        *pixel = u32::from_be_bytes([a, r, g, b]);
+    }
+}
+
 pub fn unpack_argb32_to_rgba8(pixels: &mut [u32], f: impl Fn(Rgba) -> Rgba) {
     for pixel in pixels {
         let [a, r, g, b] = pixel.to_be_bytes();
+        let (r, g, b, a) = f((r, g, b, a));
+        *pixel = u32::from_ne_bytes([r, g, b, a]);
+    }
+}
+
+pub fn permute_bgra8_to_rgba8(pixels: &mut [u32], f: impl Fn(Rgba) -> Rgba) {
+    for pixel in pixels {
+        let [b, g, r, a] = pixel.to_ne_bytes();
+        let (r, g, b, a) = f((r, g, b, a));
+        *pixel = u32::from_ne_bytes([r, g, b, a]);
+    }
+}
+
+pub fn transform_rgba8(pixels: &mut [u32], f: impl Fn(Rgba) -> Rgba) {
+    for pixel in pixels {
+        let [r, g, b, a] = pixel.to_ne_bytes();
         let (r, g, b, a) = f((r, g, b, a));
         *pixel = u32::from_ne_bytes([r, g, b, a]);
     }

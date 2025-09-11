@@ -1218,13 +1218,13 @@ impl CanvasState {
                 match (self.color_space, dst_color_space) {
                     (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
                     | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
-                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb);
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb)
                     }
                     (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
-                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_display_p3);
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_display_p3)
                     }
                     (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
-                        unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_srgb);
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_srgb)
                     }
                 }
             },
@@ -1257,13 +1257,13 @@ impl CanvasState {
                 match (src_color_space, self.color_space) {
                     (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
                     | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
-                        pack_rgba8_to_argb32(dst, srgb_to_premultiplied_linear_srgb);
+                        pack_rgba8_to_argb32(dst, srgb_to_premultiplied_linear_srgb)
                     }
                     (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
-                        pack_rgba8_to_argb32(dst, srgb_to_premultiplied_linear_display_p3);
+                        pack_rgba8_to_argb32(dst, srgb_to_premultiplied_linear_display_p3)
                     }
                     (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
-                        pack_rgba8_to_argb32(dst, display_p3_to_premultiplied_linear_srgb);
+                        pack_rgba8_to_argb32(dst, display_p3_to_premultiplied_linear_srgb)
                     }
                 }
                 if !self.alpha {

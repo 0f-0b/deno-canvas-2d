@@ -95,7 +95,7 @@ pub struct ImageBitmap {
 }
 
 impl ImageBitmap {
-    pub fn from_canvas_state(src: &CanvasState) -> Self {
+    pub(crate) fn from_canvas_state(src: &CanvasState) -> Self {
         let image = src.as_raqote_image();
         let color_space = src.color_space();
         Self {
@@ -106,7 +106,7 @@ impl ImageBitmap {
         }
     }
 
-    pub fn from_canvas_state_crop(
+    pub(crate) fn from_canvas_state_crop(
         src: &CanvasState,
         x: i64,
         y: i64,
@@ -145,7 +145,7 @@ impl ImageBitmap {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn from_image_data_crop_and_resize(
+    pub(crate) fn from_image_data_crop_and_resize(
         src: ImageDataView,
         sx: i64,
         sy: i64,
@@ -201,7 +201,7 @@ impl ImageBitmap {
         ))
     }
 
-    pub fn from_image_data_resize(
+    pub(crate) fn from_image_data_resize(
         src: ImageData,
         width: u32,
         height: u32,
@@ -245,7 +245,7 @@ impl ImageBitmap {
         }
     }
 
-    pub fn empty(width: u32, height: u32, color_space: CanvasColorSpace) -> Self {
+    pub(crate) fn empty(width: u32, height: u32, color_space: CanvasColorSpace) -> Self {
         Self {
             width,
             height,
@@ -276,24 +276,20 @@ impl ImageBitmap {
         })
     }
 
-    pub fn into_color_space(self, color_space: CanvasColorSpace) -> Self {
+    pub(crate) fn into_color_space(self, color_space: CanvasColorSpace) -> Self {
         let mut data = self.data;
         if let Some(data) = &mut data {
             match (self.color_space, color_space) {
                 (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
                 | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {}
-                (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
-                    transform_argb32(
-                        Rc::make_mut(data),
-                        premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
-                    );
-                }
-                (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
-                    transform_argb32(
-                        Rc::make_mut(data),
-                        premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
-                    );
-                }
+                (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => transform_argb32(
+                    Rc::make_mut(data),
+                    premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
+                ),
+                (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => transform_argb32(
+                    Rc::make_mut(data),
+                    premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
+                ),
             }
         };
         Self {
@@ -304,7 +300,7 @@ impl ImageBitmap {
         }
     }
 
-    pub fn into_raqote_image(self) -> Result<Option<raqote_ext::OwnedImage>, Canvas2DError> {
+    pub(crate) fn into_raqote_image(self) -> Result<Option<raqote_ext::OwnedImage>, Canvas2DError> {
         Ok(match self.data {
             Some(data) => {
                 let size = to_raqote_size(self.width as u64, self.height as u64)?;
@@ -318,7 +314,7 @@ impl ImageBitmap {
         })
     }
 
-    pub fn as_raqote_image(&self) -> Result<Option<raqote::Image<'_>>, Canvas2DError> {
+    pub(crate) fn as_raqote_image(&self) -> Result<Option<raqote::Image<'_>>, Canvas2DError> {
         Ok(match self.data {
             Some(ref data) => {
                 let size = to_raqote_size(self.width as u64, self.height as u64)?;
@@ -332,7 +328,13 @@ impl ImageBitmap {
         })
     }
 
-    pub fn crop(&self, x: i64, y: i64, width: u32, height: u32) -> Result<Self, Canvas2DError> {
+    pub(crate) fn crop(
+        &self,
+        x: i64,
+        y: i64,
+        width: u32,
+        height: u32,
+    ) -> Result<Self, Canvas2DError> {
         let color_space = self.color_space;
         if out_of_bounds(self.width, self.height, x, y, width, height) {
             return Ok(Self {
@@ -365,7 +367,7 @@ impl ImageBitmap {
         })
     }
 
-    pub fn resize(
+    pub(crate) fn resize(
         &self,
         width: u32,
         height: u32,
@@ -416,7 +418,7 @@ impl ImageBitmap {
         })
     }
 
-    pub fn get_image_data(
+    pub(crate) fn get_image_data(
         &self,
         mut dst: AlignedImageDataViewMut,
         x: i64,
@@ -439,13 +441,13 @@ impl ImageBitmap {
                 match (self.color_space, dst_color_space) {
                     (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
                     | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
-                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb);
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb)
                     }
                     (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
-                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_display_p3);
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_display_p3)
                     }
                     (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
-                        unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_srgb);
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_srgb)
                     }
                 }
             },
@@ -453,7 +455,7 @@ impl ImageBitmap {
         Ok(())
     }
 
-    pub fn remove_alpha(self) -> Self {
+    pub(crate) fn remove_alpha(self) -> Self {
         let data = match self.data {
             Some(mut data) => {
                 for pixel in Rc::make_mut(&mut data) {

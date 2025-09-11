@@ -1,5 +1,5 @@
 mod codec;
-mod convert;
+pub mod convert;
 pub mod css;
 pub mod error;
 mod filter;
@@ -19,12 +19,14 @@ use cssparser::ToCss as _;
 use error::Canvas2DError;
 use euclid::default::{Point2D, Size2D};
 use euclid::{point2, size2};
+pub use image_bitmap::ImageBitmap;
 use palette::stimulus::IntoStimulus as _;
 use strum_macros::FromRepr;
+pub use wrap::Wrap;
 
 #[derive(Clone, Copy, Debug, FromRepr)]
 #[repr(i32)]
-enum CanvasColorSpace {
+pub enum CanvasColorSpace {
     Srgb,
     DisplayP3,
 }
