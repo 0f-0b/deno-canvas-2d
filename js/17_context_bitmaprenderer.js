@@ -255,7 +255,7 @@ registerCanvasContextMode("bitmaprenderer", {
       0,
       0,
     );
-    const data = new Uint8Array(TypedArrayPrototypeGetBuffer(buf));
+    const data = TypedArrayPrototypeGetBuffer(buf);
     return { data, width, height, colorSpace };
   },
 });

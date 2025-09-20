@@ -133,7 +133,7 @@ registerCanvasContextMode("none", {
   getDataForSerialization(ctx, colorSpace) {
     colorSpace ??= "srgb";
     const { width, height } = ctx;
-    const data = new Uint8Array(width * height * 4);
+    const data = TypedArrayPrototypeGetBuffer(new Uint32Array(width * height));
     return { data, width, height, colorSpace };
   },
 });
@@ -238,7 +238,7 @@ export const OffscreenCanvasInternals = class OffscreenCanvas
         const result = mode.getDataForSerialization(ctx, null);
         return {
           data: op_canvas_2d_encode_png(
-            result.data,
+            new Uint8Array(result.data),
             result.width,
             result.height,
             colorSpaceToRepr[result.colorSpace],

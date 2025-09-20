@@ -186,7 +186,6 @@ const {
   TypedArrayPrototypeGetBuffer,
   TypedArrayPrototypeGetLength,
   Uint32Array,
-  Uint8Array,
 } = primordials;
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertCanvasImageSource = (value) => {
@@ -3081,7 +3080,7 @@ registerCanvasContextMode("2d", {
       0,
       0,
     );
-    const data = new Uint8Array(TypedArrayPrototypeGetBuffer(buf));
+    const data = TypedArrayPrototypeGetBuffer(buf);
     return { data, width, height, colorSpace };
   },
 });
