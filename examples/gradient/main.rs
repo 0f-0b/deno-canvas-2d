@@ -9,7 +9,7 @@ struct Permissions;
 
 impl TimersPermission for Permissions {
     fn allow_hrtime(&mut self) -> bool {
-        false
+        unreachable!()
     }
 }
 
@@ -42,9 +42,10 @@ async fn main() -> anyhow::Result<()> {
         let result = runtime
             .with_event_loop_promise(future, Default::default())
             .await?;
-        let scope = &mut runtime.handle_scope();
-        let result: v8::Local<v8::String> = v8::Local::new(scope, result).try_into().unwrap();
-        result.to_rust_string_lossy(scope)
+        deno_core::scope!(scope, runtime);
+        v8::Local::new(scope, result)
+            .cast::<v8::String>()
+            .to_rust_string_lossy(scope)
     };
     let blob = blob_store
         .get_object_url(Url::parse(&url).unwrap())

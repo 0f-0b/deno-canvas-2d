@@ -1502,7 +1502,7 @@ pub fn op_canvas_2d_font_face_set_clear(#[cppgc] this: &Wrap<Rc<RefCell<FontFace
 
 #[op2]
 pub fn op_canvas_2d_font_face_set_match<'a>(
-    scope: &mut v8::HandleScope<'a>,
+    scope: &mut v8::PinScope<'a, '_>,
     #[cppgc] this: &Wrap<Rc<RefCell<FontFaceSet>>>,
     #[string] font: &str,
     #[string] text: &str,
