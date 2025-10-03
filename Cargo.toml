@@ -25,15 +25,15 @@ qcms = "0.3.0"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "a28779053baa6f574fb67f0cfc6fed8badbb397c", default-features = false }
 strum_macros = "0.27.2"
 svgtypes = "0.15.3"
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.217.0"
-deno_url = "0.217.0"
-deno_web = "0.248.0"
-deno_webidl = "0.217.0"
+deno_console = "0.218.0"
+deno_url = "0.218.0"
+deno_web = "0.249.0"
+deno_webidl = "0.218.0"
 tokio = { version = "1.47.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
