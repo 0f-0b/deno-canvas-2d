@@ -30,10 +30,10 @@ unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.218.0"
-deno_url = "0.218.0"
-deno_web = "0.249.0"
-deno_webidl = "0.218.0"
+deno_console = "0.219.0"
+deno_url = "0.219.0"
+deno_web = "0.250.0"
+deno_webidl = "0.219.0"
 tokio = { version = "1.47.1", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
