@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::Cell;
 use std::io::Cursor;
 use std::sync::LazyLock;
 
@@ -216,11 +216,11 @@ pub fn op_canvas_2d_decode_image(
     resize_quality: i32,
     image_orientation: i32,
     color_space: i32,
-) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
+) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
     let color_space = ColorSpace::from_repr(color_space).unwrap();
-    Ok(Wrap::new(RefCell::new(decode_image(
+    Ok(Wrap::new(Cell::new(decode_image(
         buf,
         mime_type,
         sx,

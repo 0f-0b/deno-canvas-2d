@@ -38,7 +38,6 @@ const {
   TypeError,
   TypedArrayPrototypeGetBuffer,
   Uint32Array,
-  Uint8Array,
 } = primordials;
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertNullableImageBitmap = (value) => {

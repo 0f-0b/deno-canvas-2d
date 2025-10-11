@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::convert::Infallible;
 use std::ffi::CStr;
 use std::fmt::{self, Debug};
@@ -2030,7 +2030,7 @@ pub fn op_canvas_2d_state_is_point_in_stroke(
 #[op2(fast)]
 pub fn op_canvas_2d_state_draw_image(
     #[cppgc] this: &Wrap<RefCell<CanvasState>>,
-    #[cppgc] image: &Wrap<RefCell<ImageBitmap>>,
+    #[cppgc] image: &Wrap<Cell<ImageBitmap>>,
     sx: f64,
     sy: f64,
     sw: f64,

@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::ffi::CStr;
 use std::rc::Rc;
 
@@ -86,7 +86,7 @@ unsafe impl GarbageCollected for Wrap<Rc<CanvasPattern>> {
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_pattern_new(
-    #[cppgc] image: &Wrap<RefCell<ImageBitmap>>,
+    #[cppgc] image: &Wrap<Cell<ImageBitmap>>,
     repetition: i32,
 ) -> Wrap<Rc<CanvasPattern>> {
     let image = image.take();

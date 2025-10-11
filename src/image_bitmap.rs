@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ffi::CStr;
 use std::rc::Rc;
 
@@ -489,7 +489,7 @@ impl Default for ImageBitmap {
 }
 
 // SAFETY: this type has no members.
-unsafe impl GarbageCollected for Wrap<RefCell<ImageBitmap>> {
+unsafe impl GarbageCollected for Wrap<Cell<ImageBitmap>> {
     fn get_name(&self) -> &'static CStr {
         c"ImageBitmap"
     }
@@ -501,9 +501,9 @@ unsafe impl GarbageCollected for Wrap<RefCell<ImageBitmap>> {
 #[cppgc]
 pub fn op_canvas_2d_image_bitmap_from_canvas_state(
     #[cppgc] canvas_state: &Wrap<RefCell<CanvasState>>,
-) -> Wrap<RefCell<ImageBitmap>> {
+) -> Wrap<Cell<ImageBitmap>> {
     let canvas_state = canvas_state.borrow();
-    Wrap::new(RefCell::new(ImageBitmap::from_canvas_state(&canvas_state)))
+    Wrap::new(Cell::new(ImageBitmap::from_canvas_state(&canvas_state)))
 }
 
 #[op2]
@@ -514,17 +514,15 @@ pub fn op_canvas_2d_image_bitmap_from_canvas_state_crop(
     #[number] y: i64,
     width: u32,
     height: u32,
-) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
+) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
     let canvas_state = canvas_state.borrow();
-    Ok(Wrap::new(RefCell::new(
-        ImageBitmap::from_canvas_state_crop(
-            &canvas_state,
-            x,
-            y,
-            non_zero_u32(width),
-            non_zero_u32(height),
-        )?,
-    )))
+    Ok(Wrap::new(Cell::new(ImageBitmap::from_canvas_state_crop(
+        &canvas_state,
+        x,
+        y,
+        non_zero_u32(width),
+        non_zero_u32(height),
+    )?)))
 }
 
 #[op2]
@@ -542,7 +540,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
     dh: u32,
     resize_quality: i32,
     image_orientation: i32,
-) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
+) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
     let src = ImageDataView {
         width: src_width,
         height: src_height,
@@ -551,7 +549,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
     };
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
-    Ok(Wrap::new(RefCell::new(
+    Ok(Wrap::new(Cell::new(
         ImageBitmap::from_image_data_crop_and_resize(
             src,
             sx,
@@ -568,8 +566,8 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
 
 #[op2]
 #[cppgc]
-pub fn op_canvas_2d_image_bitmap_empty(width: u32, height: u32) -> Wrap<RefCell<ImageBitmap>> {
-    Wrap::new(RefCell::new(ImageBitmap::empty(
+pub fn op_canvas_2d_image_bitmap_empty(width: u32, height: u32) -> Wrap<Cell<ImageBitmap>> {
+    Wrap::new(Cell::new(ImageBitmap::empty(
         width,
         height,
         CanvasColorSpace::Srgb,
@@ -583,9 +581,9 @@ pub fn op_canvas_2d_image_bitmap_empty_resize(
     #[number] sh: u64,
     dw: u32,
     dh: u32,
-) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
+) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
     let size = aspect_resize(sw, sh, non_zero_u32(dw), non_zero_u32(dh))?;
-    Ok(Wrap::new(RefCell::new(ImageBitmap::empty(
+    Ok(Wrap::new(Cell::new(ImageBitmap::empty(
         size.width,
         size.height,
         CanvasColorSpace::Srgb,
@@ -593,65 +591,76 @@ pub fn op_canvas_2d_image_bitmap_empty_resize(
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_width(#[cppgc] this: &Wrap<RefCell<ImageBitmap>>) -> u32 {
-    let this = this.borrow();
-    this.width
+pub fn op_canvas_2d_image_bitmap_width(#[cppgc] this: &Wrap<Cell<ImageBitmap>>) -> u32 {
+    let image = this.take();
+    let width = image.width;
+    this.set(image);
+    width
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_height(#[cppgc] this: &Wrap<RefCell<ImageBitmap>>) -> u32 {
-    let this = this.borrow();
-    this.height
+pub fn op_canvas_2d_image_bitmap_height(#[cppgc] this: &Wrap<Cell<ImageBitmap>>) -> u32 {
+    let image = this.take();
+    let height = image.height;
+    this.set(image);
+    height
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_color_space(#[cppgc] this: &Wrap<RefCell<ImageBitmap>>) -> i32 {
-    let this = this.borrow();
-    this.color_space as i32
+pub fn op_canvas_2d_image_bitmap_color_space(#[cppgc] this: &Wrap<Cell<ImageBitmap>>) -> i32 {
+    let image = this.take();
+    let color_space = image.color_space;
+    this.set(image);
+    color_space as i32
 }
 
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_image_bitmap_clone(
-    #[cppgc] this: &Wrap<RefCell<ImageBitmap>>,
-) -> Wrap<RefCell<ImageBitmap>> {
-    Wrap::new((*this).clone())
+    #[cppgc] this: &Wrap<Cell<ImageBitmap>>,
+) -> Wrap<Cell<ImageBitmap>> {
+    let image = this.take();
+    let clone = image.clone();
+    this.set(image);
+    Wrap::new(Cell::new(clone))
 }
 
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_image_bitmap_crop(
-    #[cppgc] this: &Wrap<RefCell<ImageBitmap>>,
+    #[cppgc] this: &Wrap<Cell<ImageBitmap>>,
     #[number] x: i64,
     #[number] y: i64,
     width: u32,
     height: u32,
-) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
-    let this = this.borrow();
-    let width = non_zero_u32(width).unwrap_or(this.width);
-    let height = non_zero_u32(height).unwrap_or(this.height);
-    Ok(Wrap::new(RefCell::new(this.crop(x, y, width, height)?)))
+) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
+    let image = this.take();
+    let width = non_zero_u32(width).unwrap_or(image.width);
+    let height = non_zero_u32(height).unwrap_or(image.height);
+    let result = image.crop(x, y, width, height);
+    this.set(image);
+    Ok(Wrap::new(Cell::new(result?)))
 }
 
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_image_bitmap_resize(
-    #[cppgc] this: &Wrap<RefCell<ImageBitmap>>,
+    #[cppgc] this: &Wrap<Cell<ImageBitmap>>,
     width: u32,
     height: u32,
     quality: i32,
     image_orientation: i32,
-) -> Result<Wrap<RefCell<ImageBitmap>>, Canvas2DError> {
-    let this = this.take();
+) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
+    let image = this.take();
     let size = aspect_resize(
-        this.width as u64,
-        this.height as u64,
+        image.width as u64,
+        image.height as u64,
         non_zero_u32(width),
         non_zero_u32(height),
     )?;
     let quality = ResizeQuality::from_repr(quality).unwrap();
     let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
-    Ok(Wrap::new(RefCell::new(this.resize(
+    Ok(Wrap::new(Cell::new(image.resize(
         size.width,
         size.height,
         quality,
@@ -661,7 +670,7 @@ pub fn op_canvas_2d_image_bitmap_resize(
 
 #[op2(fast)]
 pub fn op_canvas_2d_image_bitmap_get_image_data(
-    #[cppgc] this: &Wrap<RefCell<ImageBitmap>>,
+    #[cppgc] this: &Wrap<Cell<ImageBitmap>>,
     #[buffer] dst_data: &mut [u32],
     dst_width: u32,
     dst_height: u32,
@@ -669,26 +678,28 @@ pub fn op_canvas_2d_image_bitmap_get_image_data(
     #[number] x: i64,
     #[number] y: i64,
 ) -> Result<(), Canvas2DError> {
-    let this = this.borrow();
+    let image = this.take();
     let dst = AlignedImageDataViewMut {
         width: dst_width,
         height: dst_height,
         color_space: CanvasColorSpace::from_repr(dst_color_space).unwrap(),
         data: dst_data,
     };
-    this.get_image_data(dst, x, y)
+    let result = image.get_image_data(dst, x, y);
+    this.set(image);
+    result
 }
 
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_image_bitmap_remove_alpha(
-    #[cppgc] this: &Wrap<RefCell<ImageBitmap>>,
-) -> Wrap<RefCell<ImageBitmap>> {
-    let this = this.take();
-    Wrap::new(RefCell::new(this.remove_alpha()))
+    #[cppgc] this: &Wrap<Cell<ImageBitmap>>,
+) -> Wrap<Cell<ImageBitmap>> {
+    let image = this.take();
+    Wrap::new(Cell::new(image.remove_alpha()))
 }
 
 #[op2(fast)]
-pub fn op_canvas_2d_image_bitmap_close(#[cppgc] this: &Wrap<RefCell<ImageBitmap>>) {
+pub fn op_canvas_2d_image_bitmap_close(#[cppgc] this: &Wrap<Cell<ImageBitmap>>) {
     this.take();
 }
