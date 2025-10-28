@@ -5,12 +5,12 @@ edition = "2024"
 [dependencies]
 cssparser = "0.35.0"
 cssparser-color = "0.3.0"
-deno_core = "0.362.0"
+deno_core = "0.363.0"
 deno_error = "0.7.0"
 euclid = "0.22.11"
 fontsan = { git = "https://github.com/servo/fontsan.git", rev = "212f15c9e36f701597847de94e1dafc9636bdf07" }
 harfbuzz_rs = { git = "https://github.com/0f-0b/harfbuzz_rs.git", rev = "8713514173372c0a8a705abd6da6324ccf119465" }
-hashlink = "0.10.0"
+hashlink = "0.11.0"
 image = { version = "0.25.8", default-features = false, features = [
   "bmp",
   "gif",
@@ -24,17 +24,17 @@ png = "0.18.0"
 qcms = "0.3.0"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "a28779053baa6f574fb67f0cfc6fed8badbb397c", default-features = false }
 strum_macros = "0.27.2"
-svgtypes = "0.15.3"
+svgtypes = "0.16.0"
 thiserror = "2.0.17"
 unicase = "2.8.1"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_console = "0.219.0"
-deno_url = "0.219.0"
-deno_web = "0.250.0"
-deno_webidl = "0.219.0"
-tokio = { version = "1.47.1", features = ["fs", "rt", "macros"] }
+deno_console = "0.220.0"
+deno_url = "0.220.0"
+deno_web = "0.251.0"
+deno_webidl = "0.220.0"
+tokio = { version = "1.48.0", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
 undocumented_unsafe_blocks = "warn"
