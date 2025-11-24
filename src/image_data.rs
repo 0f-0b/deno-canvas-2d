@@ -1,11 +1,11 @@
 use super::error::Canvas2DError;
-use super::{CanvasColorSpace, to_raqote_size};
+use super::{PredefinedColorSpace, to_raqote_size};
 
 #[derive(Clone, Debug)]
 pub struct ImageData {
     pub width: u32,
     pub height: u32,
-    pub color_space: CanvasColorSpace,
+    pub color_space: PredefinedColorSpace,
     pub data: Vec<u8>,
 }
 
@@ -13,7 +13,7 @@ pub struct ImageData {
 pub struct ImageDataView<'a> {
     pub width: u32,
     pub height: u32,
-    pub color_space: CanvasColorSpace,
+    pub color_space: PredefinedColorSpace,
     pub data: &'a [u8],
 }
 
@@ -21,7 +21,7 @@ pub struct ImageDataView<'a> {
 pub struct AlignedImageDataView<'a> {
     pub width: u32,
     pub height: u32,
-    pub color_space: CanvasColorSpace,
+    pub color_space: PredefinedColorSpace,
     pub data: &'a [u32],
 }
 
@@ -40,7 +40,7 @@ impl AlignedImageDataView<'_> {
 pub struct AlignedImageDataViewMut<'a> {
     pub width: u32,
     pub height: u32,
-    pub color_space: CanvasColorSpace,
+    pub color_space: PredefinedColorSpace,
     pub data: &'a mut [u32],
 }
 

@@ -401,12 +401,16 @@ export const alignUint8ClampedArrayToUint32 = (data) => {
 };
 export const colorSpaceFromRepr = ObjectFreeze([
   "srgb",
+  "srgb-linear",
   "display-p3",
+  "display-p3-linear",
 ]);
 export const colorSpaceToRepr = ObjectFreeze({
   __proto__: null,
   "srgb": 0,
-  "display-p3": 1,
+  "srgb-linear": 1,
+  "display-p3": 2,
+  "display-p3-linear": 3,
 });
 export const ImageBitmapInternals = class ImageBitmap
   extends IdentityConstructor {

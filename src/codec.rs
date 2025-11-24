@@ -9,7 +9,6 @@ use image::metadata::Orientation;
 use image::{DynamicImage, ImageDecoder, ImageError, ImageFormat, ImageReader, RgbaImage};
 use strum_macros::FromRepr;
 
-use super::CanvasColorSpace;
 use super::error::Canvas2DError;
 use super::image_bitmap::{
     ImageBitmap, ImageOrientation, ResizeQuality, aspect_resize, non_zero_u32, out_of_bounds,
@@ -17,12 +16,13 @@ use super::image_bitmap::{
 };
 use super::image_data::ImageData;
 use super::wrap::Wrap;
+use super::{CanvasColorSpace, PredefinedColorSpace};
 
 fn encode_png(
     data: &[u8],
     width: u64,
     height: u64,
-    color_space: CanvasColorSpace,
+    color_space: PredefinedColorSpace,
 ) -> Result<Vec<u8>, png::EncodingError> {
     use png::EncodingError::LimitsExceeded;
     use png::chunk;
@@ -35,8 +35,10 @@ fn encode_png(
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header()?;
     match color_space {
-        CanvasColorSpace::Srgb => writer.write_chunk(chunk::cICP, &[1, 13, 0, 1])?,
-        CanvasColorSpace::DisplayP3 => writer.write_chunk(chunk::cICP, &[12, 13, 0, 1])?,
+        PredefinedColorSpace::Srgb => writer.write_chunk(chunk::cICP, &[1, 13, 0, 1])?,
+        PredefinedColorSpace::SrgbLinear => writer.write_chunk(chunk::cICP, &[1, 8, 0, 1])?,
+        PredefinedColorSpace::DisplayP3 => writer.write_chunk(chunk::cICP, &[12, 13, 0, 1])?,
+        PredefinedColorSpace::DisplayP3Linear => writer.write_chunk(chunk::cICP, &[12, 8, 0, 1])?,
     }
     writer.write_image_data(data)?;
     writer.finish()?;
@@ -51,7 +53,7 @@ pub fn op_canvas_2d_encode_png(
     #[number] height: u64,
     color_space: i32,
 ) -> Result<Vec<u8>, Canvas2DError> {
-    let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
+    let color_space = PredefinedColorSpace::from_repr(color_space).unwrap();
     encode_png(data, width, height, color_space).map_err(|e| {
         Canvas2DError::EncodeImage(ImageError::Encoding(EncodingError::new(
             ImageFormat::Png.into(),
@@ -192,7 +194,7 @@ fn decode_image(
         ImageData {
             width: sw,
             height: sh,
-            color_space: CanvasColorSpace::Srgb,
+            color_space: PredefinedColorSpace::Srgb,
             data,
         },
         dw,

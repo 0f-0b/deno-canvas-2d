@@ -8,17 +8,22 @@ use euclid::size2;
 use strum_macros::FromRepr;
 
 use super::convert::{
+    linear_srgb_to_premultiplied_linear_srgb, premultiplied_linear_display_p3_to_linear_srgb,
     premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
     premultiplied_linear_display_p3_to_srgb, premultiplied_linear_srgb_to_display_p3,
+    premultiplied_linear_srgb_to_linear_display_p3, premultiplied_linear_srgb_to_linear_srgb,
     premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
     premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_srgb, transform_argb32,
-    unpack_argb32_to_rgba8,
+    transform_image, unpack_argb32_to_rgba8,
 };
 use super::error::Canvas2DError;
 use super::image_data::{AlignedImageDataViewMut, ImageData, ImageDataView};
 use super::state::CanvasState;
 use super::wrap::Wrap;
-use super::{ARGB32_ALPHA_MASK, CanvasColorSpace, raqote_ext, to_raqote_point, to_raqote_size};
+use super::{
+    ARGB32_ALPHA_MASK, CanvasColorSpace, PredefinedColorSpace, raqote_ext, to_raqote_point,
+    to_raqote_size,
+};
 
 pub fn non_zero_u32(x: u32) -> Option<u32> {
     (x != 0).then_some(x)
@@ -167,7 +172,7 @@ impl ImageBitmap {
             return Ok(Self {
                 width: dw,
                 height: dh,
-                color_space,
+                color_space: color_space.premultiplied(),
                 data: None,
             });
         }
@@ -191,7 +196,7 @@ impl ImageBitmap {
             ImageData {
                 width: sw,
                 height: sh,
-                color_space: CanvasColorSpace::Srgb,
+                color_space,
                 data: cropped.into_vec(),
             },
             dw,
@@ -213,11 +218,15 @@ impl ImageBitmap {
 
         let color_space = src.color_space;
         let mut tmp = RgbaImage::from_vec(src.width, src.height, src.data).unwrap();
-        for pixel in tmp.pixels_mut() {
-            let [r, g, b, a] = pixel.0;
-            let (r, g, b, a) = srgb_to_premultiplied_linear_srgb((r, g, b, a));
-            pixel.0 = [r, g, b, a];
+        match color_space {
+            PredefinedColorSpace::Srgb | PredefinedColorSpace::DisplayP3 => {
+                transform_image(&mut tmp, srgb_to_premultiplied_linear_srgb)
+            }
+            PredefinedColorSpace::SrgbLinear | PredefinedColorSpace::DisplayP3Linear => {
+                transform_image(&mut tmp, linear_srgb_to_premultiplied_linear_srgb)
+            }
         }
+        let color_space = color_space.premultiplied();
         if src.width != width || src.height != height {
             let filter = match quality {
                 ResizeQuality::Pixelated => FilterType::Nearest,
@@ -439,15 +448,25 @@ impl ImageBitmap {
             |src, dst| {
                 dst.copy_from_slice(src);
                 match (self.color_space, dst_color_space) {
-                    (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
-                    | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::Srgb)
+                    | (CanvasColorSpace::DisplayP3, PredefinedColorSpace::DisplayP3) => {
                         unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb)
                     }
-                    (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::SrgbLinear)
+                    | (CanvasColorSpace::DisplayP3, PredefinedColorSpace::DisplayP3Linear) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_linear_srgb)
+                    }
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::DisplayP3) => {
                         unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_display_p3)
                     }
-                    (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::DisplayP3Linear) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_linear_display_p3)
+                    }
+                    (CanvasColorSpace::DisplayP3, PredefinedColorSpace::Srgb) => {
                         unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_srgb)
+                    }
+                    (CanvasColorSpace::DisplayP3, PredefinedColorSpace::SrgbLinear) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_linear_srgb)
                     }
                 }
             },
@@ -544,7 +563,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
     let src = ImageDataView {
         width: src_width,
         height: src_height,
-        color_space: CanvasColorSpace::from_repr(src_color_space).unwrap(),
+        color_space: PredefinedColorSpace::from_repr(src_color_space).unwrap(),
         data: src_data,
     };
     let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
@@ -682,7 +701,7 @@ pub fn op_canvas_2d_image_bitmap_get_image_data(
     let dst = AlignedImageDataViewMut {
         width: dst_width,
         height: dst_height,
-        color_space: CanvasColorSpace::from_repr(dst_color_space).unwrap(),
+        color_space: PredefinedColorSpace::from_repr(dst_color_space).unwrap(),
         data: dst_data,
     };
     let result = image.get_image_data(dst, x, y);

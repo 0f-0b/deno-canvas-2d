@@ -11,8 +11,11 @@ use euclid::{Angle, point2, size2, vec2};
 use strum_macros::FromRepr;
 
 use super::convert::{
-    display_p3_to_premultiplied_linear_srgb, pack_rgba8_to_argb32,
+    display_p3_to_premultiplied_linear_srgb, linear_display_p3_to_premultiplied_linear_srgb,
+    linear_srgb_to_premultiplied_linear_display_p3, linear_srgb_to_premultiplied_linear_srgb,
+    pack_rgba8_to_argb32, premultiplied_linear_display_p3_to_linear_srgb,
     premultiplied_linear_display_p3_to_srgb, premultiplied_linear_srgb_to_display_p3,
+    premultiplied_linear_srgb_to_linear_display_p3, premultiplied_linear_srgb_to_linear_srgb,
     premultiplied_linear_srgb_to_srgb, srgb_to_premultiplied_linear_display_p3,
     srgb_to_premultiplied_linear_srgb, unpack_argb32_to_rgba8,
 };
@@ -35,9 +38,9 @@ use super::pattern::CanvasPattern;
 use super::text::{FontFaceSet, TextMetrics, prepare_text};
 use super::wrap::Wrap;
 use super::{
-    ARGB32_ALPHA_MASK, CanvasColorSpace, raqote_ext, resolve_color_for_canvas,
-    serialize_color_for_canvas, to_raqote_color, to_raqote_point, to_raqote_size,
-    to_raqote_solid_source,
+    ARGB32_ALPHA_MASK, CanvasColorSpace, PredefinedColorSpace, raqote_ext,
+    resolve_color_for_canvas, serialize_color_for_canvas, to_raqote_color, to_raqote_point,
+    to_raqote_size, to_raqote_solid_source,
 };
 
 const TRANSPARENT_SOLID_SOURCE: raqote::SolidSource = raqote::SolidSource {
@@ -1216,15 +1219,25 @@ impl CanvasState {
             |src, dst| {
                 dst.copy_from_slice(src);
                 match (self.color_space, dst_color_space) {
-                    (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
-                    | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::Srgb)
+                    | (CanvasColorSpace::DisplayP3, PredefinedColorSpace::DisplayP3) => {
                         unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb)
                     }
-                    (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::SrgbLinear)
+                    | (CanvasColorSpace::DisplayP3, PredefinedColorSpace::DisplayP3Linear) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_linear_srgb)
+                    }
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::DisplayP3) => {
                         unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_display_p3)
                     }
-                    (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
+                    (CanvasColorSpace::Srgb, PredefinedColorSpace::DisplayP3Linear) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_linear_display_p3)
+                    }
+                    (CanvasColorSpace::DisplayP3, PredefinedColorSpace::Srgb) => {
                         unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_srgb)
+                    }
+                    (CanvasColorSpace::DisplayP3, PredefinedColorSpace::SrgbLinear) => {
+                        unpack_argb32_to_rgba8(dst, premultiplied_linear_display_p3_to_linear_srgb)
                     }
                 }
             },
@@ -1255,15 +1268,25 @@ impl CanvasState {
             |src, dst| {
                 dst.copy_from_slice(src);
                 match (src_color_space, self.color_space) {
-                    (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
-                    | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
+                    (PredefinedColorSpace::Srgb, CanvasColorSpace::Srgb)
+                    | (PredefinedColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {
                         pack_rgba8_to_argb32(dst, srgb_to_premultiplied_linear_srgb)
                     }
-                    (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
+                    (PredefinedColorSpace::SrgbLinear, CanvasColorSpace::Srgb)
+                    | (PredefinedColorSpace::DisplayP3Linear, CanvasColorSpace::DisplayP3) => {
+                        pack_rgba8_to_argb32(dst, linear_srgb_to_premultiplied_linear_srgb)
+                    }
+                    (PredefinedColorSpace::Srgb, CanvasColorSpace::DisplayP3) => {
                         pack_rgba8_to_argb32(dst, srgb_to_premultiplied_linear_display_p3)
                     }
-                    (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
+                    (PredefinedColorSpace::DisplayP3, CanvasColorSpace::Srgb) => {
                         pack_rgba8_to_argb32(dst, display_p3_to_premultiplied_linear_srgb)
+                    }
+                    (PredefinedColorSpace::SrgbLinear, CanvasColorSpace::DisplayP3) => {
+                        pack_rgba8_to_argb32(dst, linear_srgb_to_premultiplied_linear_display_p3)
+                    }
+                    (PredefinedColorSpace::DisplayP3Linear, CanvasColorSpace::Srgb) => {
+                        pack_rgba8_to_argb32(dst, linear_display_p3_to_premultiplied_linear_srgb)
                     }
                 }
                 if !self.alpha {
@@ -1362,12 +1385,12 @@ pub fn op_canvas_2d_state_new(
     alpha: bool,
     color_space: i32,
 ) -> Result<Wrap<RefCell<CanvasState>>, Canvas2DError> {
-    let color_space = CanvasColorSpace::from_repr(color_space).unwrap();
+    let color_space = PredefinedColorSpace::from_repr(color_space).unwrap();
     Ok(Wrap::new(RefCell::new(CanvasState::new(
         width,
         height,
         alpha,
-        color_space,
+        color_space.premultiplied(),
     )?)))
 }
 
@@ -2065,7 +2088,7 @@ pub fn op_canvas_2d_state_get_image_data(
     let dst = AlignedImageDataViewMut {
         width: dst_width,
         height: dst_height,
-        color_space: CanvasColorSpace::from_repr(dst_color_space).unwrap(),
+        color_space: PredefinedColorSpace::from_repr(dst_color_space).unwrap(),
         data: dst_data,
     };
     this.get_image_data(dst, x, y)
@@ -2089,7 +2112,7 @@ pub fn op_canvas_2d_state_put_image_data(
     let src = AlignedImageDataView {
         width: src_width,
         height: src_height,
-        color_space: CanvasColorSpace::from_repr(src_color_space).unwrap(),
+        color_space: PredefinedColorSpace::from_repr(src_color_space).unwrap(),
         data: src_data,
     };
     this.put_image_data(src, sx, sy, sw, sh, dx, dy)

@@ -24,11 +24,28 @@ use palette::stimulus::IntoStimulus as _;
 use strum_macros::FromRepr;
 pub use wrap::Wrap;
 
-#[derive(Clone, Copy, Debug, FromRepr)]
-#[repr(i32)]
+#[derive(Clone, Copy, Debug)]
 pub enum CanvasColorSpace {
     Srgb,
     DisplayP3,
+}
+
+#[derive(Clone, Copy, Debug, FromRepr)]
+#[repr(i32)]
+pub enum PredefinedColorSpace {
+    Srgb,
+    SrgbLinear,
+    DisplayP3,
+    DisplayP3Linear,
+}
+
+impl PredefinedColorSpace {
+    pub fn premultiplied(self) -> CanvasColorSpace {
+        match self {
+            Self::Srgb | Self::SrgbLinear => CanvasColorSpace::Srgb,
+            Self::DisplayP3 | Self::DisplayP3Linear => CanvasColorSpace::DisplayP3,
+        }
+    }
 }
 
 fn to_raqote_point(x: i64, y: i64) -> Result<Point2D<i32>, Canvas2DError> {
@@ -99,10 +116,6 @@ fn serialize_color_for_canvas(color: AbsoluteColor) -> String {
         }
         _ => color.to_css_string(),
     }
-}
-
-fn premultiply(c: u8, a: u8) -> u8 {
-    (((c as u32 * a as u32 + 128) * 257) >> 16) as u8
 }
 
 const ARGB32_ALPHA_MASK: u32 = 0xff000000;
