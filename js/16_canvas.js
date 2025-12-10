@@ -1,6 +1,6 @@
 import { primordials } from "ext:core/mod.js";
 import { op_defer } from "ext:core/ops";
-import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
+import { createFilteredInspectProxy } from "ext:deno_web/01_console.js";
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import { EventTarget } from "ext:deno_web/02_event.js";
 import { Blob } from "ext:deno_web/09_file.js";

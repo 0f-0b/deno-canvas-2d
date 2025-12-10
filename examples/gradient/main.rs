@@ -2,16 +2,8 @@ use std::sync::Arc;
 
 use deno_core::url::Url;
 use deno_core::{JsRuntime, RuntimeOptions, anyhow, v8};
-use deno_web::{BlobStore, TimersPermission};
+use deno_web::BlobStore;
 use tokio::fs;
-
-struct Permissions;
-
-impl TimersPermission for Permissions {
-    fn allow_hrtime(&mut self) -> bool {
-        unreachable!()
-    }
-}
 
 deno_core::extension!(
     init,
@@ -26,9 +18,7 @@ async fn main() -> anyhow::Result<()> {
     let mut runtime = JsRuntime::new(RuntimeOptions {
         extensions: vec![
             deno_webidl::deno_webidl::init(),
-            deno_console::deno_console::init(),
-            deno_url::deno_url::init(),
-            deno_web::deno_web::init::<Permissions>(blob_store.clone(), None),
+            deno_web::deno_web::init(blob_store.clone(), None, Default::default()),
             canvas_2d::canvas_2d::init(),
             init::init(),
         ],

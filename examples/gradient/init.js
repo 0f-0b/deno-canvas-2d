@@ -27,7 +27,7 @@ import {
 } from "ext:canvas_2d/17_context_2d.js";
 import { ImageBitmapRenderingContext } from "ext:canvas_2d/17_context_bitmaprenderer.js";
 import { core, primordials } from "ext:core/mod.js";
-import { URL } from "ext:deno_url/00_url.js";
+import { URL } from "ext:deno_web/00_url.js";
 
 const { ObjectDefineProperties, globalThis } = primordials;
 const { propGetterOnly, propNonEnumerable, propWritable } = core;
@@ -61,7 +61,8 @@ ObjectDefineProperties(globalThis, {
 });
 
 // Suppress "following modules were not evaluated" warning
-import "ext:deno_url/01_urlpattern.js";
+import "ext:deno_web/01_broadcast_channel.js";
+import "ext:deno_web/01_urlpattern.js";
 import "ext:deno_web/04_global_interfaces.js";
 import "ext:deno_web/05_base64.js";
 import "ext:deno_web/10_filereader.js";
