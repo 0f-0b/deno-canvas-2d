@@ -26,13 +26,13 @@ raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "a28779053baa6f574
 strum_macros = "0.27.2"
 svgtypes = "0.16.0"
 thiserror = "2.0.17"
-unicase = "2.8.1"
+unicase = "2.9.0"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_web = "0.256.0"
-deno_webidl = "0.225.0"
-tokio = { version = "1.48.0", features = ["fs", "rt", "macros"] }
+deno_web = "0.257.0"
+deno_webidl = "0.226.0"
+tokio = { version = "1.49.0", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
 undocumented_unsafe_blocks = "warn"
