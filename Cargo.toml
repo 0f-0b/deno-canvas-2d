@@ -5,10 +5,10 @@ edition = "2024"
 [dependencies]
 cssparser = "0.35.0"
 cssparser-color = "0.3.0"
-deno_core = "0.376.0"
+deno_core = "0.377.0"
 deno_error = "0.7.1"
 euclid = "0.22.11"
-fontsan = { git = "https://github.com/servo/fontsan.git", rev = "212f15c9e36f701597847de94e1dafc9636bdf07" }
+fontsan = { git = "https://github.com/servo/fontsan.git", rev = "ec58e75f566648a256a4fe7264ea6ffa2b83f201" }
 harfbuzz_rs = { git = "https://github.com/0f-0b/harfbuzz_rs.git", rev = "8713514173372c0a8a705abd6da6324ccf119465" }
 hashlink = "0.11.0"
 image = { version = "0.25.9", default-features = false, features = [
@@ -24,14 +24,14 @@ png = "0.18.0"
 qcms = "0.3.0"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "a28779053baa6f574fb67f0cfc6fed8badbb397c", default-features = false }
 strum_macros = "0.27.2"
-svgtypes = "0.16.0"
-thiserror = "2.0.17"
+svgtypes = "0.16.1"
+thiserror = "2.0.18"
 unicase = "2.9.0"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_web = "0.257.0"
-deno_webidl = "0.226.0"
+deno_web = "0.258.0"
+deno_webidl = "0.227.0"
 tokio = { version = "1.49.0", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
