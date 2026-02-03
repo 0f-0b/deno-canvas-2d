@@ -188,9 +188,9 @@ checksum = "64fa3c856b712db6612c019f14756e64e4bcea13337a6b33b696333a9eaa2d06"
 
 [[package]]
 name = "bytemuck"
-version = "1.24.0"
+version = "1.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fbdf580320f38b612e485521afda1ee26d10cc9884efaaa750d383e13e3c5f4"
+checksum = "c8efb64bd706a16a1bdde310ae86b351e4d21550d98d056f22f8a7f7a2183fec"
 
 [[package]]
 name = "byteorder-lite"
@@ -265,9 +265,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.54"
+version = "1.2.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6354c81bbfd62d9cfa9cb3c773c2b7b2a3a482d569de977fd0e961f6e7c00583"
+checksum = "47b26a0954ae34af09b50f0de26458fa95369a0d478d8236d3f93082b219bd29"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -391,9 +391,9 @@ dependencies = [
 
 [[package]]
 name = "deno_core"
-version = "0.382.0"
+version = "0.383.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff4bdf251dc4597ba3f646e2f007208c475e40b5a412c039b7c75ff277fe7b38"
+checksum = "ee60c193b9e93726558e20dca14b36db7fccfebdf4479271e834e52709d101ca"
 dependencies = [
  "anyhow",
  "az",
@@ -461,9 +461,9 @@ dependencies = [
 
 [[package]]
 name = "deno_features"
-version = "0.26.0"
+version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4a15bed4e5c7b8a4502bbfb4d2840c8a138dd6eea48703406263a880727e98"
+checksum = "3d84d7d416901d732c6d729e69fbb25534aedc57081faa5568583a0701694fc8"
 dependencies = [
  "deno_core",
  "serde",
@@ -472,9 +472,9 @@ dependencies = [
 
 [[package]]
 name = "deno_ops"
-version = "0.258.0"
+version = "0.259.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a13fcc669b03b34efcf5052afdefe5e32b16f3d60116706ac6ef1af0cb3c4a61"
+checksum = "4e102069f83f92da6cba0867ffc9bfe3a5a98fa8b01e49687da764d64e91810d"
 dependencies = [
  "indexmap",
  "proc-macro2",
@@ -502,9 +502,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.88.0"
+version = "0.89.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c9558151dd8ad4aeda9297b09510f9cf3beefcc635659c9d22004acfa04eb6"
+checksum = "4e2ddcf7e0714fee8cc897a2e9eca5ba7a03b477a82e6a9a8d16b191eb151361"
 dependencies = [
  "capacity_builder",
  "chrono",
@@ -553,9 +553,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.260.0"
+version = "0.261.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7336de15dee3e487f89095046259d2e4226a85dab120e194b27b5e377b800e8"
+checksum = "c07c5bfe533c7c365234dd2491707d815e2501753a7f407ac44d4a78eb42fd2a"
 dependencies = [
  "async-trait",
  "base64-simd",
@@ -576,9 +576,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.229.0"
+version = "0.230.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc76c4c50a9398e405ef596a3502b94132b6ea580f728a4a1d306c8e2e861fb6"
+checksum = "9787ede37b46fd68bcdac03a931346670b7409b1e0fb78135d5f939139d612b4"
 dependencies = [
  "deno_core",
 ]
@@ -698,9 +698,9 @@ dependencies = [
 
 [[package]]
 name = "find-msvc-tools"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8591b0bcc8a98a64310a2fae1bb3e9b8564dd10e381e6e28010fde8e8e8568db"
+checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
 name = "flate2"
@@ -1753,9 +1753,9 @@ dependencies = [
 
 [[package]]
 name = "serde_v8"
-version = "0.291.0"
+version = "0.292.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2168c75b2bfe4b1426735663c5faafed2f49b4877845338b5df2778e5d3e5b08"
+checksum = "f0d7af6a35bbed7c8d91b951608bf2e820a077992bf3dde06ef016af6e7b503f"
 dependencies = [
  "deno_error",
  "num-bigint",
@@ -1795,9 +1795,9 @@ checksum = "b2aa850e253778c88a04c3d7323b043aeda9d3e30d5971937c1855769763678e"
 
 [[package]]
 name = "slab"
-version = "0.4.11"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
+checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "smallvec"
@@ -2564,9 +2564,9 @@ dependencies = [
 
 [[package]]
 name = "zmij"
-version = "1.0.17"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02aae0f83f69aafc94776e879363e9771d7ecbffe2c7fbb6c14c5e00dfe88439"
+checksum = "3ff05f8caa9038894637571ae6b9e29466c1f4f829d26c9b28f869a29cbe3445"
 
 [[package]]
 name = "zoneinfo64"
