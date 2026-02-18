@@ -21,7 +21,7 @@ image = { version = "0.25.9", default-features = false, features = [
 itertools = "0.14.0"
 lyon_geom = "1.0.18"
 palette = { version = "0.7.6", default-features = false, features = ["std"] }
-png = "0.18.0"
+png = "0.18.1"
 qcms = "0.3.0"
 raqote = { git = "https://github.com/0f-0b/raqote.git", rev = "a28779053baa6f574fb67f0cfc6fed8badbb397c", default-features = false }
 strum_macros = "0.27.2"
@@ -31,8 +31,8 @@ unicase = "2.9.0"
 unicode-bidi = "0.3.18"
 
 [dev-dependencies]
-deno_web = "0.262.0"
-deno_webidl = "0.231.0"
+deno_web = "0.263.0"
+deno_webidl = "0.232.0"
 tokio = { version = "1.49.0", features = ["fs", "rt", "macros"] }
 
 [lints.clippy]
