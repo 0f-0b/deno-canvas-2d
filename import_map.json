@@ -6,7 +6,7 @@
       "ext:canvas_2d/16_font_loading.js": "./js/16_font_loading.js",
       "ext:canvas_2d/17_context_2d.js": "./js/17_context_2d.js",
       "ext:canvas_2d/17_context_bitmaprenderer.js": "./js/17_context_bitmaprenderer.js",
-      "ext:core/mod.js": "../deno_core/core/mod.js",
+      "ext:core/mod.js": "../deno/libs/core/mod.js",
       "ext:deno_web/00_url.js": "../deno/ext/web/00_url.js",
       "ext:deno_web/01_broadcast_channel.js": "../deno/ext/web/01_broadcast_channel.js",
       "ext:deno_web/01_urlpattern.js": "../deno/ext/web/01_urlpattern.js",
@@ -19,7 +19,7 @@
       "ext:deno_web/15_performance.js": "../deno/ext/web/15_performance.js"
     },
     "./js/": {
-      "ext:core/mod.js": "../deno_core/core/mod.js",
+      "ext:core/mod.js": "../deno/libs/core/mod.js",
       "ext:core/ops": "data:text/javascript,",
       "ext:deno_web/01_console.js": "../deno/ext/web/01_console.js",
       "ext:deno_web/01_dom_exception.js": "../deno/ext/web/01_dom_exception.js",
