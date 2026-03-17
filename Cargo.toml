@@ -3,8 +3,8 @@ name = "canvas_2d"
 edition = "2024"
 
 [dependencies]
-cssparser = "0.35.0"
-cssparser-color = "0.3.0"
+cssparser = "0.37.0"
+cssparser-color = "0.5.0"
 deno_core = "0.391.0"
 deno_error = "0.7.1"
 euclid = "0.22.13"

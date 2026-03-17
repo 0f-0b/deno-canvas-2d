@@ -81,6 +81,7 @@ pub enum AbsoluteColorValue {
     Srgb(Srgb),
     SrgbLinear(LinSrgb),
     DisplayP3(DisplayP3),
+    DisplayP3Linear(LinDisplayP3),
     A98Rgb(A98Rgb),
     ProphotoRgb(ProphotoRgb),
     Rec2020(Rec2020),
@@ -101,6 +102,7 @@ impl AbsoluteColorValue {
             Self::Srgb(c) => c.into_color_unclamped(),
             Self::SrgbLinear(c) => c.into_color_unclamped(),
             Self::DisplayP3(c) => c.into_color_unclamped(),
+            Self::DisplayP3Linear(c) => c.into_color_unclamped(),
             Self::A98Rgb(c) => c.into_color_unclamped(),
             Self::ProphotoRgb(c) => c.adapt_into(),
             Self::Rec2020(c) => c.into_color_unclamped(),
@@ -200,6 +202,14 @@ impl ToCss for AbsoluteColor {
             .to_css(dest),
             AbsoluteColorValue::DisplayP3(c) => ColorFunction {
                 color_space: PredefinedColorSpace::DisplayP3,
+                c1: Some(c.red),
+                c2: Some(c.green),
+                c3: Some(c.blue),
+                alpha: Some(self.alpha),
+            }
+            .to_css(dest),
+            AbsoluteColorValue::DisplayP3Linear(c) => ColorFunction {
+                color_space: PredefinedColorSpace::DisplayP3Linear,
                 c1: Some(c.red),
                 c2: Some(c.green),
                 c3: Some(c.blue),
@@ -390,6 +400,10 @@ impl FromParsedColor for ComputedColor {
             }),
             PredefinedColorSpace::DisplayP3 => Self::Absolute(AbsoluteColor {
                 value: AbsoluteColorValue::DisplayP3(Rgb::new(c1, c2, c3)),
+                alpha,
+            }),
+            PredefinedColorSpace::DisplayP3Linear => Self::Absolute(AbsoluteColor {
+                value: AbsoluteColorValue::DisplayP3Linear(Rgb::new(c1, c2, c3)),
                 alpha,
             }),
             PredefinedColorSpace::A98Rgb => Self::Absolute(AbsoluteColor {

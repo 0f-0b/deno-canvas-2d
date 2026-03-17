@@ -275,7 +275,7 @@ macro_rules! impl_to_css_for_computed_dimension {
 use impl_to_css_for_computed_dimension;
 
 macro_rules! try_match_next_ident_ignore_ascii_case {
-    ($input:expr, $($pattern:pat $(if $guard:expr)? => $then:expr),+ $(,)?) => {
+    ($input:expr, $($pattern:literal $(if $guard:expr)? => $then:expr),+ $(,)?) => {
         'block: {
             let location = $input.current_source_location();
             let ident = match $input.expect_ident() {
