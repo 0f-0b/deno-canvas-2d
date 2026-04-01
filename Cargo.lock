@@ -418,9 +418,9 @@ dependencies = [
 
 [[package]]
 name = "deno_core"
-version = "0.396.0"
+version = "0.397.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c94ad6b829e0dbb2304eea3e1646a8d8fa473cac1fd56d644756eef7b492b98"
+checksum = "58f7d1f9e7e66160164ea5ec379d58b56446afc568dff83fb9d7ef1fd3fb4a21"
 dependencies = [
  "anyhow",
  "az",
@@ -489,9 +489,9 @@ dependencies = [
 
 [[package]]
 name = "deno_features"
-version = "0.40.0"
+version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d9198fd14d155a6b8c7ffc14b0b53168fc17b5617c362cb18e0b08f265a51ae"
+checksum = "7f39682c96ff061f258bea797f5094b945956141b551c6f7ce26d672bfdc21cc"
 dependencies = [
  "deno_core",
  "serde",
@@ -500,9 +500,9 @@ dependencies = [
 
 [[package]]
 name = "deno_ops"
-version = "0.272.0"
+version = "0.273.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2a24aef19861bde7045a990f24fa74a3448cda0bfe8a43f6bf287089f1e3d95"
+checksum = "1f7c28530a506ec61d8065fd772669961e3df56c418bee9ea5df3eab29e64b1d"
 dependencies = [
  "indexmap",
  "proc-macro2",
@@ -530,9 +530,9 @@ dependencies = [
 
 [[package]]
 name = "deno_permissions"
-version = "0.102.0"
+version = "0.103.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40edb693384a51821718f197b8e0ba8227197bbe8a2ab65ec7d7958fe881ff07"
+checksum = "8103c246a5e65b457efd1311c11d43ea3ea8e4549f7ed753de0ca983a971cef9"
 dependencies = [
  "capacity_builder",
  "chrono",
@@ -581,9 +581,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.274.0"
+version = "0.275.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2159b009263638bfdde925bccba05eb993214b6b142aa3c50992ad89e154fd21"
+checksum = "27584d6cd4cfbeb60dc96be812f29ae3065f151053562c50abf41106a690c53f"
 dependencies = [
  "async-trait",
  "brotli",
@@ -604,9 +604,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.243.0"
+version = "0.244.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2810acaeee52fff6510dc8488cf29107d767c6b3691d0856c8b727c526480120"
+checksum = "a322b98ddfca4f68ed14d6beb1d9a00992f04a02d25de91d2bc0b23522ced703"
 dependencies = [
  "deno_core",
 ]
@@ -1260,9 +1260,9 @@ dependencies = [
 
 [[package]]
 name = "js-sys"
-version = "0.3.93"
+version = "0.3.94"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "797146bb2677299a1eb6b7b50a890f4c361b29ef967addf5b2fa45dae1bb6d7d"
+checksum = "2e04e2ef80ce82e13552136fabeef8a5ed1f985a96805761cbb9a2c34e7664d9"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
@@ -1287,9 +1287,9 @@ checksum = "09edd9e8b54e49e587e4f6295a7d29c3ea94d469cb40ab8ca70b288248a81db2"
 
 [[package]]
 name = "libc"
-version = "0.2.183"
+version = "0.2.184"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5b646652bf6661599e1da8901b3b9522896f01e736bad5f723fe7a3a27f899d"
+checksum = "48f5d2a454e16a5ea0f4ced81bd44e4cfc7bd3a507b61887c99fd3538b28e4af"
 
 [[package]]
 name = "libloading"
@@ -1842,9 +1842,9 @@ dependencies = [
 
 [[package]]
 name = "serde_v8"
-version = "0.305.0"
+version = "0.306.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfad8addfd4ccfc315cb382b5feae9b4694f0c075123c519bdbd8c6530a466a6"
+checksum = "9741cf5a91953f46cd49d5d20152d49e0cc4eddc4ce4c6d964a855f30254c642"
 dependencies = [
  "deno_error",
  "num-bigint",
@@ -2303,9 +2303,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.116"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dc0882f7b5bb01ae8c5215a1230832694481c1a4be062fd410e12ea3da5b631"
+checksum = "0551fc1bb415591e3372d0bc4780db7e587d84e2a7e79da121051c5c4b89d0b0"
 dependencies = [
  "cfg-if",
  "once_cell",
@@ -2316,9 +2316,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.116"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75973d3066e01d035dbedaad2864c398df42f8dd7b1ea057c35b8407c015b537"
+checksum = "7fbdf9a35adf44786aecd5ff89b4563a90325f9da0923236f6104e603c7e86be"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -2326,9 +2326,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.116"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91af5e4be765819e0bcfee7322c14374dc821e35e72fa663a830bbc7dc199eac"
+checksum = "dca9693ef2bab6d4e6707234500350d8dad079eb508dca05530c85dc3a529ff2"
 dependencies = [
  "bumpalo",
  "proc-macro2",
@@ -2339,9 +2339,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.116"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9bf0406a78f02f336bf1e451799cca198e8acde4ffa278f0fb20487b150a633"
+checksum = "39129a682a6d2d841b6c429d0c51e5cb0ed1a03829d8b3d1e69a011e62cb3d3b"
 dependencies = [
  "unicode-ident",
 ]
