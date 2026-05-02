@@ -1169,25 +1169,22 @@ impl CanvasState {
         }
         let color_space = self.color_space;
         self.try_paint(move |this| {
-            let source = image
-                .into_color_space(color_space)
-                .into_raqote_image()?
-                .map(|image| {
-                    raqote_ext::OwnedSource::Image(
-                        image,
-                        raqote::ExtendMode::Pad,
-                        if this.current_drawing_state.image_smoothing_enabled {
-                            raqote::FilterMode::Bilinear
-                        } else {
-                            raqote::FilterMode::Nearest
-                        },
-                        Transform2D::translation(-dx, -dy)
-                            .then(&Transform2D::new(sw / dw, 0.0, 0.0, sh / dh, sx, sy))
-                            .cast(),
-                        false,
-                        false,
-                    )
-                });
+            let source = image.into_raqote_image(color_space)?.map(|image| {
+                raqote_ext::OwnedSource::Image(
+                    image,
+                    raqote::ExtendMode::Pad,
+                    if this.current_drawing_state.image_smoothing_enabled {
+                        raqote::FilterMode::Bilinear
+                    } else {
+                        raqote::FilterMode::Nearest
+                    },
+                    Transform2D::translation(-dx, -dy)
+                        .then(&Transform2D::new(sw / dw, 0.0, 0.0, sh / dh, sx, sy))
+                        .cast(),
+                    false,
+                    false,
+                )
+            });
             Ok(move |draw_target: &mut raqote::DrawTarget, draw_options| {
                 if let Some(ref image) = source {
                     draw_target.fill_rect(

@@ -44,17 +44,14 @@ impl CanvasPattern {
         destination_color_space: CanvasColorSpace,
         image_smoothing_enabled: bool,
     ) -> Option<raqote_ext::OwnedSource> {
-        let image = self.image.clone().into_color_space(destination_color_space);
-        let data = image.data?;
-        let width = image.width.try_into().ok()?;
-        let height = image.height.try_into().ok()?;
+        let image = self
+            .image
+            .clone()
+            .into_raqote_image(destination_color_space)
+            .ok()??;
         let inverse_transform = self.transformation_matrix.get().inverse()?;
         Some(raqote_ext::OwnedSource::Image(
-            raqote_ext::OwnedImage {
-                width,
-                height,
-                data,
-            },
+            image,
             raqote::ExtendMode::Repeat,
             if image_smoothing_enabled {
                 raqote::FilterMode::Bilinear

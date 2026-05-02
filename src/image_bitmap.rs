@@ -92,11 +92,16 @@ pub enum ResizeQuality {
 }
 
 #[derive(Clone, Debug)]
+pub struct ImageBitmapData {
+    pub pixels: Rc<[u32]>,
+    pub color_space: CanvasColorSpace,
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct ImageBitmap {
     pub width: u32,
     pub height: u32,
-    pub color_space: CanvasColorSpace,
-    pub data: Option<Rc<[u32]>>,
+    pub data: Option<ImageBitmapData>,
 }
 
 impl ImageBitmap {
@@ -106,8 +111,10 @@ impl ImageBitmap {
         Self {
             width: image.width as u32,
             height: image.height as u32,
-            color_space,
-            data: Some(image.data.into()),
+            data: Some(ImageBitmapData {
+                pixels: image.data.into(),
+                color_space,
+            }),
         }
     }
 
@@ -126,7 +133,6 @@ impl ImageBitmap {
             return Ok(Self {
                 width,
                 height,
-                color_space,
                 data: None,
             });
         }
@@ -134,8 +140,10 @@ impl ImageBitmap {
             return Ok(Self {
                 width,
                 height,
-                color_space,
-                data: Some(image.data.into()),
+                data: Some(ImageBitmapData {
+                    pixels: image.data.into(),
+                    color_space,
+                }),
             });
         }
         let src_origin = to_raqote_point(x, y)?;
@@ -172,7 +180,6 @@ impl ImageBitmap {
             return Ok(Self {
                 width: dw,
                 height: dh,
-                color_space: color_space.premultiplied(),
                 data: None,
             });
         }
@@ -239,7 +246,7 @@ impl ImageBitmap {
         if flip_y {
             flip_vertical_in_place(&mut tmp);
         }
-        let data = tmp
+        let pixels = tmp
             .pixels()
             .map(|pixel| {
                 let [r, g, b, a] = pixel.0;
@@ -249,16 +256,17 @@ impl ImageBitmap {
         Self {
             width,
             height,
-            color_space,
-            data: Some(data),
+            data: Some(ImageBitmapData {
+                pixels,
+                color_space,
+            }),
         }
     }
 
-    pub(crate) fn empty(width: u32, height: u32, color_space: CanvasColorSpace) -> Self {
+    pub(crate) fn empty(width: u32, height: u32) -> Self {
         Self {
             width,
             height,
-            color_space,
             data: None,
         }
     }
@@ -270,68 +278,67 @@ impl ImageBitmap {
         f: impl FnOnce(&mut raqote::DrawTarget<&mut [u32]>),
     ) -> Result<Self, Canvas2DError> {
         let size = to_raqote_size(width as u64, height as u64)?;
-        let mut data = std::iter::repeat_n(0, (width * height) as usize).collect::<Rc<[_]>>();
+        let mut pixels = std::iter::repeat_n(0, (width * height) as usize).collect::<Rc<[_]>>();
         let mut dst = raqote::DrawTarget::from_backing(
             size.width,
             size.height,
-            Rc::get_mut(&mut data).unwrap(),
+            Rc::get_mut(&mut pixels).unwrap(),
         );
         f(&mut dst);
         Ok(Self {
             width,
             height,
-            color_space,
-            data: Some(data),
+            data: Some(ImageBitmapData {
+                pixels,
+                color_space,
+            }),
         })
     }
 
-    pub(crate) fn into_color_space(self, color_space: CanvasColorSpace) -> Self {
-        let mut data = self.data;
-        if let Some(data) = &mut data {
-            match (self.color_space, color_space) {
-                (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
-                | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {}
-                (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => transform_argb32(
-                    Rc::make_mut(data),
-                    premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
-                ),
-                (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => transform_argb32(
-                    Rc::make_mut(data),
-                    premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
-                ),
-            }
-        };
-        Self {
-            width: self.width,
-            height: self.height,
-            color_space,
-            data,
-        }
-    }
-
-    pub(crate) fn into_raqote_image(self) -> Result<Option<raqote_ext::OwnedImage>, Canvas2DError> {
+    pub(crate) fn into_raqote_image(
+        self,
+        color_space: CanvasColorSpace,
+    ) -> Result<Option<raqote_ext::OwnedImage>, Canvas2DError> {
         Ok(match self.data {
             Some(data) => {
                 let size = to_raqote_size(self.width as u64, self.height as u64)?;
+                let mut pixels = data.pixels;
+                match (data.color_space, color_space) {
+                    (CanvasColorSpace::Srgb, CanvasColorSpace::Srgb)
+                    | (CanvasColorSpace::DisplayP3, CanvasColorSpace::DisplayP3) => {}
+                    (CanvasColorSpace::Srgb, CanvasColorSpace::DisplayP3) => transform_argb32(
+                        Rc::make_mut(&mut pixels),
+                        premultiplied_linear_srgb_to_premultiplied_linear_display_p3,
+                    ),
+                    (CanvasColorSpace::DisplayP3, CanvasColorSpace::Srgb) => transform_argb32(
+                        Rc::make_mut(&mut pixels),
+                        premultiplied_linear_display_p3_to_premultiplied_linear_srgb,
+                    ),
+                }
                 Some(raqote_ext::OwnedImage {
                     width: size.width,
                     height: size.height,
-                    data,
+                    data: pixels,
                 })
             }
             None => None,
         })
     }
 
-    pub(crate) fn as_raqote_image(&self) -> Result<Option<raqote::Image<'_>>, Canvas2DError> {
+    pub(crate) fn as_raqote_image(
+        &self,
+    ) -> Result<Option<(raqote::Image<'_>, CanvasColorSpace)>, Canvas2DError> {
         Ok(match self.data {
             Some(ref data) => {
                 let size = to_raqote_size(self.width as u64, self.height as u64)?;
-                Some(raqote::Image {
-                    width: size.width,
-                    height: size.height,
-                    data,
-                })
+                Some((
+                    raqote::Image {
+                        width: size.width,
+                        height: size.height,
+                        data: &data.pixels,
+                    },
+                    data.color_space,
+                ))
             }
             None => None,
         })
@@ -344,12 +351,10 @@ impl ImageBitmap {
         width: u32,
         height: u32,
     ) -> Result<Self, Canvas2DError> {
-        let color_space = self.color_space;
         if out_of_bounds(self.width, self.height, x, y, width, height) {
             return Ok(Self {
                 width,
                 height,
-                color_space,
                 data: None,
             });
         }
@@ -360,13 +365,14 @@ impl ImageBitmap {
             return Ok(Self {
                 width,
                 height,
-                color_space,
                 data: None,
             });
         };
+        let color_space = data.color_space;
         let src_origin = to_raqote_point(x, y)?;
         let src_size = to_raqote_size(self.width as u64, self.height as u64)?;
-        let src = raqote::DrawTarget::from_backing(src_size.width, src_size.height, data.as_ref());
+        let src =
+            raqote::DrawTarget::from_backing(src_size.width, src_size.height, data.pixels.as_ref());
         Self::new_with(width, height, color_space, |dst| {
             dst.copy_surface(
                 &src,
@@ -386,15 +392,14 @@ impl ImageBitmap {
         if width == self.width && height == self.height {
             return Ok(self.clone());
         }
-        let Some(src) = self.as_raqote_image()? else {
+        let Some((src, color_space)) = self.as_raqote_image()? else {
             return Ok(Self {
                 width,
                 height,
-                color_space: self.color_space,
                 data: None,
             });
         };
-        Self::new_with(width, height, self.color_space, |dst| {
+        Self::new_with(width, height, color_space, |dst| {
             let mut transform = Transform2D::scale(
                 src.width as f32 / dst.width() as f32,
                 src.height as f32 / dst.height() as f32,
@@ -433,7 +438,7 @@ impl ImageBitmap {
         x: i64,
         y: i64,
     ) -> Result<(), Canvas2DError> {
-        let Some(image) = self.as_raqote_image()? else {
+        let Some((image, color_space)) = self.as_raqote_image()? else {
             dst.data.fill(0);
             return Ok(());
         };
@@ -447,7 +452,7 @@ impl ImageBitmap {
             Point2D::origin(),
             |src, dst| {
                 dst.copy_from_slice(src);
-                match (self.color_space, dst_color_space) {
+                match (color_space, dst_color_space) {
                     (CanvasColorSpace::Srgb, PredefinedColorSpace::Srgb)
                     | (CanvasColorSpace::DisplayP3, PredefinedColorSpace::DisplayP3) => {
                         unpack_argb32_to_rgba8(dst, premultiplied_linear_srgb_to_srgb)
@@ -474,35 +479,20 @@ impl ImageBitmap {
         Ok(())
     }
 
-    pub(crate) fn remove_alpha(self) -> Self {
-        let data = match self.data {
-            Some(mut data) => {
-                for pixel in Rc::make_mut(&mut data) {
+    pub(crate) fn remove_alpha(&mut self) {
+        match &mut self.data {
+            Some(data) => {
+                for pixel in Rc::make_mut(&mut data.pixels) {
                     *pixel |= ARGB32_ALPHA_MASK;
                 }
-                data
             }
             None => {
                 let size = (self.width as u64 * self.height as u64).try_into().unwrap();
-                std::iter::repeat_n(ARGB32_ALPHA_MASK, size).collect()
+                self.data = Some(ImageBitmapData {
+                    pixels: std::iter::repeat_n(ARGB32_ALPHA_MASK, size).collect(),
+                    color_space: CanvasColorSpace::Srgb,
+                });
             }
-        };
-        Self {
-            width: self.width,
-            height: self.height,
-            color_space: self.color_space,
-            data: Some(data),
-        }
-    }
-}
-
-impl Default for ImageBitmap {
-    fn default() -> Self {
-        Self {
-            width: 0,
-            height: 0,
-            color_space: CanvasColorSpace::Srgb,
-            data: None,
         }
     }
 }
@@ -586,11 +576,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
 #[op2]
 #[cppgc]
 pub fn op_canvas_2d_image_bitmap_empty(width: u32, height: u32) -> Wrap<Cell<ImageBitmap>> {
-    Wrap::new(Cell::new(ImageBitmap::empty(
-        width,
-        height,
-        CanvasColorSpace::Srgb,
-    )))
+    Wrap::new(Cell::new(ImageBitmap::empty(width, height)))
 }
 
 #[op2]
@@ -605,7 +591,6 @@ pub fn op_canvas_2d_image_bitmap_empty_resize(
     Ok(Wrap::new(Cell::new(ImageBitmap::empty(
         size.width,
         size.height,
-        CanvasColorSpace::Srgb,
     ))))
 }
 
@@ -628,7 +613,10 @@ pub fn op_canvas_2d_image_bitmap_height(#[cppgc] this: &Wrap<Cell<ImageBitmap>>)
 #[op2(fast)]
 pub fn op_canvas_2d_image_bitmap_color_space(#[cppgc] this: &Wrap<Cell<ImageBitmap>>) -> i32 {
     let image = this.take();
-    let color_space = image.color_space;
+    let color_space = match &image.data {
+        Some(data) => data.color_space,
+        None => CanvasColorSpace::Srgb,
+    };
     this.set(image);
     color_space as i32
 }
@@ -714,8 +702,9 @@ pub fn op_canvas_2d_image_bitmap_get_image_data(
 pub fn op_canvas_2d_image_bitmap_remove_alpha(
     #[cppgc] this: &Wrap<Cell<ImageBitmap>>,
 ) -> Wrap<Cell<ImageBitmap>> {
-    let image = this.take();
-    Wrap::new(Cell::new(image.remove_alpha()))
+    let mut image = this.take();
+    image.remove_alpha();
+    Wrap::new(Cell::new(image))
 }
 
 #[op2(fast)]

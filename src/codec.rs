@@ -9,6 +9,7 @@ use image::metadata::Orientation;
 use image::{DynamicImage, ImageDecoder, ImageError, ImageFormat, ImageReader, RgbaImage};
 use strum_macros::FromRepr;
 
+use super::PredefinedColorSpace;
 use super::error::Canvas2DError;
 use super::image_bitmap::{
     ImageBitmap, ImageOrientation, ResizeQuality, aspect_resize, non_zero_u32, out_of_bounds,
@@ -16,7 +17,6 @@ use super::image_bitmap::{
 };
 use super::image_data::ImageData;
 use super::wrap::Wrap;
-use super::{CanvasColorSpace, PredefinedColorSpace};
 
 fn encode_png(
     data: &[u8],
@@ -170,7 +170,6 @@ fn decode_image(
         return Ok(ImageBitmap {
             width: dw,
             height: dh,
-            color_space: CanvasColorSpace::Srgb,
             data: None,
         });
     }

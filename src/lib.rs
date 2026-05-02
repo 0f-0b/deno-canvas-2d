@@ -19,7 +19,7 @@ use cssparser::ToCss as _;
 use error::Canvas2DError;
 use euclid::default::{Point2D, Size2D};
 use euclid::{point2, size2};
-pub use image_bitmap::ImageBitmap;
+pub use image_bitmap::{ImageBitmap, ImageBitmapData};
 use palette::stimulus::IntoStimulus as _;
 use strum_macros::FromRepr;
 pub use wrap::Wrap;
