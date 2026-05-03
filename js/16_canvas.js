@@ -619,7 +619,7 @@ async function checkUsabilityAndCropWithFormatting(
           dw ?? 0,
           dh ?? 0,
           resizeQualityToRepr[resizeQuality],
-          imageOrientationToRepr[imageOrientation],
+          imageOrientation === "flipY",
         );
       }
       return bitmap;
@@ -638,7 +638,7 @@ async function checkUsabilityAndCropWithFormatting(
         dw ?? 0,
         dh ?? 0,
         resizeQualityToRepr[resizeQuality],
-        imageOrientationToRepr[imageOrientation],
+        imageOrientation === "flipY",
       );
     } finally {
       await makeSafePromise(op_defer());
@@ -687,7 +687,7 @@ async function checkUsabilityAndCropWithFormatting(
       dw ?? 0,
       dh ?? 0,
       resizeQualityToRepr[resizeQuality],
-      imageOrientationToRepr[imageOrientation],
+      imageOrientation === "flipY",
     );
   } finally {
     await makeSafePromise(op_defer());

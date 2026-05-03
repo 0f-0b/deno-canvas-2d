@@ -166,8 +166,8 @@ impl ImageBitmap {
         sh: Option<u32>,
         dw: Option<u32>,
         dh: Option<u32>,
-        resize_quality: ResizeQuality,
-        image_orientation: ImageOrientation,
+        quality: ResizeQuality,
+        flip_y: bool,
     ) -> Result<Self, Canvas2DError> {
         use image::imageops::replace;
         use image::{ImageBuffer, Rgba, RgbaImage};
@@ -183,10 +183,6 @@ impl ImageBitmap {
                 data: None,
             });
         }
-        let flip_y = match image_orientation {
-            ImageOrientation::FromImage => false,
-            ImageOrientation::FlipY => true,
-        };
         let cropped = if same_size(src.width, src.height, sx, sy, sw, sh) {
             RgbaImage::from_vec(src.width, src.height, src.data.to_owned()).unwrap()
         } else {
@@ -208,7 +204,7 @@ impl ImageBitmap {
             },
             dw,
             dh,
-            resize_quality,
+            quality,
             flip_y,
         ))
     }
@@ -547,8 +543,8 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
     sh: u32,
     dw: u32,
     dh: u32,
-    resize_quality: i32,
-    image_orientation: i32,
+    quality: i32,
+    flip_y: bool,
 ) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
     let src = ImageDataView {
         width: src_width,
@@ -556,8 +552,7 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
         color_space: PredefinedColorSpace::from_repr(src_color_space).unwrap(),
         data: src_data,
     };
-    let resize_quality = ResizeQuality::from_repr(resize_quality).unwrap();
-    let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
+    let quality = ResizeQuality::from_repr(quality).unwrap();
     Ok(Wrap::new(Cell::new(
         ImageBitmap::from_image_data_crop_and_resize(
             src,
@@ -567,8 +562,8 @@ pub fn op_canvas_2d_image_bitmap_from_image_data_crop_and_resize(
             non_zero_u32(sh),
             non_zero_u32(dw),
             non_zero_u32(dh),
-            resize_quality,
-            image_orientation,
+            quality,
+            flip_y,
         )?,
     )))
 }
@@ -656,7 +651,7 @@ pub fn op_canvas_2d_image_bitmap_resize(
     width: u32,
     height: u32,
     quality: i32,
-    image_orientation: i32,
+    flip_y: bool,
 ) -> Result<Wrap<Cell<ImageBitmap>>, Canvas2DError> {
     let image = this.take();
     let size = aspect_resize(
@@ -666,12 +661,11 @@ pub fn op_canvas_2d_image_bitmap_resize(
         non_zero_u32(height),
     )?;
     let quality = ResizeQuality::from_repr(quality).unwrap();
-    let image_orientation = ImageOrientation::from_repr(image_orientation).unwrap();
     Ok(Wrap::new(Cell::new(image.resize(
         size.width,
         size.height,
         quality,
-        matches!(image_orientation, ImageOrientation::FlipY),
+        flip_y,
     )?)))
 }
 
