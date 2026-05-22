@@ -1,12 +1,4 @@
-import { primordials } from "ext:core/mod.js";
-import { createFilteredInspectProxy } from "ext:deno_web/01_console.js";
-import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import {
-  configureInterface,
-  illegalConstructor,
-  requiredArguments,
-  type,
-} from "ext:deno_webidl/00_webidl.js";
+import { core, primordials } from "ext:core/mod.js";
 import {
   op_canvas_2d_image_bitmap_clone,
   op_canvas_2d_image_bitmap_close,
@@ -39,6 +31,17 @@ const {
   TypedArrayPrototypeGetBuffer,
   Uint32Array,
 } = primordials;
+const { loadExtScript } = core;
+const {
+  createFilteredInspectProxy,
+} = loadExtScript("ext:deno_web/01_console.js");
+const { DOMException } = loadExtScript("ext:deno_web/01_dom_exception.js");
+const {
+  configureInterface,
+  illegalConstructor,
+  requiredArguments,
+  type,
+} = loadExtScript("ext:deno_webidl/00_webidl.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertNullableImageBitmap = (value) => {
   if (value === null || value === undefined) {

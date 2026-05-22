@@ -16,7 +16,6 @@ pub(crate) mod color;
 pub(crate) mod filter;
 pub(crate) mod font;
 pub(crate) mod length;
-pub(crate) mod transform;
 
 pub(crate) trait FromCss: Sized {
     type Err;
@@ -92,12 +91,6 @@ fn parse_integer_with_range<'i>(
         } if range.contains(&int_value) => int_value,
         ref t => return Err(location.new_unexpected_token_error(t.clone())),
     })
-}
-
-fn parse_number_or_percentage<'i>(
-    input: &mut Parser<'i, '_>,
-) -> Result<NumberOrPercentage, ParseError<'i, Infallible>> {
-    parse_number_or_percentage_with_range(input, ..)
 }
 
 fn parse_number_or_percentage_with_range<'i>(

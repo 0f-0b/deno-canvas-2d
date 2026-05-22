@@ -1,15 +1,5 @@
-import { primordials } from "ext:core/mod.js";
+import { core, primordials } from "ext:core/mod.js";
 import { op_defer } from "ext:core/ops";
-import { createFilteredInspectProxy } from "ext:deno_web/01_console.js";
-import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import { EventTarget } from "ext:deno_web/02_event.js";
-import { Blob } from "ext:deno_web/09_file.js";
-import {
-  configureInterface,
-  illegalConstructor,
-  requiredArguments,
-  type,
-} from "ext:deno_webidl/00_webidl.js";
 import {
   BlobPrototypeBytes,
   BlobPrototypeGetType,
@@ -71,6 +61,19 @@ const {
   Uint8ClampedArray,
   globalThis,
 } = primordials;
+const { loadExtScript } = core;
+const {
+  createFilteredInspectProxy,
+} = loadExtScript("ext:deno_web/01_console.js");
+const { DOMException } = loadExtScript("ext:deno_web/01_dom_exception.js");
+const { EventTarget } = loadExtScript("ext:deno_web/02_event.js");
+const { Blob } = loadExtScript("ext:deno_web/09_file.js");
+const {
+  configureInterface,
+  illegalConstructor,
+  requiredArguments,
+  type,
+} = loadExtScript("ext:deno_webidl/00_webidl.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const readImageEncodeOptionsMembers = (value) => {
   const result = { __proto__: null };

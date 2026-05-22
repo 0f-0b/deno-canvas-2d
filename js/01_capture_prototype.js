@@ -1,8 +1,8 @@
 import { core, primordials } from "ext:core/mod.js";
-import { type } from "ext:deno_webidl/00_webidl.js";
 
 const { ObjectGetOwnPropertyDescriptor, ObjectHasOwn } = primordials;
-const { isProxy } = core;
+const { isProxy, loadExtScript } = core;
+const { type } = loadExtScript("ext:deno_webidl/00_webidl.js");
 
 export function capturePrototype(constructor, fallback) {
   if (constructor === fallback) {

@@ -1,20 +1,4 @@
-import { primordials } from "ext:core/mod.js";
-import { createFilteredInspectProxy } from "ext:deno_web/01_console.js";
-import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import {
-  dispatch,
-  Event,
-  EventTarget,
-  setIsTrusted,
-} from "ext:deno_web/02_event.js";
-import { defer } from "ext:deno_web/02_timers.js";
-import { Deferred } from "ext:deno_web/06_streams.js";
-import {
-  configureInterface,
-  illegalConstructor,
-  requiredArguments,
-  type,
-} from "ext:deno_webidl/00_webidl.js";
+import { core, primordials } from "ext:core/mod.js";
 import {
   op_canvas_2d_font_face_ascent_override,
   op_canvas_2d_font_face_descent_override,
@@ -94,6 +78,25 @@ const {
   TypeError,
   globalThis,
 } = primordials;
+const { loadExtScript } = core;
+const {
+  createFilteredInspectProxy,
+} = loadExtScript("ext:deno_web/01_console.js");
+const { DOMException } = loadExtScript("ext:deno_web/01_dom_exception.js");
+const {
+  dispatch,
+  Event,
+  EventTarget,
+  setIsTrusted,
+} = loadExtScript("ext:deno_web/02_event.js");
+const { defer } = loadExtScript("ext:deno_web/02_timers.js");
+const { Deferred } = loadExtScript("ext:deno_web/06_streams.js");
+const {
+  configureInterface,
+  illegalConstructor,
+  requiredArguments,
+  type,
+} = loadExtScript("ext:deno_webidl/00_webidl.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const empty = ObjectFreeze({
   next: () => ({ done: true }),

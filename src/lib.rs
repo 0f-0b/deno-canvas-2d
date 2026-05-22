@@ -6,7 +6,6 @@ mod filter;
 mod gradient;
 mod image_bitmap;
 mod image_data;
-mod matrix;
 mod path;
 mod pattern;
 mod raqote_ext;
@@ -124,7 +123,6 @@ deno_core::extension!(
     canvas_2d,
     deps = [deno_web],
     ops = [
-        matrix::op_canvas_2d_parse_matrix,
         codec::op_canvas_2d_encode_png,
         codec::op_canvas_2d_decode_image,
         state::op_canvas_2d_state_new,
@@ -286,6 +284,7 @@ deno_core::extension!(
     esm = [
         dir "js",
         "00_blob_primordials.js",
+        "00_dom_matrix_primordials.js",
         "00_event_primordials.js",
         "00_event_target_primordials.js",
         "00_image_data_primordials.js",
@@ -319,8 +318,6 @@ deno_core::extension!(
         "05_convert_enforce_range_unsigned_long.js",
         "05_convert_enforce_range_unsigned_long_long.js",
         "05_convert_event_handler.js",
-        "05_convert_float32_array.js",
-        "05_convert_float64_array.js",
         "05_convert_image_data.js",
         "05_convert_legacy_null_to_empty_string_dom_string.js",
         "05_convert_long.js",

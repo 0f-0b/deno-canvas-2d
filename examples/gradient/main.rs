@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
     let mut runtime = JsRuntime::new(RuntimeOptions {
         extensions: vec![
             deno_webidl::deno_webidl::init(),
-            deno_web::deno_web::init(blob_store.clone(), None, Default::default()),
+            deno_web::deno_web::init(blob_store.clone(), None, true, Default::default()),
             canvas_2d::canvas_2d::init(),
             init::init(),
         ],

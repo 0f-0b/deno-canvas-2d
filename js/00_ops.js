@@ -51,7 +51,6 @@ export {
   op_canvas_2d_image_bitmap_remove_alpha,
   op_canvas_2d_image_bitmap_resize,
   op_canvas_2d_image_bitmap_width,
-  op_canvas_2d_parse_matrix,
   op_canvas_2d_path_arc_to,
   op_canvas_2d_path_clear,
   op_canvas_2d_path_clone,

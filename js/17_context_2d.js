@@ -1,13 +1,5 @@
-import { primordials } from "ext:core/mod.js";
-import { createFilteredInspectProxy } from "ext:deno_web/01_console.js";
-import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import { ImageData } from "ext:deno_web/16_image_data.js";
-import {
-  configureInterface,
-  illegalConstructor,
-  requiredArguments,
-  type,
-} from "ext:deno_webidl/00_webidl.js";
+import { core, primordials } from "ext:core/mod.js";
+import { DOMMatrixFromFloat64Array } from "./00_dom_matrix_primordials.js";
 import {
   ImageDataPrototypeGetColorSpace,
   ImageDataPrototypeGetData,
@@ -153,7 +145,6 @@ import { convertUnrestrictedDouble } from "./05_convert_unrestricted_double.js";
 import {
   convertDOMMatrix2DInit,
   convertDOMPointInit,
-  createDOMMatrix,
   validateAndFixup2D,
 } from "./15_geometry.js";
 import {
@@ -187,6 +178,19 @@ const {
   TypedArrayPrototypeGetLength,
   Uint32Array,
 } = primordials;
+const { createLazyLoader, loadExtScript } = core;
+const {
+  createFilteredInspectProxy,
+} = loadExtScript("ext:deno_web/01_console.js");
+const { DOMException } = loadExtScript("ext:deno_web/01_dom_exception.js");
+const { ImageData } = loadExtScript("ext:deno_web/16_image_data.js");
+const {
+  configureInterface,
+  illegalConstructor,
+  requiredArguments,
+  type,
+} = loadExtScript("ext:deno_webidl/00_webidl.js");
+const loadGeometry = createLazyLoader("ext:deno_web/geometry.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertCanvasImageSource = (value) => {
   if (
@@ -1573,7 +1577,8 @@ export class OffscreenCanvasRenderingContext2D extends Object {
       OffscreenCanvasRenderingContext2DInternals.getState(this),
       getTransformBuffer,
     );
-    return createDOMMatrix(getTransformBuffer, true);
+    loadGeometry();
+    return DOMMatrixFromFloat64Array(getTransformBuffer);
   }
 
   setTransform(a = undefined, b, c, d, e, f) {
