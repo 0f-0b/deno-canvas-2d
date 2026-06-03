@@ -1,8 +1,8 @@
-import { core, primordials } from "ext:core/mod.js";
+import { primordials } from "ext:core/mod.js";
+import { ImageData } from "ext:core/ops";
 
 const { ObjectGetOwnPropertyDescriptors, uncurryThis } = primordials;
-const { loadExtScript } = core;
-const { ImageDataPrototype } = loadExtScript("ext:deno_web/16_image_data.js");
+export const ImageDataPrototype = ImageData.prototype;
 const proto = ObjectGetOwnPropertyDescriptors(ImageDataPrototype);
 export const ImageDataPrototypeGetColorSpace = uncurryThis(
   proto.colorSpace.get,
