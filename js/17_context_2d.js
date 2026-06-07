@@ -127,10 +127,11 @@ import {
   op_canvas_2d_state_width,
   op_canvas_2d_state_word_spacing,
 } from "./00_ops.js";
-import { capturePrototype } from "./01_capture_prototype.js";
 import { defaultTo } from "./01_default_to.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
-import { requireObject } from "./01_require_object.js";
+import { isObject } from "./01_is_object.js";
+import { capturePrototype } from "./02_capture_prototype.js";
+import { requireObject } from "./02_require_object.js";
 import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
 import { createEnumConverter } from "./04_create_enum_converter.js";
 import { createSequenceFromIterable } from "./04_create_sequence_from_iterable.js";
@@ -188,13 +189,12 @@ const {
   configureInterface,
   illegalConstructor,
   requiredArguments,
-  type,
 } = loadExtScript("ext:deno_webidl/00_webidl.js");
 const loadGeometry = createLazyLoader("ext:deno_web/geometry.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertCanvasImageSource = (value) => {
   if (
-    type(value) === "Object" &&
+    isObject(value) &&
     (ImageBitmapInternals.hasInstance(value) ||
       OffscreenCanvasInternals.hasInstance(value))
   ) {
@@ -223,7 +223,7 @@ const convertCanvasRenderingContext2DSettings = createDictionaryConverter(
 );
 const convertDOMStringOrCanvasGradientOrCanvasPattern = (value) => {
   if (
-    type(value) === "Object" &&
+    isObject(value) &&
     (CanvasGradientInternals.hasInstance(value) ||
       CanvasPatternInternals.hasInstance(value))
   ) {
@@ -582,13 +582,13 @@ const convertImageDataSettings = createDictionaryConverter(
   readImageDataSettingsMembers,
 );
 const convertPath2D = (value) => {
-  if (!(type(value) === "Object" && Path2DInternals.hasInstance(value))) {
-    throw new TypeError("Expected Path2D");
+  if (isObject(value) && Path2DInternals.hasInstance(value)) {
+    return value;
   }
-  return value;
+  throw new TypeError("Expected Path2D");
 };
 const convertPath2DOrDOMString = (value) =>
-  type(value) === "Object" && Path2DInternals.hasInstance(value)
+  isObject(value) && Path2DInternals.hasInstance(value)
     ? value
     : convertDOMString(value);
 
@@ -952,11 +952,11 @@ const convertSequenceOfUnrestrictedDouble = (value) => {
   return createSequenceFromIterable(value, method, convertUnrestrictedDouble);
 };
 const convertUnrestrictedDoubleOrDOMPointInit = (value) =>
-  value === null || value === undefined || type(value) === "Object"
+  value === null || value === undefined || isObject(value)
     ? convertDOMPointInit(value)
     : convertUnrestrictedDouble(value);
 const convertUnrestrictedDoubleOrDOMPointInitOrSequenceThereof = (value) => {
-  if (type(value) === "Object") {
+  if (isObject(value)) {
     const method = value[SymbolIterator];
     if (method !== null && method !== undefined) {
       return createSequenceFromIterable(
@@ -1960,8 +1960,7 @@ export class OffscreenCanvasRenderingContext2D extends Object {
     const nArgs = arguments.length;
     if (
       nArgs === 0 ||
-      (nArgs === 1 &&
-        !(type(path) === "Object" && Path2DInternals.hasInstance(path)))
+      (nArgs === 1 && !(isObject(path) && Path2DInternals.hasInstance(path)))
     ) {
       fillRule = path;
       path = null;
@@ -1990,8 +1989,7 @@ export class OffscreenCanvasRenderingContext2D extends Object {
     const nArgs = arguments.length;
     if (
       nArgs === 0 ||
-      (nArgs === 1 &&
-        !(type(path) === "Object" && Path2DInternals.hasInstance(path)))
+      (nArgs === 1 && !(isObject(path) && Path2DInternals.hasInstance(path)))
     ) {
       fillRule = path;
       path = null;
@@ -2014,8 +2012,7 @@ export class OffscreenCanvasRenderingContext2D extends Object {
     requiredArguments(nArgs, 2, prefix);
     if (
       nArgs === 2 ||
-      (nArgs === 3 &&
-        !(type(path) === "Object" && Path2DInternals.hasInstance(path)))
+      (nArgs === 3 && !(isObject(path) && Path2DInternals.hasInstance(path)))
     ) {
       fillRule = y;
       y = x;

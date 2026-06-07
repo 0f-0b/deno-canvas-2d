@@ -11,6 +11,7 @@ import {
   op_canvas_2d_image_bitmap_width,
 } from "./00_ops.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
+import { isObject } from "./01_is_object.js";
 import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
 import { convertBoolean } from "./05_convert_boolean.js";
 import {
@@ -40,14 +41,13 @@ const {
   configureInterface,
   illegalConstructor,
   requiredArguments,
-  type,
 } = loadExtScript("ext:deno_webidl/00_webidl.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertNullableImageBitmap = (value) => {
   if (value === null || value === undefined) {
     return null;
   }
-  if (type(value) === "Object" && ImageBitmapInternals.hasInstance(value)) {
+  if (isObject(value) && ImageBitmapInternals.hasInstance(value)) {
     return value;
   }
   throw new TypeError("Expected ImageBitmap");

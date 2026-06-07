@@ -33,17 +33,18 @@ import {
   op_canvas_2d_font_face_weight,
   op_canvas_2d_font_source,
 } from "./00_ops.js";
-import { capturePrototype } from "./01_capture_prototype.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
+import { isObject } from "./01_is_object.js";
 import {
   aggregateSpeciesSafePromises,
   makeSpeciesSafePromise,
   newFromSpeciesSafePromise,
 } from "./01_promise.js";
-import { requireObject } from "./01_require_object.js";
+import { capturePrototype } from "./02_capture_prototype.js";
 import { isArrayBuffer } from "./02_is_array_buffer.js";
 import { isDataView } from "./02_is_data_view.js";
 import { isTypedArray } from "./02_is_typed_array.js";
+import { requireObject } from "./02_require_object.js";
 import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
 import { createSequenceFromIterable } from "./04_create_sequence_from_iterable.js";
 import { convertArrayBuffer } from "./05_convert_array_buffer.js";
@@ -95,7 +96,6 @@ const {
   configureInterface,
   illegalConstructor,
   requiredArguments,
-  type,
 } = loadExtScript("ext:deno_webidl/00_webidl.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const empty = ObjectFreeze({
@@ -618,10 +618,10 @@ export class FontFace extends Object {
 }
 
 const convertFontFace = (value) => {
-  if (!(type(value) === "Object" && FontFaceInternals.hasInstance(value))) {
-    throw new TypeError("Expected FontFace");
+  if (isObject(value) && FontFaceInternals.hasInstance(value)) {
+    return value;
   }
-  return value;
+  throw new TypeError("Expected FontFace");
 };
 const convertSequenceOfFontFace = (value) => {
   const method = requireObject(value)[SymbolIterator];

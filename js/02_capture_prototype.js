@@ -1,8 +1,8 @@
 import { core, primordials } from "ext:core/mod.js";
+import { isObject } from "./01_is_object.js";
 
 const { ObjectGetOwnPropertyDescriptor, ObjectHasOwn } = primordials;
-const { isProxy, loadExtScript } = core;
-const { type } = loadExtScript("ext:deno_webidl/00_webidl.js");
+const { isProxy } = core;
 
 export function capturePrototype(constructor, fallback) {
   if (constructor === fallback) {
@@ -10,12 +10,12 @@ export function capturePrototype(constructor, fallback) {
   }
   if (!isProxy(constructor)) {
     const desc = ObjectGetOwnPropertyDescriptor(constructor, "prototype");
-    if (desc && ObjectHasOwn(desc, "value") && type(desc.value) === "Object") {
+    if (desc && ObjectHasOwn(desc, "value") && isObject(desc.value)) {
       return constructor;
     }
   }
   const proto = constructor.prototype;
-  if (type(proto) !== "Object") {
+  if (!isObject(proto)) {
     return fallback;
   }
   const C = function () {};

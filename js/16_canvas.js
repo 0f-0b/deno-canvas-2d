@@ -23,9 +23,10 @@ import {
   op_canvas_2d_image_bitmap_resize,
   op_canvas_2d_image_bitmap_width,
 } from "./00_ops.js";
-import { capturePrototype } from "./01_capture_prototype.js";
 import { IdentityConstructor } from "./01_identity_constructor.js";
+import { isObject } from "./01_is_object.js";
 import { makeSafePromise } from "./01_promise.js";
+import { capturePrototype } from "./02_capture_prototype.js";
 import { isBlob } from "./02_is_blob.js";
 import { isImageData } from "./02_is_image_data.js";
 import { createDictionaryConverter } from "./04_create_dictionary_converter.js";
@@ -72,7 +73,6 @@ const {
   configureInterface,
   illegalConstructor,
   requiredArguments,
-  type,
 } = loadExtScript("ext:deno_webidl/00_webidl.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const readImageEncodeOptionsMembers = (value) => {
@@ -522,7 +522,7 @@ export function checkUsabilityAndClone(image) {
 
 const convertImageBitmapSource = (value) => {
   if (
-    (type(value) === "Object" &&
+    (isObject(value) &&
       (ImageBitmapInternals.hasInstance(value) ||
         OffscreenCanvasInternals.hasInstance(value))) ||
     isBlob(value) || isImageData(value)

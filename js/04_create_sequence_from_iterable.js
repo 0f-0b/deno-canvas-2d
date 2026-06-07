@@ -1,5 +1,5 @@
 import { primordials } from "ext:core/mod.js";
-import { requireObject } from "./01_require_object.js";
+import { requireObject } from "./02_require_object.js";
 
 const {
   ArrayPrototype,
