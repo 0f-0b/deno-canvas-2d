@@ -179,7 +179,7 @@ const {
   TypedArrayPrototypeGetLength,
   Uint32Array,
 } = primordials;
-const { createLazyLoader, loadExtScript } = core;
+const { loadExtScript } = core;
 const {
   createFilteredInspectProxy,
 } = loadExtScript("ext:deno_web/01_console.js");
@@ -190,7 +190,7 @@ const {
   illegalConstructor,
   requiredArguments,
 } = loadExtScript("ext:deno_webidl/00_webidl.js");
-const loadGeometry = createLazyLoader("ext:deno_web/geometry.js");
+const loadGeometry = () => loadExtScript("ext:deno_web/17_geometry.js");
 const privateCustomInspect = SymbolFor("Deno.privateCustomInspect");
 const convertCanvasImageSource = (value) => {
   if (
