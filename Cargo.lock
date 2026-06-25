@@ -431,9 +431,9 @@ dependencies = [
 
 [[package]]
 name = "deno_core"
-version = "0.404.0"
+version = "0.405.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ed0bfc2096207522de1b7826b0fdd85587e19d0d61368411ad3f193166376b2"
+checksum = "b8220ba29cf7b51d98c12e3f04e32bee32f8a100875bd417b51712ab66314dad"
 dependencies = [
  "anyhow",
  "az",
@@ -499,9 +499,9 @@ dependencies = [
 
 [[package]]
 name = "deno_ops"
-version = "0.280.0"
+version = "0.281.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7404a038088a57bb9d73e48975a0359d869e69edc450f4a30fe5416652b4b470"
+checksum = "70cbbcfc5ffb2ad2b006cf147584f695f56e8e201df6667adb4f81f7920bbba5"
 dependencies = [
  "indexmap",
  "proc-macro2",
@@ -540,9 +540,9 @@ dependencies = [
 
 [[package]]
 name = "deno_web"
-version = "0.282.0"
+version = "0.283.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "866ce795a1224737efb701fc06408c92b6685df8a9b9539628ac06f960c01096"
+checksum = "0c9c401e6e2785b0a549890e34fedb5cf56275290a57cbaec2c6010a38f7af85"
 dependencies = [
  "async-trait",
  "brotli",
@@ -556,15 +556,16 @@ dependencies = [
  "serde",
  "thiserror",
  "tokio",
+ "unicode-normalization",
  "urlpattern",
  "uuid",
 ]
 
 [[package]]
 name = "deno_webidl"
-version = "0.251.0"
+version = "0.252.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0358a9bcd89ef1421bf091f7b2b364ca5e32aa55fc42ed6888dbad15b670a5b4"
+checksum = "7f941adf06967757047f948500fc857e11ec15aa99d49e6504b493125f9fe656"
 dependencies = [
  "deno_core",
 ]
@@ -1750,9 +1751,9 @@ dependencies = [
 
 [[package]]
 name = "serde_v8"
-version = "0.313.0"
+version = "0.314.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b033e7b24fef6a1c2b47c7a435568504955392440b3562a89dbd4b6a390c27a"
+checksum = "19e736b8cca4b296325a945a1c819e09338a65d12f267ff5c8885752805f3f6b"
 dependencies = [
  "deno_error",
  "num-bigint",
@@ -2048,6 +2049,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tinyvec"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e61e67053d25a4e82c844e8424039d9745781b3fc4f32b8d55ed50f5f667ef3"
+dependencies = [
+ "tinyvec_macros",
+]
+
+[[package]]
+name = "tinyvec_macros"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+
+[[package]]
 name = "tokio"
 version = "1.52.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2104,6 +2120,15 @@ name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+
+[[package]]
+name = "unicode-normalization"
+version = "0.1.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
+dependencies = [
+ "tinyvec",
+]
 
 [[package]]
 name = "url"
